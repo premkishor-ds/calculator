@@ -19,20 +19,51 @@ export default function WealthDashboard() {
   const [targetGoal, setTargetGoal] = useState<string>('');
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
 
+  const resetAll = () => {
+    setInitialLumpsum(0);
+    setStartSip(30000);
+    setStepUp(20);
+    setCagr(25);
+    setYears(12);
+    setInflation(6);
+    setTargetGoal('');
+  };
+
+
   // Load theme
   useEffect(() => {
     const savedTheme = localStorage.getItem('theme') as 'dark' | 'light';
-    const currentTheme = savedTheme || 'dark';
+    const isSystemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    
+    // Logic: If system is dark, stay in dark. Otherwise, use saved theme or default dark.
+    let currentTheme: 'dark' | 'light' = 'dark';
+    if (isSystemDark) {
+      currentTheme = 'dark';
+    } else {
+      currentTheme = savedTheme || 'dark';
+    }
+    
     setTheme(currentTheme);
     document.documentElement.classList.toggle('dark', currentTheme === 'dark');
   }, []);
 
   const toggleTheme = () => {
+    const isSystemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    
+    // Requirement: "when click on toggle dark to light it will stay in dark if system theme is set to dark"
+    if (isSystemDark) {
+      setTheme('dark');
+      localStorage.setItem('theme', 'dark');
+      document.documentElement.classList.add('dark');
+      return;
+    }
+
     const newTheme = theme === 'dark' ? 'light' : 'dark';
     setTheme(newTheme);
     localStorage.setItem('theme', newTheme);
     document.documentElement.classList.toggle('dark', newTheme === 'dark');
   };
+
 
   // Logic
   const ledger = useMemo(() => 
@@ -103,7 +134,9 @@ export default function WealthDashboard() {
           years={years} setYears={setYears}
           inflation={inflation} setInflation={setInflation}
           targetGoal={targetGoal} handleReverseSip={handleReverseSip}
+          resetAll={resetAll}
         />
+
 
         <SummaryCards summary={summary} inflation={inflation} years={years} chartData={chartData} theme={theme} />
         <ExecutiveSummary summary={summary} inflation={inflation} years={years} chartData={chartData} theme={theme} />

@@ -17,6 +17,7 @@ interface ControlsProps {
   setInflation: (v: number) => void;
   targetGoal: string;
   handleReverseSip: (v: string) => void;
+  resetAll: () => void;
 }
 
 export const Controls: React.FC<ControlsProps> = (props) => {
@@ -27,11 +28,22 @@ export const Controls: React.FC<ControlsProps> = (props) => {
     cagr, setCagr, 
     years, setYears, 
     inflation, setInflation, 
-    targetGoal, handleReverseSip 
+    targetGoal, handleReverseSip,
+    resetAll
   } = props;
 
   return (
     <section className="bg-white dark:bg-slate-900/50 backdrop-blur-md p-8 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xl mb-12">
+      <div className="flex justify-between items-center mb-8">
+        <h3 className="text-sm font-bold uppercase tracking-widest text-slate-400">Calculator Parameters</h3>
+        <button 
+          onClick={resetAll}
+          className="text-[10px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-full border border-slate-200 dark:border-slate-800 hover:bg-red-500/10 hover:text-red-500 hover:border-red-500/20 transition-all"
+        >
+          Reset to Defaults
+        </button>
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
         
         <div className="space-y-8">
@@ -52,7 +64,7 @@ export const Controls: React.FC<ControlsProps> = (props) => {
           <div className="space-y-4">
             <div className="flex justify-between items-center">
               <label className="text-xs font-bold uppercase tracking-wider text-blue-500 flex items-center gap-1">
-                Target CAGR % <span title="Compound Annual Growth Rate."><HelpCircle className="w-3 h-3 cursor-help text-slate-400" /></span>
+                Target CAGR % <span title="Compound Annual Growth Rate - The average yearly growth of your investment over time."><HelpCircle className="w-3 h-3 cursor-help text-slate-400" /></span>
               </label>
               <span className="text-lg font-bold text-blue-600">{cagr}%</span>
             </div>
@@ -71,7 +83,7 @@ export const Controls: React.FC<ControlsProps> = (props) => {
           <div className="space-y-4">
             <div className="flex justify-between items-center">
               <label className="text-xs font-bold uppercase tracking-wider text-blue-500 flex items-center gap-1">
-                Investment Period <span title="How long you intend to stay invested."><HelpCircle className="w-3 h-3 cursor-help text-slate-400" /></span>
+                Investment Period <span title="How long you intend to stay invested in years."><HelpCircle className="w-3 h-3 cursor-help text-slate-400" /></span>
               </label>
               <span className="text-lg font-bold text-blue-600">{years} Years</span>
             </div>
@@ -88,6 +100,7 @@ export const Controls: React.FC<ControlsProps> = (props) => {
             <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Initial Lumpsum</label>
             <input 
               type="number" value={initialLumpsum} onChange={(e) => setInitialLumpsum(Number(e.target.value))}
+              onFocus={(e) => e.target.select()}
               className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3 outline-none focus:ring-2 ring-blue-500 transition-all text-sm"
             />
           </div>
@@ -95,13 +108,17 @@ export const Controls: React.FC<ControlsProps> = (props) => {
             <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Step-Up %</label>
             <input 
               type="number" value={stepUp} onChange={(e) => setStepUp(Number(e.target.value))}
+              onFocus={(e) => e.target.select()}
               className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3 outline-none focus:ring-2 ring-blue-500 transition-all text-sm"
             />
           </div>
           <div className="flex flex-col gap-2">
-            <label className="text-[10px] font-bold uppercase tracking-wider text-orange-500">Inflation %</label>
+            <label className="text-[10px] font-bold uppercase tracking-wider text-orange-500 flex items-center gap-1">
+              Inflation % <span title="Inflation Rate - The rate at which the purchasing power of money decreases (standard is 6%)."><HelpCircle className="w-3 h-3 cursor-help text-slate-400" /></span>
+            </label>
             <input 
               type="number" value={inflation} onChange={(e) => setInflation(Number(e.target.value))}
+              onFocus={(e) => e.target.select()}
               className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3 outline-none focus:ring-2 ring-orange-500 transition-all text-sm"
             />
           </div>
@@ -109,6 +126,7 @@ export const Controls: React.FC<ControlsProps> = (props) => {
             <label className="text-[10px] font-bold uppercase tracking-wider text-purple-500">Target Goal (₹)</label>
             <input 
               type="number" value={targetGoal} onChange={(e) => handleReverseSip(e.target.value)}
+              onFocus={(e) => e.target.select()}
               placeholder="Goal ₹"
               className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3 outline-none focus:ring-2 ring-purple-500 transition-all placeholder:text-slate-600 text-sm font-bold"
             />
@@ -117,5 +135,6 @@ export const Controls: React.FC<ControlsProps> = (props) => {
 
       </div>
     </section>
+
   );
 };

@@ -1,5 +1,5 @@
 import React from 'react';
-import { TrendingUp, Sun, Landmark, Zap } from 'lucide-react';
+import { TrendingUp, Sun, Landmark, Zap, HelpCircle } from 'lucide-react';
 import { formatINR, SummaryResult } from '@/utils/calculations';
 import { 
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer 
@@ -44,8 +44,12 @@ export const SummaryCards: React.FC<VisualsProps> = ({ summary, inflation }) => 
     <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-lg relative overflow-hidden">
       <div className="flex items-center gap-3 mb-4 text-red-500">
         <Landmark className="w-5 h-5" />
-        <p className="text-sm font-semibold">Net After-Tax (12.5% LTCG)</p>
+        <p className="text-sm font-semibold flex items-center gap-1">
+          Net After-Tax (12.5% LTCG) 
+          <span title="Long Term Capital Gains Tax - Tax applied on profits above ₹1.25 Lakh (effective 2024). Calculated as 12.5% on gains."><HelpCircle className="w-3 h-3 cursor-help text-slate-400" /></span>
+        </p>
       </div>
+
       <h3 className="text-3xl font-bold text-red-600 dark:text-red-400">{formatINR(summary.postTaxCorpus)}</h3>
       <p className="text-xs text-slate-500 mt-2 italic">Your actual &quot;In-Hand&quot; wealth</p>
     </div>
