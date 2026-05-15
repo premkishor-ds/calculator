@@ -35,34 +35,20 @@ export default function WealthDashboard() {
     const savedTheme = localStorage.getItem('theme') as 'dark' | 'light';
     const isSystemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     
-    // Logic: If system is dark, stay in dark. Otherwise, use saved theme or default dark.
-    let currentTheme: 'dark' | 'light' = 'dark';
-    if (isSystemDark) {
-      currentTheme = 'dark';
-    } else {
-      currentTheme = savedTheme || 'dark';
-    }
+    // Use saved preference if it exists, otherwise follow system theme
+    const currentTheme = savedTheme || (isSystemDark ? 'dark' : 'light');
     
     setTheme(currentTheme);
     document.documentElement.classList.toggle('dark', currentTheme === 'dark');
   }, []);
 
   const toggleTheme = () => {
-    const isSystemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    
-    // Requirement: "when click on toggle dark to light it will stay in dark if system theme is set to dark"
-    if (isSystemDark) {
-      setTheme('dark');
-      localStorage.setItem('theme', 'dark');
-      document.documentElement.classList.add('dark');
-      return;
-    }
-
     const newTheme = theme === 'dark' ? 'light' : 'dark';
     setTheme(newTheme);
     localStorage.setItem('theme', newTheme);
     document.documentElement.classList.toggle('dark', newTheme === 'dark');
   };
+
 
 
   // Logic
