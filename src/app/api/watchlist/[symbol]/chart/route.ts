@@ -17,17 +17,57 @@ export async function GET(
     const { searchParams } = new URL(request.url);
     const range = searchParams.get('range') || '1y';
 
-    // Map query range to Yahoo Finance parameters
-    const rangeMap: Record<string, { range: string; interval: string }> = {
-      '1d': { range: '1d', interval: '5m' },
-      '1w': { range: '5d', interval: '15m' },
-      '1m': { range: '1mo', interval: '1d' },
-      '1y': { range: '1y', interval: '1d' },
-      '5y': { range: '5y', interval: '1wk' },
-      'max': { range: 'max', interval: '1mo' },
+    // Map query range to Yahoo Finance period1 and interval parameters
+    let period1Date: Date;
+    let interval: '5m' | '15m' | '1d' | '1wk' | '1mo' = '1d';
+
+    switch (range.toLowerCase()) {
+      case '1d':
+        const oneDayAgo = new Date();
+        oneDayAgo.setDate(oneDayAgo.getDate() - 1);
+        period1Date = oneDayAgo;
+        interval = '5m';
+        break;
+      case '1w':
+        const oneWeekAgo = new Date();
+        oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+        period1Date = oneWeekAgo;
+        interval = '15m';
+        break;
+      case '1m':
+        const oneMonthAgo = new Date();
+        oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+        period1Date = oneMonthAgo;
+        interval = '1d';
+        break;
+      case '1y':
+        const oneYearAgo = new Date();
+        oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+        period1Date = oneYearAgo;
+        interval = '1d';
+        break;
+      case '5y':
+        const fiveYearsAgo = new Date();
+        fiveYearsAgo.setFullYear(fiveYearsAgo.getFullYear() - 5);
+        period1Date = fiveYearsAgo;
+        interval = '1wk';
+        break;
+      case 'max':
+        period1Date = new Date('2000-01-01');
+        interval = '1mo';
+        break;
+      default:
+        const defOneYearAgo = new Date();
+        defOneYearAgo.setFullYear(defOneYearAgo.getFullYear() - 1);
+        period1Date = defOneYearAgo;
+        interval = '1d';
+    }
+
+    const config = {
+      period1: period1Date,
+      interval
     };
 
-    const config = rangeMap[range.toLowerCase()] || rangeMap['1y'];
     const needsHistoricalEps = ['5y', 'max'].includes(range.toLowerCase());
 
     const tenYearsAgo = new Date();
@@ -36,7 +76,7 @@ export async function GET(
 
     // Fetch resources in parallel
     const promises = [
-      yahooFinance.chart(symbol, config as any),
+      yahooFinance.chart(symbol, config),
       yahooFinance.quoteSummary(symbol, { modules: ['defaultKeyStatistics'] })
     ] as any[];
 
