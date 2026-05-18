@@ -99,7 +99,24 @@ export const WATCHLIST_SYMBOLS = [
 ];
 ```
 
-*Adding or updating symbols in this file dynamically updates the sidebar list, calculations, and chart APIs across the application.*
+*Adding or updating symbols in this file dynamically updates the sidebar list, calculations, and chart APIs across the application when operating in local fallback mode.*
+
+---
+
+## 🗃️ Persistent Watchlist & MongoDB Sync
+
+The Screener Cockpit and Trading Terminal pages are fully integrated with a persistent **Node/Express Mongoose Backend** utilizing MongoDB.
+
+### Key Integration Mechanics:
+1. **Dynamic Star Toggles**: Star icons allow you to favorite or unfavorite tickers. Changes perform immediate database `PATCH` mutations and update UI states.
+2. **Interactive Ticker Validator**: Adding a ticker validates its statistics through active corporate filings (via `yahoo-finance2`) before executing a `POST` operation to add the verified record to the database.
+3. **Resilient Local Fallback**: If the database server is offline or network calls fail, both the Cockpit and Terminal pages seamlessly shift into Local Offline Mode, purge browser cache, and load default institutional quotes with an dynamic warning header.
+
+### Environment Variable Setup
+Ensure you create a `.env` file in the root of the `/frontend` directory to target the database API:
+```env
+NEXT_PUBLIC_API_URL=http://localhost:5001/api
+```
 
 ---
 

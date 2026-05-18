@@ -12,6 +12,8 @@ import {
   ChevronRight,
   Layers,
   Sparkles,
+  Star,
+  Trash2,
 } from 'lucide-react';
 import { DEFAULT_SYMBOLS } from '@/utils/symbols';
 
@@ -43,7 +45,35 @@ interface StockQuote {
   promHold: number;
   profitGrowth: number;
   salesGrowth: number;
+  isFavourite?: boolean;
+  _id?: string;
 }
+
+interface BackendStock {
+  symbol: string;
+  name: string;
+  isFavourite?: boolean;
+  _id?: string;
+}
+
+interface LiveStock {
+  symbol: string;
+  name: string;
+  price: number;
+  change: number;
+  changePercent: number;
+  marketCap: number;
+  volume: number;
+  pe: number;
+  eps: number;
+  cmpBv: number;
+  divYield: number;
+  promHold: number;
+  profitGrowth: number;
+  salesGrowth: number;
+}
+
+const BACKEND_API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api';
 
 export default function TradingTerminalPage() {
   /* ── State ─────────────────────────────────────────────────── */
@@ -56,8 +86,11 @@ export default function TradingTerminalPage() {
   const [terminalSearch,   setTerminalSearch]    = useState('');
   const [terminalSearchError, setTerminalSearchError] = useState('');
   const [terminalSearching, setTerminalSearching] = useState(false);
+  const [showFavouritesOnly, setShowFavouritesOnly] = useState(false);
+  const [apiFailed,        setApiFailed]         = useState(false);
   
   // Expanded dynamic technical & fundamental analysis panel state
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [deepData,         setDeepData]         = useState<any>(null);
   const [deepLoading,      setDeepLoading]      = useState(false);
   const [activeTab,        setActiveTab]        = useState<'technicals' | 'fundamentals' | 'profile' | 'proscons' | 'strategy'>('technicals');
@@ -65,31 +98,83 @@ export default function TradingTerminalPage() {
   /* Derived */
   const selectedStock = watchlistStocks.find(s => s.symbol === selectedSymbol) || null;
 
-  /* ── Load watchlist ────────────────────────────────────────── */
+  /* ── Load watchlist from Backend API ────────────────────────── */
   useEffect(() => {
     let active = true;
     (async () => {
       try {
         setWatchlistLoading(true);
-        let symbols = DEFAULT_SYMBOLS as string[];
-        if (typeof window !== 'undefined') {
-          const saved = localStorage.getItem('vision_watchlist');
-          if (saved) {
-            try {
-              const p = JSON.parse(saved);
-              if (Array.isArray(p) && p.length > 0) symbols = p;
-            } catch {}
-          }
+        setApiFailed(false);
+
+        // 1. Try to fetch stocks from Mongoose backend API
+        const backendRes = await fetch(`${BACKEND_API_URL}/stocks`);
+        if (!backendRes.ok) {
+          throw new Error('Backend API returned non-200 status');
         }
-        const res  = await fetch(`/api/watchlist?symbols=${encodeURIComponent(symbols.join(','))}`);
-        const data = await res.json();
+        
+        const backendStocks = (await backendRes.json()) as BackendStock[];
+        const symbols = backendStocks.map((s: BackendStock) => s.symbol);
+
+        if (symbols.length === 0) {
+          if (active) {
+            setWatchlistStocks([]);
+            setWatchlistLoading(false);
+          }
+          return;
+        }
+
+        // 2. Fetch live metrics from Next.js Next API for these symbols
+        const liveRes = await fetch(`/api/watchlist?symbols=${encodeURIComponent(symbols.join(','))}`);
+        if (!liveRes.ok) {
+          throw new Error('Live data fetch failed');
+        }
+        const liveData = await liveRes.json();
+
         if (active) {
-          setWatchlistStocks(data);
-          const def = data.find((s: StockQuote) => s.symbol === 'CGPOWER.NS');
-          setSelectedSymbol(def ? 'CGPOWER.NS' : data[0]?.symbol ?? 'CGPOWER.NS');
+          // 3. Merge Backend details (isFavourite, correct formatting) with Live data
+          const mergedData = liveData.map((liveStock: LiveStock) => {
+            const backendStock = backendStocks.find(
+              (s: BackendStock) => s.symbol.toUpperCase() === liveStock.symbol.toUpperCase()
+            );
+            return {
+              ...liveStock,
+              name: backendStock ? backendStock.name : liveStock.name, // Keep stored name in correct format
+              isFavourite: backendStock ? !!backendStock.isFavourite : false,
+              _id: backendStock ? backendStock._id : undefined
+            };
+          });
+
+          setWatchlistStocks(mergedData);
+          const def = mergedData.find((s: StockQuote) => s.symbol === 'CGPOWER.NS');
+          setSelectedSymbol(def ? 'CGPOWER.NS' : mergedData[0]?.symbol ?? 'CGPOWER.NS');
         }
       } catch (err) {
-        console.error('Watchlist load error:', err);
+        console.error('Backend API error - Falling back to local default stocks list:', err);
+        if (active) {
+          setApiFailed(true);
+          // If API fails, clear local storage
+          if (typeof window !== 'undefined') {
+            localStorage.removeItem('vision_watchlist');
+          }
+          
+          // Fall back to default stock list
+          try {
+            const fallbackSymbols = DEFAULT_SYMBOLS;
+            const res = await fetch(`/api/watchlist?symbols=${encodeURIComponent(fallbackSymbols.join(','))}`);
+            if (res.ok) {
+              const data = await res.json();
+              const fallbackData = data.map((s: LiveStock) => ({
+                ...s,
+                isFavourite: false
+              }));
+              setWatchlistStocks(fallbackData);
+              const def = fallbackData.find((s: StockQuote) => s.symbol === 'CGPOWER.NS');
+              setSelectedSymbol(def ? 'CGPOWER.NS' : fallbackData[0]?.symbol ?? 'CGPOWER.NS');
+            }
+          } catch (fallbackErr) {
+            console.error('Fallback fetch error:', fallbackErr);
+          }
+        }
       } finally {
         if (active) setWatchlistLoading(false);
       }
@@ -107,23 +192,117 @@ export default function TradingTerminalPage() {
     try {
       setTerminalSearching(true);
       setTerminalSearchError('');
+      
+      // 1. Query Yahoo Finance via next api to verify ticker exists & get standard format
       const res  = await fetch(`/api/watchlist?symbols=${encodeURIComponent(sym)}`);
       if (!res.ok) throw new Error('Ticker not found.');
       const data = await res.json();
       if (!data?.length) throw new Error('No quote returned.');
       const stock = data[0];
-      setSelectedSymbol(stock.symbol);
-      if (!watchlistStocks.some(s => s.symbol === stock.symbol)) {
-        const next = [stock, ...watchlistStocks];
+
+      let savedStock = { ...stock, isFavourite: false };
+
+      // 2. Add to Mongoose backend API (if online)
+      if (!apiFailed) {
+        try {
+          const backendPostRes = await fetch(`${BACKEND_API_URL}/stocks`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              symbol: stock.symbol,
+              name: stock.name, // Stored in correct format
+              isFavourite: false
+            })
+          });
+          if (backendPostRes.ok) {
+            const dbStock = await backendPostRes.json();
+            savedStock = {
+              ...stock,
+              name: dbStock.name, // Use database name in correct format
+              isFavourite: !!dbStock.isFavourite,
+              _id: dbStock._id
+            };
+          } else {
+            const errData = await backendPostRes.json();
+            throw new Error(errData.error || 'Failed to add stock to backend database');
+          }
+        } catch (backendErr) {
+          console.error('Backend save error:', backendErr);
+          setTerminalSearchError('Database save failed, operating locally');
+        }
+      }
+
+      setSelectedSymbol(savedStock.symbol);
+      if (!watchlistStocks.some(s => s.symbol === savedStock.symbol)) {
+        const next = [savedStock, ...watchlistStocks];
         setWatchlistStocks(next);
-        if (typeof window !== 'undefined')
-          localStorage.setItem('vision_watchlist', JSON.stringify(next.map(s => s.symbol)));
       }
       setTerminalSearch('');
     } catch (err: unknown) {
       setTerminalSearchError(err instanceof Error ? err.message : 'Search failed');
     } finally {
       setTerminalSearching(false);
+    }
+  };
+
+  /* ── Toggle Favourite ───────────────────────────────────────── */
+  const handleToggleFavourite = async (symbolToToggle: string, currentFavStatus: boolean, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    try {
+      const nextFavStatus = !currentFavStatus;
+
+      if (!apiFailed) {
+        const res = await fetch(`${BACKEND_API_URL}/stocks/${encodeURIComponent(symbolToToggle)}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ isFavourite: nextFavStatus })
+        });
+        if (!res.ok) {
+          throw new Error('Failed to toggle favourite status in database');
+        }
+      }
+
+      // Update state
+      setWatchlistStocks(prev => prev.map(s => {
+        if (s.symbol.toUpperCase() === symbolToToggle.toUpperCase()) {
+          return { ...s, isFavourite: nextFavStatus };
+        }
+        return s;
+      }));
+    } catch (err) {
+      console.error('Toggle favorite error:', err);
+      alert(err instanceof Error ? err.message : 'Failed to update favorite status');
+    }
+  };
+
+  /* ── Delete Stock ──────────────────────────────────────────── */
+  const handleDeleteStock = async (symbolToDelete: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!confirm(`Are you sure you want to delete ${symbolToDelete.split('.')[0]} from the list?`)) return;
+
+    try {
+      if (!apiFailed) {
+        const res = await fetch(`${BACKEND_API_URL}/stocks/${encodeURIComponent(symbolToDelete)}`, {
+          method: 'DELETE'
+        });
+        if (!res.ok) {
+          throw new Error('Failed to delete stock from database');
+        }
+      }
+
+      const nextWatchlist = watchlistStocks.filter(s => s.symbol.toUpperCase() !== symbolToDelete.toUpperCase());
+      setWatchlistStocks(nextWatchlist);
+
+      if (selectedSymbol.toUpperCase() === symbolToDelete.toUpperCase()) {
+        if (nextWatchlist.length > 0) {
+          setSelectedSymbol(nextWatchlist[0].symbol);
+        } else {
+          setSelectedSymbol('');
+        }
+      }
+    } catch (err) {
+      console.error('Delete stock error:', err);
+      alert(err instanceof Error ? err.message : 'Failed to delete stock');
     }
   };
 
@@ -149,10 +328,12 @@ export default function TradingTerminalPage() {
     return () => { active = false; };
   }, [selectedSymbol]);
 
-  const filteredWatchlist = watchlistStocks.filter(s =>
-    s.symbol.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    s.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredWatchlist = watchlistStocks.filter(s => {
+    const matchesSearch = s.symbol.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         s.name.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesFav = showFavouritesOnly ? !!s.isFavourite : true;
+    return matchesSearch && matchesFav;
+  });
 
   /* ── Render ────────────────────────────────────────────────── */
   return (
@@ -218,8 +399,21 @@ export default function TradingTerminalPage() {
                 <div>
                   <div className="flex items-center gap-2">
                     <h1 className="font-extrabold text-base text-white">{selectedStock.name}</h1>
-                    <span className="px-2 py-0.5 bg-slate-800 text-slate-400 text-[10px] font-bold rounded border border-slate-700">
+                    <span className="px-2 py-0.5 bg-slate-850 text-slate-400 text-[10px] font-bold rounded border border-slate-800 flex items-center gap-1.5">
                       {selectedStock.symbol}
+                      {/* Favourite Star Toggle */}
+                      <button
+                        type="button"
+                        onClick={() => handleToggleFavourite(selectedStock.symbol, !!selectedStock.isFavourite)}
+                        className={`p-0.5 rounded transition-all hover:scale-105 ${
+                          selectedStock.isFavourite
+                            ? 'text-yellow-400'
+                            : 'text-slate-600 hover:text-slate-400'
+                        }`}
+                        title={selectedStock.isFavourite ? "Remove from Favourites" : "Mark as Favourite"}
+                      >
+                        <Star className={`w-3 h-3 ${selectedStock.isFavourite ? 'fill-yellow-400' : ''}`} />
+                      </button>
                     </span>
                   </div>
                   <p className="text-[11px] text-slate-500 mt-0.5">NSE • INR</p>
@@ -278,7 +472,7 @@ export default function TradingTerminalPage() {
                   ].map(tab => (
                     <button
                       key={tab.id}
-                      onClick={() => setActiveTab(tab.id as any)}
+                      onClick={() => setActiveTab(tab.id as 'technicals' | 'fundamentals' | 'profile' | 'proscons' | 'strategy')}
                       className={`px-3 py-2 text-[10px] font-extrabold uppercase tracking-wider rounded-lg transition-all shrink-0 ${
                         activeTab === tab.id
                           ? 'bg-slate-900 text-blue-400 border border-blue-500/20'
@@ -565,6 +759,39 @@ export default function TradingTerminalPage() {
                 className="w-full pl-9 pr-4 py-2 bg-slate-900 border border-slate-800 focus:border-blue-500/50 rounded-xl text-xs font-bold text-slate-200 placeholder:text-slate-600 focus:outline-none transition-all"
               />
             </div>
+
+            {/* Filter Tabs (All vs Favourites) */}
+            <div className="flex gap-1 mt-3 p-0.5 bg-slate-900 border border-slate-800 rounded-xl">
+              <button
+                type="button"
+                onClick={() => setShowFavouritesOnly(false)}
+                className={`flex-1 py-1 text-[9px] font-extrabold uppercase tracking-wider rounded-lg transition-all ${
+                  !showFavouritesOnly
+                    ? 'bg-slate-800 text-blue-400 border border-blue-500/10'
+                    : 'text-slate-500 hover:text-slate-400'
+                }`}
+              >
+                All ({watchlistStocks.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowFavouritesOnly(true)}
+                className={`flex-1 py-1 text-[9px] font-extrabold uppercase tracking-wider rounded-lg transition-all flex items-center justify-center gap-1 ${
+                  showFavouritesOnly
+                    ? 'bg-slate-850 text-yellow-400 border border-yellow-500/10'
+                    : 'text-slate-500 hover:text-slate-400'
+                }`}
+              >
+                ⭐ Favs ({watchlistStocks.filter(s => s.isFavourite).length})
+              </button>
+            </div>
+
+            {apiFailed && (
+              <div className="mt-2.5 px-2.5 py-1.5 bg-red-500/10 border border-red-500/20 text-red-400 text-[9px] font-extrabold rounded-lg flex items-center justify-between animate-pulse">
+                <span>⚠️ Backend API Offline</span>
+                <span className="text-[8px] bg-red-500/25 px-1 py-0.2 rounded uppercase">Local Mode</span>
+              </div>
+            )}
           </div>
 
           <div className="flex-1 overflow-y-auto divide-y divide-slate-900/60">
@@ -578,31 +805,63 @@ export default function TradingTerminalPage() {
                 const active   = stock.symbol === selectedSymbol;
                 const positive = stock.change >= 0;
                 return (
-                  <button
+                  <div
                     key={stock.symbol}
                     onClick={() => setSelectedSymbol(stock.symbol)}
-                    className={`w-full text-left px-4 py-3.5 flex items-center justify-between gap-3 transition-all border-l-4 touch-manipulation ${
+                    className={`w-full text-left px-4 py-3 flex items-center justify-between gap-3 transition-all border-l-4 touch-manipulation cursor-pointer group/item ${
                       active ? 'bg-slate-900 border-blue-500' : 'hover:bg-slate-900/50 border-transparent'
                     }`}
                   >
-                    <div className="min-w-0">
+                    <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-1.5">
                         <span className={`text-xs font-black ${active ? 'text-blue-400' : 'text-slate-100'}`}>
                           {stock.symbol.split('.')[0]}
                         </span>
                         <span className="text-[9px] text-slate-600 font-bold">{stock.symbol.split('.')[1]}</span>
+                        {stock.isFavourite && (
+                          <span className="text-yellow-400 text-[10px] font-extrabold">★</span>
+                        )}
                       </div>
-                      <p className="text-[10px] text-slate-500 truncate max-w-[140px] mt-0.5">{stock.name}</p>
+                      <p className="text-[10px] text-slate-500 truncate max-w-[130px] mt-0.5" title={stock.name}>
+                        {stock.name}
+                      </p>
                     </div>
-                    <div className="text-right shrink-0">
-                      <div className="text-xs font-black text-white">₹{stock.price.toFixed(0)}</div>
-                      <span className={`inline-block text-[9px] font-extrabold px-1.5 py-0.5 rounded mt-0.5 ${
-                        positive ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'
-                      }`}>
-                        {positive ? '+' : ''}{stock.changePercent.toFixed(1)}%
-                      </span>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <div className="text-right">
+                        <div className="text-xs font-black text-white">₹{stock.price.toFixed(0)}</div>
+                        <span className={`inline-block text-[9px] font-extrabold px-1.5 py-0.5 rounded mt-0.5 ${
+                          positive ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'
+                        }`}>
+                          {positive ? '+' : ''}{stock.changePercent.toFixed(1)}%
+                        </span>
+                      </div>
+                      
+                      {/* Action buttons (Star & Delete) - visible on hover or if favourite */}
+                      <div className="flex items-center gap-1 opacity-40 group-hover/item:opacity-100 transition-opacity">
+                        <button
+                          type="button"
+                          onClick={(e) => handleToggleFavourite(stock.symbol, !!stock.isFavourite, e)}
+                          className={`p-1 rounded-lg border transition-all hover:scale-105 ${
+                            stock.isFavourite
+                              ? 'bg-yellow-500/10 border-yellow-500/35 text-yellow-400 hover:bg-yellow-500/20'
+                              : 'bg-slate-800 border-slate-700 text-slate-500 hover:text-slate-350 hover:bg-slate-750'
+                          }`}
+                          title={stock.isFavourite ? "Remove from Favourites" : "Mark as Favourite"}
+                        >
+                          <Star className={`w-3 h-3 ${stock.isFavourite ? 'fill-yellow-400 text-yellow-400' : ''}`} />
+                        </button>
+                        
+                        <button
+                          type="button"
+                          onClick={(e) => handleDeleteStock(stock.symbol, e)}
+                          className="p-1 rounded-lg border bg-slate-800 border-slate-700 text-slate-500 hover:text-red-400 hover:bg-red-500/10 hover:border-red-500/20 transition-all hover:scale-105"
+                          title="Delete from Terminal"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      </div>
                     </div>
-                  </button>
+                  </div>
                 );
               })
             ) : (

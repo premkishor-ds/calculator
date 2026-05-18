@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useSyncExternalStore, useCallback } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
   TrendingUp, 
@@ -13,8 +13,10 @@ import {
   Plus, 
   Trash2, 
   AlertCircle,
-  TrendingUp as StockIcon
+  TrendingUp as StockIcon,
+  Star
 } from 'lucide-react';
+import { DEFAULT_SYMBOLS } from '@/utils/symbols';
 
 interface StockData {
   symbol: string;
@@ -31,66 +33,36 @@ interface StockData {
   promHold: number;
   profitGrowth: number;
   salesGrowth: number;
+  isFavourite?: boolean;
 }
 
-import { DEFAULT_SYMBOLS } from '@/utils/symbols';
-
-const WATCHLIST_KEY = 'vision_watchlist';
-const WATCHLIST_EVENT = 'vision-watchlist-change';
-
-let lastWatchlistString = '';
-let cachedWatchlistArray: string[] = DEFAULT_SYMBOLS;
-
-function readWatchlist(): string[] {
-  if (typeof window === 'undefined') return DEFAULT_SYMBOLS;
-  try {
-    const saved = localStorage.getItem(WATCHLIST_KEY);
-    if (saved) {
-      if (saved === lastWatchlistString) {
-        return cachedWatchlistArray;
-      }
-      const parsed = JSON.parse(saved);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        lastWatchlistString = saved;
-        cachedWatchlistArray = parsed;
-        return parsed;
-      }
-    }
-  } catch {
-    // use defaults
-  }
-  
-  const defaultStr = JSON.stringify(DEFAULT_SYMBOLS);
-  if (defaultStr !== lastWatchlistString) {
-    lastWatchlistString = defaultStr;
-    cachedWatchlistArray = DEFAULT_SYMBOLS;
-  }
-  return DEFAULT_SYMBOLS;
+interface BackendStock {
+  symbol: string;
+  name: string;
+  isFavourite?: boolean;
 }
 
-function subscribeWatchlist(onStoreChange: () => void) {
-  window.addEventListener('storage', onStoreChange);
-  window.addEventListener(WATCHLIST_EVENT, onStoreChange);
-  return () => {
-    window.removeEventListener('storage', onStoreChange);
-    window.removeEventListener(WATCHLIST_EVENT, onStoreChange);
-  };
+interface LiveStock {
+  symbol: string;
+  name: string;
+  price: number;
+  change: number;
+  changePercent: number;
+  marketCap: number;
+  volume: number;
+  pe: number;
+  eps: number;
+  cmpBv: number;
+  divYield: number;
+  promHold: number;
+  profitGrowth: number;
+  salesGrowth: number;
 }
+
+const BACKEND_API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api';
 
 export default function WatchlistPage() {
   const router = useRouter();
-  const watchlist = useSyncExternalStore(subscribeWatchlist, readWatchlist, () => DEFAULT_SYMBOLS);
-
-  const persistWatchlist = useCallback((next: string[]) => {
-    localStorage.setItem(WATCHLIST_KEY, JSON.stringify(next));
-    window.dispatchEvent(new Event(WATCHLIST_EVENT));
-  }, []);
-
-  useEffect(() => {
-    if (!localStorage.getItem(WATCHLIST_KEY)) {
-      localStorage.setItem(WATCHLIST_KEY, JSON.stringify(DEFAULT_SYMBOLS));
-    }
-  }, []);
 
   const [stocks, setStocks] = useState<StockData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -101,33 +73,79 @@ export default function WatchlistPage() {
   const [addError, setAddError] = useState('');
   const [sortField, setSortField] = useState<keyof StockData>('marketCap');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+  const [apiFailed, setApiFailed] = useState(false);
+  const [showFavouritesOnly, setShowFavouritesOnly] = useState(false);
 
-  // Fetch stocks when watchlist state updates
-  useEffect(() => {
-    const fetchStocks = async () => {
-      if (watchlist.length === 0) {
+  // Fetch stocks from the Mongoose backend and merge with live Yahoo Finance quotes
+  const fetchStocksFromAPI = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError('');
+      setApiFailed(false);
+
+      // 1. Try to fetch stocks from Express backend API
+      let backendStocks: BackendStock[] = [];
+      try {
+        const backendRes = await fetch(`${BACKEND_API_URL}/stocks`);
+        if (!backendRes.ok) throw new Error();
+        backendStocks = await backendRes.json();
+      } catch (err) {
+        console.warn("Express backend failed - falling back to default stocks list", err);
+        setApiFailed(true);
+        // Clear local storage on API failure as requested
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('vision_watchlist');
+        }
+        
+        // Build mock stocks list from default symbols
+        backendStocks = DEFAULT_SYMBOLS.map(symbol => ({
+          symbol,
+          name: symbol.split('.')[0] + ' Ltd.',
+          isFavourite: false
+        }));
+      }
+
+      if (backendStocks.length === 0) {
         setStocks([]);
         setLoading(false);
         return;
       }
-      try {
-        setLoading(true);
-        setError('');
-        const res = await fetch(`/api/watchlist?symbols=${watchlist.join(',')}`);
-        if (!res.ok) throw new Error('Failed to fetch live stock data');
-        const data = await res.json();
-        setStocks(data);
-      } catch (err: unknown) {
-        setError(err instanceof Error ? err.message : 'Something went wrong');
-      } finally {
-        setLoading(false);
-      }
-    };
 
-    fetchStocks();
-    const interval = setInterval(fetchStocks, 60000);
+      const symbols = backendStocks.map(s => s.symbol);
+
+      // 2. Fetch live metrics from Next.js Yahoo Finance API
+      const liveRes = await fetch(`/api/watchlist?symbols=${encodeURIComponent(symbols.join(','))}`);
+      if (!liveRes.ok) throw new Error('Live data fetch failed');
+      const liveData = await liveRes.json();
+
+      // 3. Merge Live Quote metrics with Backend details
+      const mergedData = liveData.map((liveStock: LiveStock) => {
+        const backendStock = backendStocks.find(
+          (s: BackendStock) => s.symbol.toUpperCase() === liveStock.symbol.toUpperCase()
+        );
+        return {
+          ...liveStock,
+          name: backendStock ? backendStock.name : liveStock.name,
+          isFavourite: backendStock ? !!backendStock.isFavourite : false
+        };
+      });
+
+      setStocks(mergedData);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Something went wrong while fetching watchlist');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Fetch stocks on mount and schedule live updates every 60s
+  useEffect(() => {
+    Promise.resolve().then(() => {
+      fetchStocksFromAPI();
+    });
+    const interval = setInterval(fetchStocksFromAPI, 60000);
     return () => clearInterval(interval);
-  }, [watchlist]);
+  }, [fetchStocksFromAPI]);
 
   const handleSort = (field: keyof StockData) => {
     if (sortField === field) {
@@ -149,14 +167,14 @@ export default function WatchlistPage() {
     const formattedSym = cleanSym.includes('.') ? cleanSym : `${cleanSym}.NS`;
 
     // Prevent duplicate entries
-    if (watchlist.map(s => s.toUpperCase()).includes(formattedSym)) {
+    if (stocks.some(s => s.symbol.toUpperCase() === formattedSym.toUpperCase())) {
       setAddError(`${cleanSym} is already in your watchlist.`);
       return;
     }
 
     try {
       setAddLoading(true);
-      // Validate symbol using the API route
+      // 1. Validate symbol using Next.js live Yahoo Finance API
       const res = await fetch(`/api/watchlist?symbols=${formattedSym}`);
       if (!res.ok) throw new Error();
       const testData = await res.json();
@@ -166,9 +184,40 @@ export default function WatchlistPage() {
         return;
       }
 
-      // Add to list and persist
-      const updatedList = [...watchlist, formattedSym];
-      persistWatchlist(updatedList);
+      const validatedStock = testData[0];
+
+      // 2. Add to Mongoose backend API (if online)
+      let dbStock = { symbol: validatedStock.symbol, name: validatedStock.name, isFavourite: false };
+      if (!apiFailed) {
+        try {
+          const backendPostRes = await fetch(`${BACKEND_API_URL}/stocks`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              symbol: validatedStock.symbol,
+              name: validatedStock.name,
+              isFavourite: false
+            })
+          });
+          if (backendPostRes.ok) {
+            dbStock = await backendPostRes.json();
+          } else {
+            const errData = await backendPostRes.json();
+            throw new Error(errData.error || 'Failed to add stock to backend database');
+          }
+        } catch (backendErr) {
+          console.error('Backend save error:', backendErr);
+          setAddError('Database save failed, operating locally');
+        }
+      }
+
+      // Add to state list
+      const nextStock: StockData = {
+        ...validatedStock,
+        name: dbStock.name,
+        isFavourite: !!dbStock.isFavourite
+      };
+      setStocks(prev => [nextStock, ...prev]);
       setNewSymbol('');
     } catch {
       setAddError(`Failed to fetch validation stats for ${cleanSym}.`);
@@ -177,24 +226,143 @@ export default function WatchlistPage() {
     }
   };
 
-  // Delete dynamic ticker action
-  const handleDeleteStock = (symToDelete: string) => {
-    const updatedList = watchlist.filter(s => s.toLowerCase() !== symToDelete.toLowerCase());
-    persistWatchlist(updatedList);
+  // Toggle Favourite Status
+  const handleToggleFavourite = async (symbolToToggle: string, currentFavStatus: boolean) => {
+    try {
+      const nextFavStatus = !currentFavStatus;
+
+      // 1. Optimistic UI update
+      setStocks(prev => prev.map(s => {
+        if (s.symbol.toUpperCase() === symbolToToggle.toUpperCase()) {
+          return { ...s, isFavourite: nextFavStatus };
+        }
+        return s;
+      }));
+
+      // 2. Call backend if online
+      if (!apiFailed) {
+        const res = await fetch(`${BACKEND_API_URL}/stocks/${encodeURIComponent(symbolToToggle)}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ isFavourite: nextFavStatus })
+        });
+        if (!res.ok) {
+          throw new Error('Failed to toggle favourite status in database');
+        }
+      }
+    } catch (err) {
+      console.error('Toggle favorite error:', err);
+      // Revert optimistic update on failure
+      setStocks(prev => prev.map(s => {
+        if (s.symbol.toUpperCase() === symbolToToggle.toUpperCase()) {
+          return { ...s, isFavourite: currentFavStatus };
+        }
+        return s;
+      }));
+      alert(err instanceof Error ? err.message : 'Failed to update favorite status');
+    }
   };
 
-  // Reset to default portfolio
-  const handleResetWatchlist = () => {
-    if (window.confirm("Are you sure you want to restore the default institutional-grade stock watchlist?")) {
-      persistWatchlist(DEFAULT_SYMBOLS);
+  // Delete dynamic ticker action
+  const handleDeleteStock = async (symToDelete: string) => {
+    if (!confirm(`Are you sure you want to delete ${symToDelete.split('.')[0]} from the watchlist?`)) return;
+
+    try {
+      // 1. Call backend if online
+      if (!apiFailed) {
+        const res = await fetch(`${BACKEND_API_URL}/stocks/${encodeURIComponent(symToDelete)}`, {
+          method: 'DELETE'
+        });
+        if (!res.ok) {
+          throw new Error('Failed to delete stock from database');
+        }
+      }
+
+      // 2. Update local state
+      setStocks(prev => prev.filter(s => s.symbol.toLowerCase() !== symToDelete.toLowerCase()));
+    } catch (err) {
+      console.error('Delete stock error:', err);
+      alert(err instanceof Error ? err.message : 'Failed to delete stock');
+    }
+  };
+
+  // Reset watchlist back to standard institutional defaults
+  const handleResetWatchlist = async () => {
+    if (!window.confirm("Are you sure you want to restore the default institutional-grade stock watchlist?")) return;
+
+    try {
+      setLoading(true);
+      if (!apiFailed) {
+        // Delete all current stocks
+        await Promise.all(
+          stocks.map(s =>
+            fetch(`${BACKEND_API_URL}/stocks/${encodeURIComponent(s.symbol)}`, { method: 'DELETE' }).catch(() => {})
+          )
+        );
+
+        // Add back the default institutional-grade seed list
+        const defaultSeeds = [
+          { symbol: 'VOLTAMP.NS', name: 'Voltamp Transformers Ltd.' },
+          { symbol: 'TDPOWERSYS.NS', name: 'TD Power Systems Ltd.' },
+          { symbol: 'TARIL.NS', name: 'Transformers & Rectifiers (India) Ltd.' },
+          { symbol: 'PRECWIRE.NS', name: 'Precision Wires India Ltd.' },
+          { symbol: 'MAZDOCK.NS', name: 'Mazagon Dock Shipbuilders Ltd.' },
+          { symbol: 'KIRLOSENG.NS', name: 'Kirloskar Oil Engines Ltd.' },
+          { symbol: 'HSCL.NS', name: 'Himadri Speciality Chemical Ltd.' },
+          { symbol: 'HFCL.NS', name: 'HFCL Ltd.' },
+          { symbol: 'E2E.NS', name: 'E2E Networks Ltd.' },
+          { symbol: 'BECTORFOOD.NS', name: 'Mrs. Bectors Food Specialities Ltd.' },
+          { symbol: 'AURIONPRO.NS', name: 'Aurionpro Solutions Ltd.' },
+          { symbol: 'KEI.NS', name: 'KEI Industries Ltd.' },
+          { symbol: 'COFORGE.NS', name: 'Coforge Ltd.' },
+          { symbol: 'MANORAMA.NS', name: 'Manorama Industries Ltd.' },
+          { symbol: 'ZENTEC.NS', name: 'Zen Technologies Ltd.' },
+          { symbol: 'APARINDS.NS', name: 'Apar Industries Ltd.' },
+          { symbol: 'SHILCTECH.NS', name: 'Shilpa Medicare Ltd.' },
+          { symbol: 'INOXINDIA.NS', name: 'Inox India Ltd.' },
+          { symbol: 'KRN.NS', name: 'KRN Heat Exchanger and Refrigeration Ltd.' },
+          { symbol: 'IDEAFORGE.NS', name: 'ideaForge Technology Ltd.' },
+          { symbol: 'GRSE.NS', name: 'Garden Reach Shipbuilders & Engineers Ltd.' },
+          { symbol: 'PARAS.NS', name: 'Paras Defence and Space Technologies Ltd.' },
+          { symbol: 'ASTRAMICRO.NS', name: 'Astra Microwave Products Ltd.' },
+          { symbol: 'SYRMA.NS', name: 'Syrma SGS Technology Ltd.' },
+          { symbol: 'KAYNES.NS', name: 'Kaynes Technology India Ltd.' },
+          { symbol: 'AEROFLEX.NS', name: 'Aeroflex Industries Ltd.' },
+          { symbol: 'KMEW.NS', name: 'Knowledge Marine & Export Works Ltd.' },
+          { symbol: 'GVT&D.NS', name: 'GE Vernova T&D India Ltd.' },
+          { symbol: 'CGPOWER.NS', name: 'CG Power & Industrial Solutions Ltd.' },
+          { symbol: 'APOLLO.NS', name: 'Apollo Hospitals Enterprise Ltd.' },
+          { symbol: 'UNIMECH.NS', name: 'Unimech Aerospace and Manufacture Ltd.' },
+          { symbol: 'DATAPATTNS.NS', name: 'Data Patterns (India) Ltd.' },
+          { symbol: 'MTARTECH.NS', name: 'MTAR Technologies Ltd.' },
+          { symbol: 'NETWEB.NS', name: 'Netweb Technologies India Ltd.' }
+        ];
+
+        await Promise.all(
+          defaultSeeds.map(item =>
+            fetch(`${BACKEND_API_URL}/stocks`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ symbol: item.symbol, name: item.name, isFavourite: false })
+            }).catch(() => {})
+          )
+        );
+      }
+      await fetchStocksFromAPI();
+    } catch (err) {
+      console.error('Reset watchlist error:', err);
+    } finally {
+      setLoading(false);
     }
   };
 
   const filteredAndSortedStocks = stocks
-    .filter(stock => 
-      stock.symbol.toLowerCase().includes(search.toLowerCase()) || 
-      stock.name.toLowerCase().includes(search.toLowerCase())
-    )
+    .filter(stock => {
+      const matchesSearch = stock.symbol.toLowerCase().includes(search.toLowerCase()) || 
+                           stock.name.toLowerCase().includes(search.toLowerCase());
+      const matchesFav = showFavouritesOnly ? !!stock.isFavourite : true;
+      return matchesSearch && matchesFav;
+    })
     .sort((a, b) => {
       const aVal = a[sortField];
       const bVal = b[sortField];
@@ -275,7 +443,7 @@ export default function WatchlistPage() {
               Institutional Screener
             </h1>
             <p className="text-sm text-slate-500 dark:text-slate-400 mt-2 max-w-xl font-medium leading-relaxed">
-              Build and curate your own portfolio workspace in real-time. Dynamic search, live ticker validators, persistent browser watchlist reloads, and tabular CSV exports.
+              Build and curate your own portfolio workspace in real-time. Dynamic search, live ticker validators, persistent backend watchlist reloads, and tabular CSV exports.
             </p>
           </div>
 
@@ -347,18 +515,54 @@ export default function WatchlistPage() {
           </div>
         </div>
 
+        {/* Watchlist Mode Tabs */}
+        <div className="flex gap-2 mb-6 p-1 bg-slate-200/50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-md">
+          <button
+            type="button"
+            onClick={() => setShowFavouritesOnly(false)}
+            className={`flex-1 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition-all ${
+              !showFavouritesOnly
+                ? 'bg-white dark:bg-slate-800 text-blue-500 dark:text-blue-400 shadow-md border border-slate-200/20'
+                : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+            }`}
+          >
+            All Watchlist ({stocks.length})
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowFavouritesOnly(true)}
+            className={`flex-1 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-1.5 ${
+              showFavouritesOnly
+                ? 'bg-white dark:bg-slate-800 text-yellow-500 shadow-md border border-slate-200/20'
+                : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+            }`}
+          >
+            ★ Starred Favorites ({stocks.filter(s => s.isFavourite).length})
+          </button>
+        </div>
+
+        {apiFailed && (
+          <div className="mb-6 px-4 py-3 bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-extrabold rounded-2xl flex items-center justify-between animate-pulse max-w-md">
+            <span>⚠️ MongoDB Database API Offline</span>
+            <span className="text-[10px] bg-red-500/25 px-2 py-0.5 rounded-full uppercase">Local Mode</span>
+          </div>
+        )}
+
         {/* Live table list */}
         <div className="bg-white dark:bg-slate-900/50 backdrop-blur-md rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden">
           {loading && stocks.length === 0 ? (
             <div className="p-20 text-center flex flex-col items-center justify-center gap-4">
               <RefreshCw className="w-8 h-8 text-blue-500 animate-spin" />
-              <p className="text-slate-500 text-sm font-semibold">Compiling live portfolio valuations...</p>
+              <p className="text-slate-500 text-sm font-semibold">Compiling live database portfolio valuations...</p>
             </div>
           ) : error && stocks.length === 0 ? (
             <div className="p-20 text-center text-red-500 font-semibold">{error}</div>
-          ) : watchlist.length === 0 ? (
+          ) : filteredAndSortedStocks.length === 0 ? (
             <div className="p-20 text-center text-slate-500 font-semibold">
-              Your watchlist is empty. Add standard Yahoo Finance tickers above to build your custom portfolio.
+              {showFavouritesOnly 
+                ? "No starred favorite stocks found. Star your key tickers to filter them here!"
+                : "Your watchlist is empty. Add standard Yahoo Finance tickers above to build your custom portfolio."
+              }
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -388,14 +592,28 @@ export default function WatchlistPage() {
                         key={idx} 
                         className="hover:bg-slate-50 dark:hover:bg-slate-800/20 transition-colors group"
                       >
-                        {/* Ticker link to detailed cockpit */}
+                        {/* Ticker link to detailed cockpit with favorite toggle */}
                         <td className="p-4 font-bold text-slate-900 dark:text-white sticky left-0 bg-white dark:bg-slate-900 group-hover:bg-slate-50 dark:group-hover:bg-slate-850/60 z-10 transition-colors shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
-                          <span 
-                            onClick={() => router.push(`/watchlist/${encodeURIComponent(stock.symbol)}`)}
-                            className="text-slate-950 dark:text-slate-100 hover:text-blue-500 dark:hover:text-blue-400 transition-colors cursor-pointer underline"
-                          >
-                            {stock.symbol.replace('.NS', '')}
-                          </span>
+                          <div className="flex items-center gap-2.5">
+                            <button
+                              type="button"
+                              onClick={() => handleToggleFavourite(stock.symbol, !!stock.isFavourite)}
+                              className={`p-1 rounded-lg transition-all hover:scale-115 ${
+                                stock.isFavourite
+                                  ? 'text-yellow-450 hover:text-yellow-500'
+                                  : 'text-slate-300 dark:text-slate-700 hover:text-slate-500'
+                              }`}
+                              title={stock.isFavourite ? "Remove from Favourites" : "Mark as Favourite"}
+                            >
+                              <Star className={`w-4 h-4 ${stock.isFavourite ? 'fill-yellow-400 text-yellow-400' : ''}`} />
+                            </button>
+                            <span 
+                              onClick={() => router.push(`/watchlist/${encodeURIComponent(stock.symbol)}`)}
+                              className="text-slate-950 dark:text-slate-100 hover:text-blue-500 dark:hover:text-blue-400 transition-colors cursor-pointer underline"
+                            >
+                              {stock.symbol.replace('.NS', '')}
+                            </span>
+                          </div>
                         </td>
                         <td className="p-4 font-medium text-slate-500 dark:text-slate-400">{stock.name}</td>
                         <td className="p-4 text-right font-bold">₹{stock.price.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
@@ -439,7 +657,7 @@ export default function WatchlistPage() {
         <div className="mt-8 flex items-start gap-3 p-4 bg-blue-500/5 dark:bg-blue-500/10 rounded-2xl border border-blue-500/20 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
           <Info className="w-4 h-4 text-blue-500 flex-shrink-0 mt-0.5" />
           <div>
-            <span className="font-semibold text-blue-600 dark:text-blue-400">Stock Market Disclaimer:</span> Investment in securities market are subject to market risks, read all the related documents carefully before investing. Fundamental ratio analysis and technical indicators presented on this cockpit are fetched dynamically from active corporate filings and standard market quote tickers in real-time. Past performance is not indicative of future investment returns.
+            <span className="font-semibold text-blue-600 dark:text-blue-400">Stock Market Disclaimer:</span> Investment in securities market are subject to market risks, read all the related documents carefully before investing. Fundamental ratio analysis and technical indicators presented on this cockpit are fetched dynamically from active database corporate filings and standard market quote tickers in real-time. Past performance is not indicative of future investment returns.
           </div>
         </div>
 
