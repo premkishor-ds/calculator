@@ -28,7 +28,7 @@ export async function GET(
     // Fetch live summary, historical statements in parallel
     const [summaryRes, balanceSheetRes, financialsRes, cashFlowRes, quarterlyFinancialsRes] = await Promise.allSettled([
       yahooFinance.quoteSummary(symbol, {
-        modules: ['price', 'summaryDetail', 'defaultKeyStatistics', 'financialData', 'majorHoldersBreakdown']
+        modules: ['price', 'summaryDetail', 'defaultKeyStatistics', 'financialData', 'majorHoldersBreakdown', 'assetProfile']
       }),
       yahooFinance.fundamentalsTimeSeries(symbol, {
         period1,
@@ -76,6 +76,8 @@ export async function GET(
     const financialData = (summary.financialData || {}) as any;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const holders = (summary.majorHoldersBreakdown || {}) as any;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const profile = (summary.assetProfile || {}) as any;
 
     const regularPrice = price.regularMarketPrice || 0;
     const bv = stats.bookValue || 0;
@@ -110,6 +112,33 @@ export async function GET(
       twoHundredDayAverage: detail.twoHundredDayAverage || stats.twoHundredDayAverage || 0,
       fiftyTwoWeekHigh: detail.fiftyTwoWeekHigh || stats.fiftyTwoWeekHigh || 0,
       fiftyTwoWeekLow: detail.fiftyTwoWeekLow || stats.fiftyTwoWeekLow || 0,
+      
+      // Expanded dynamic ratio additions
+      pegRatio: stats.pegRatio || 0,
+      priceToSales: detail.priceToSalesTrailing12Months || stats.priceToSalesTrailing12Months || 0,
+      enterpriseValue: stats.enterpriseValue || 0,
+      evToEbitda: stats.enterpriseToEbitda || 0,
+      evToRevenue: stats.enterpriseToRevenue || 0,
+      operatingMargin: (financialData.operatingMargins || 0) * 100,
+      profitMargin: (financialData.profitMargins || 0) * 100,
+      grossMargin: (financialData.grossMargins || 0) * 100,
+    };
+
+    // Format company profile info
+    const corporateProfile = {
+      sector: profile.sector || 'N/A',
+      industry: profile.industry || 'N/A',
+      employees: profile.fullTimeEmployees || 0,
+      website: profile.website || '',
+      city: profile.city || 'N/A',
+      summary: profile.longBusinessSummary || 'No summary available.',
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      officers: (profile.companyOfficers || []).map((off: any) => ({
+        name: off.name || 'N/A',
+        title: off.title || 'N/A',
+        age: off.age || null,
+        pay: off.totalPay || null,
+      })).slice(0, 5),
     };
 
     // Format historical statements (10 years)
@@ -141,6 +170,8 @@ export async function GET(
       operatingCashFlow: item.operatingCashFlow || item.netCashFromOperatingActivities || 0,
       investingCashFlow: item.investingCashFlow || item.netCashFromInvestingActivities || 0,
       financingCashFlow: item.financingCashFlow || item.netCashFromFinancingActivities || 0,
+      capitalExpenditure: item.capitalExpenditure || item.capitalExpenditureReported || 0,
+      netChangeInCash: item.changesInCash || 0,
       freeCashFlow: item.freeCashFlow || 0,
     }));
 
@@ -261,6 +292,7 @@ export async function GET(
 
     return NextResponse.json({
       ratios,
+      profile: corporateProfile,
       balanceSheet: balanceSheetData,
       profitLoss: profitLossData,
       cashFlow: cashFlowData,

@@ -17,7 +17,9 @@ import {
   Users, 
   CheckCircle, 
   AlertTriangle,
-  Calendar
+  Calendar,
+  Globe,
+  Briefcase
 } from 'lucide-react';
 
 interface Ratios {
@@ -44,6 +46,14 @@ interface Ratios {
   twoHundredDayAverage: number;
   fiftyTwoWeekHigh: number;
   fiftyTwoWeekLow: number;
+  pegRatio: number;
+  priceToSales: number;
+  enterpriseValue: number;
+  evToEbitda: number;
+  evToRevenue: number;
+  operatingMargin: number;
+  profitMargin: number;
+  grossMargin: number;
 }
 
 interface BalanceSheetItem {
@@ -81,6 +91,8 @@ interface CashFlowItem {
   operatingCashFlow: number;
   investingCashFlow: number;
   financingCashFlow: number;
+  capitalExpenditure: number; 
+  netChangeInCash: number; 
   freeCashFlow: number;
 }
 
@@ -93,8 +105,26 @@ interface PeerItem {
   divYield: number;
 }
 
+interface OfficerItem {
+  name: string;
+  title: string;
+  age: number | null;
+  pay: number | null;
+}
+
+interface CorporateProfile {
+  sector: string;
+  industry: string;
+  employees: number;
+  website: string;
+  city: string;
+  summary: string;
+  officers: OfficerItem[];
+}
+
 interface StockDetails {
   ratios: Ratios;
+  profile: CorporateProfile;
   balanceSheet: BalanceSheetItem[];
   profitLoss: ProfitLossItem[];
   cashFlow: CashFlowItem[];
@@ -109,7 +139,7 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
   const [data, setData] = useState<StockDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [activeTab, setActiveTab] = useState<'ratios' | 'pl' | 'qpl' | 'bs' | 'cf' | 'peers' | 'shareholding'>('ratios');
+  const [activeTab, setActiveTab] = useState<'ratios' | 'qpl' | 'pl' | 'bs' | 'cf' | 'peers' | 'shareholding' | 'about'>('ratios');
 
   const decodedSymbol = decodeURIComponent(resolvedParams.symbol);
 
@@ -165,12 +195,11 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
     );
   }
 
-  const { ratios, balanceSheet, profitLoss, cashFlow, quarterlyProfitLoss, peers, pros, cons } = data;
+  const { ratios, profile, balanceSheet, profitLoss, cashFlow, quarterlyProfitLoss, peers, pros, cons } = data;
   const isPositive = ratios.change >= 0;
 
-  // Render quarterly statements sorted chronologically (oldest at top, newest at bottom)
+  // Render statements chronologically
   const chronologicalQuarterly = quarterlyProfitLoss ? [...quarterlyProfitLoss].reverse() : [];
-  // Render annual statements chronologically
   const chronologicalAnnual = profitLoss ? [...profitLoss].reverse() : [];
   const chronologicalBS = balanceSheet ? [...balanceSheet].reverse() : [];
   const chronologicalCF = cashFlow ? [...cashFlow].reverse() : [];
@@ -244,6 +273,16 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
             Overview & Ratios
           </button>
           <button
+            onClick={() => setActiveTab('about')}
+            className={`pb-4 px-2 text-sm font-semibold border-b-2 whitespace-nowrap transition-all ${
+              activeTab === 'about'
+                ? 'border-blue-500 text-blue-500 dark:text-blue-400'
+                : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+            }`}
+          >
+            About & Profile
+          </button>
+          <button
             onClick={() => setActiveTab('qpl')}
             className={`pb-4 px-2 text-sm font-semibold border-b-2 whitespace-nowrap transition-all ${
               activeTab === 'qpl'
@@ -251,7 +290,7 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
                 : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
             }`}
           >
-            Quarterly Results
+            Quarterly Results (Recent)
           </button>
           <button
             onClick={() => setActiveTab('pl')}
@@ -385,6 +424,46 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
               </div>
             </div>
 
+            {/* Valuation & Margins panel */}
+            <div className="md:col-span-3 bg-white dark:bg-slate-900/50 backdrop-blur-md rounded-3xl border border-slate-200 dark:border-slate-800 p-6 sm:p-8 shadow-xl">
+              <h3 className="text-lg font-bold mb-6 flex items-center gap-2 text-slate-900 dark:text-white">
+                <Layers className="w-5 h-5 text-blue-500" /> Advanced Valuation & Enterprise Margins
+              </h3>
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-6">
+                <div className="p-4 bg-slate-50 dark:bg-slate-800/40 rounded-2xl">
+                  <span className="text-xs text-slate-400 font-semibold uppercase">PEG Ratio</span>
+                  <p className="text-lg font-bold text-slate-800 dark:text-white mt-1">{ratios.pegRatio > 0 ? ratios.pegRatio.toFixed(2) : '--'}</p>
+                </div>
+                <div className="p-4 bg-slate-50 dark:bg-slate-800/40 rounded-2xl">
+                  <span className="text-xs text-slate-400 font-semibold uppercase">Price-to-Sales (P/S)</span>
+                  <p className="text-lg font-bold text-slate-800 dark:text-white mt-1">{ratios.priceToSales > 0 ? ratios.priceToSales.toFixed(2) : '--'}</p>
+                </div>
+                <div className="p-4 bg-slate-50 dark:bg-slate-800/40 rounded-2xl col-span-1 sm:col-span-2">
+                  <span className="text-xs text-slate-400 font-semibold uppercase">Enterprise Value (EV)</span>
+                  <p className="text-lg font-bold text-slate-800 dark:text-white mt-1 font-sans">
+                    {ratios.enterpriseValue > 0 ? `₹${(ratios.enterpriseValue / 10000000).toFixed(2)}Cr` : '--'}
+                  </p>
+                </div>
+                <div className="p-4 bg-slate-50 dark:bg-slate-800/40 rounded-2xl">
+                  <span className="text-xs text-slate-400 font-semibold uppercase">EV / EBITDA</span>
+                  <p className="text-lg font-bold text-slate-800 dark:text-white mt-1">{ratios.evToEbitda > 0 ? ratios.evToEbitda.toFixed(2) : '--'}</p>
+                </div>
+                <div className="p-4 bg-slate-50 dark:bg-slate-800/40 rounded-2xl">
+                  <span className="text-xs text-slate-400 font-semibold uppercase">EV / Revenue</span>
+                  <p className="text-lg font-bold text-slate-800 dark:text-white mt-1">{ratios.evToRevenue > 0 ? ratios.evToRevenue.toFixed(2) : '--'}</p>
+                </div>
+                <div className="p-4 bg-slate-50 dark:bg-slate-800/40 rounded-2xl">
+                  <span className="text-xs text-slate-400 font-semibold uppercase">Operating Margin</span>
+                  <p className="text-lg font-bold text-emerald-500 mt-1">{ratios.operatingMargin !== 0 ? `${ratios.operatingMargin.toFixed(2)}%` : '--'}</p>
+                </div>
+                <div className="p-4 bg-slate-50 dark:bg-slate-800/40 rounded-2xl">
+                  <span className="text-xs text-slate-400 font-semibold uppercase">Net Profit Margin</span>
+                  <p className="text-lg font-bold text-emerald-500 mt-1">{ratios.profitMargin !== 0 ? `${ratios.profitMargin.toFixed(2)}%` : '--'}</p>
+                </div>
+              </div>
+            </div>
+
             {/* Pros & Cons Section */}
             <div className="md:col-span-3 bg-white dark:bg-slate-900/50 backdrop-blur-md rounded-3xl border border-slate-200 dark:border-slate-800 p-6 sm:p-8 shadow-xl">
               <h3 className="text-lg font-bold mb-6 text-slate-900 dark:text-white">Vision Analysis: Pros & Cons</h3>
@@ -427,11 +506,110 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
           </div>
         )}
 
+        {activeTab === 'about' && (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Corporate Profile overview */}
+            <div className="lg:col-span-2 space-y-6">
+              <div className="bg-white dark:bg-slate-900/50 backdrop-blur-md rounded-3xl border border-slate-200 dark:border-slate-800 p-6 sm:p-8 shadow-xl">
+                <h3 className="text-lg font-bold mb-4 flex items-center gap-2 text-slate-900 dark:text-white">
+                  <Briefcase className="w-5 h-5 text-blue-500" /> Corporate Profile & Summary
+                </h3>
+                <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-300 font-sans whitespace-pre-line">
+                  {profile.summary}
+                </p>
+              </div>
+            </div>
+
+            {/* General Corporate Stats and website link */}
+            <div className="space-y-6">
+              <div className="bg-white dark:bg-slate-900/50 backdrop-blur-md rounded-3xl border border-slate-200 dark:border-slate-800 p-6 shadow-xl">
+                <h3 className="text-base font-bold mb-6 flex items-center gap-2 text-slate-900 dark:text-white">
+                  <Globe className="w-5 h-5 text-blue-500" /> Corporate Identity
+                </h3>
+                
+                <div className="space-y-4 text-sm">
+                  <div className="flex justify-between items-center py-2.5 border-b border-slate-100 dark:border-slate-800/60">
+                    <span className="text-xs font-semibold text-slate-450 uppercase">Sector</span>
+                    <span className="font-bold text-slate-700 dark:text-white">{profile.sector}</span>
+                  </div>
+                  <div className="flex justify-between items-center py-2.5 border-b border-slate-100 dark:border-slate-800/60">
+                    <span className="text-xs font-semibold text-slate-450 uppercase">Industry</span>
+                    <span className="font-bold text-slate-700 dark:text-white">{profile.industry}</span>
+                  </div>
+                  <div className="flex justify-between items-center py-2.5 border-b border-slate-100 dark:border-slate-800/60">
+                    <span className="text-xs font-semibold text-slate-450 uppercase">Full-Time Employees</span>
+                    <span className="font-bold text-slate-700 dark:text-white">
+                      {profile.employees > 0 ? profile.employees.toLocaleString('en-IN') : 'N/A'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center py-2.5 border-b border-slate-100 dark:border-slate-800/60">
+                    <span className="text-xs font-semibold text-slate-450 uppercase">HQ City</span>
+                    <span className="font-bold text-slate-700 dark:text-white">{profile.city}</span>
+                  </div>
+                  {profile.website && (
+                    <div className="flex justify-between items-center py-2.5">
+                      <span className="text-xs font-semibold text-slate-455 uppercase">Corporate Website</span>
+                      <a href={profile.website} target="_blank" rel="noopener noreferrer" className="font-bold text-blue-500 hover:underline flex items-center gap-1">
+                        Visit Website <Globe className="w-3.5 h-3.5" />
+                      </a>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Key Executive officers table */}
+            <div className="lg:col-span-3 bg-white dark:bg-slate-900/50 backdrop-blur-md rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden">
+              <div className="p-6 border-b border-slate-200 dark:border-slate-800 flex items-center gap-2">
+                <Users className="w-5 h-5 text-blue-500" />
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white">Key Executive Officers & Governance</h3>
+              </div>
+              {!profile.officers || profile.officers.length === 0 ? (
+                <div className="p-12 text-center text-slate-500 font-medium">No corporate officers list reported for this stock symbol.</div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse min-w-[700px]">
+                    <thead>
+                      <tr className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-800 text-xs font-bold uppercase tracking-wider text-slate-500">
+                        <th className="p-4">Officer Name</th>
+                        <th className="p-4">Title / Role</th>
+                        <th className="p-4 text-center">Age</th>
+                        <th className="p-4 text-right">Compensation (INR)</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-150 dark:divide-slate-800 text-sm">
+                      {profile.officers.map((off, idx) => (
+                        <tr key={idx} className="hover:bg-slate-50 dark:hover:bg-slate-800/20 transition-colors">
+                          <td className="p-4 font-bold text-slate-900 dark:text-white">{off.name}</td>
+                          <td className="p-4 font-medium text-slate-600 dark:text-slate-350">{off.title}</td>
+                          <td className="p-4 text-center font-medium">{off.age ? off.age : '--'}</td>
+                          <td className="p-4 text-right font-bold text-slate-800 dark:text-slate-100">
+                            {off.pay ? `₹${(off.pay / 10000000).toFixed(2)}Cr` : '--'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
+          </div>
+        )}
+
         {activeTab === 'qpl' && (
           <div className="bg-white dark:bg-slate-900/50 backdrop-blur-md rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden">
-            <div className="p-6 border-b border-slate-200 dark:border-slate-800 flex items-center gap-2">
-              <Calendar className="w-5 h-5 text-blue-500" />
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white">Quarterly Financial Results (Last 12 Quarters)</h3>
+            <div className="p-6 border-b border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-2">
+                <Calendar className="w-5 h-5 text-blue-500" />
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white">Quarterly Financial Results (Recent Quarters)</h3>
+              </div>
+              <div className="flex items-start gap-1.5 p-2 bg-blue-500/5 dark:bg-blue-500/10 rounded-xl border border-blue-500/10 max-w-md text-xs leading-relaxed text-slate-500 dark:text-slate-400">
+                <Info className="w-3.5 h-3.5 text-blue-500 flex-shrink-0 mt-0.5" />
+                <span>
+                  Yahoo Finance&apos;s public API limits active time-series queries to the last 5 consecutive quarters for international NSE/BSE securities.
+                </span>
+              </div>
             </div>
             {!chronologicalQuarterly || chronologicalQuarterly.length === 0 ? (
               <div className="p-12 text-center text-slate-500 font-medium">Historical quarterly statements are currently unavailable for this stock symbol.</div>
@@ -558,7 +736,7 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
           <div className="bg-white dark:bg-slate-900/50 backdrop-blur-md rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden">
             <div className="p-6 border-b border-slate-200 dark:border-slate-800 flex items-center gap-2">
               <DollarSign className="w-5 h-5 text-blue-500" />
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white">Annual Cash Flow Statement (10-Year Trend)</h3>
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white">Annual Cash Flow Statement (10-Year High-Density Trend)</h3>
             </div>
             {!chronologicalCF || chronologicalCF.length === 0 ? (
               <div className="p-12 text-center text-slate-500 font-medium">Historical Cash Flow data is currently unavailable for this stock symbol.</div>
@@ -571,7 +749,9 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
                       <th className="p-4 text-right">Operating Cash Flow</th>
                       <th className="p-4 text-right">Investing Cash Flow</th>
                       <th className="p-4 text-right">Financing Cash Flow</th>
-                      <th className="p-4 text-right font-bold text-slate-850 dark:text-white">Free Cash Flow</th>
+                      <th className="p-4 text-right font-semibold">Capital Expenditure (CapEx)</th>
+                      <th className="p-4 text-right font-semibold text-slate-700 dark:text-slate-350">Net Cash Flow</th>
+                      <th className="p-4 text-right font-bold text-slate-850 dark:text-white">Free Cash Flow (FCF)</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-150 dark:divide-slate-800 text-sm">
@@ -586,6 +766,12 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
                         </td>
                         <td className={`p-4 text-right ${item.financingCashFlow >= 0 ? 'text-slate-700 dark:text-slate-350' : 'text-red-500'}`}>
                           ₹{item.financingCashFlow ? (item.financingCashFlow / 10000000).toFixed(2) : '0.00'}Cr
+                        </td>
+                        <td className="p-4 text-right font-medium text-red-500">
+                          ₹{item.capitalExpenditure ? (Math.abs(item.capitalExpenditure) / 10000000).toFixed(2) : '0.00'}Cr
+                        </td>
+                        <td className={`p-4 text-right font-semibold ${item.netChangeInCash >= 0 ? 'text-blue-500' : 'text-red-500'}`}>
+                          ₹{item.netChangeInCash ? (item.netChangeInCash / 10000000).toFixed(2) : '0.00'}Cr
                         </td>
                         <td className={`p-4 text-right font-bold ${item.freeCashFlow >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
                           ₹{item.freeCashFlow ? (item.freeCashFlow / 10000000).toFixed(2) : '0.00'}Cr
@@ -663,7 +849,7 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
               <div className="space-y-6">
                 <div>
                   <div className="flex justify-between items-center text-sm font-semibold mb-2">
-                    <span className="text-slate-600 dark:text-slate-300">Promoter Holding</span>
+                    <span className="text-slate-600 dark:text-slate-350">Promoter Holding</span>
                     <span className="text-blue-500">{ratios.promHold.toFixed(2)}%</span>
                   </div>
                   <div className="w-full bg-slate-100 dark:bg-slate-800 h-3 rounded-full overflow-hidden">
@@ -673,7 +859,7 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
 
                 <div>
                   <div className="flex justify-between items-center text-sm font-semibold mb-2">
-                    <span className="text-slate-600 dark:text-slate-300">Institutional Holding</span>
+                    <span className="text-slate-600 dark:text-slate-350">Institutional Holding</span>
                     <span className="text-cyan-500">{ratios.instHold.toFixed(2)}%</span>
                   </div>
                   <div className="w-full bg-slate-100 dark:bg-slate-800 h-3 rounded-full overflow-hidden">
@@ -683,7 +869,7 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
 
                 <div>
                   <div className="flex justify-between items-center text-sm font-semibold mb-2">
-                    <span className="text-slate-600 dark:text-slate-300">Public & Others</span>
+                    <span className="text-slate-600 dark:text-slate-350">Public & Others</span>
                     <span className="text-emerald-500">{ratios.pubHold.toFixed(2)}%</span>
                   </div>
                   <div className="w-full bg-slate-100 dark:bg-slate-800 h-3 rounded-full overflow-hidden">
