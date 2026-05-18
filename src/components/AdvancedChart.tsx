@@ -38,10 +38,11 @@ interface Props {
 
 /* ─── Constants ──────────────────────────────────────────────── */
 const MA_LIST = [
-  { period: 9,   color: '#f59e0b', label: 'MA9'   },
-  { period: 20,  color: '#3b82f6', label: 'MA20'  },
-  { period: 50,  color: '#a855f7', label: 'MA50'  },
-  { period: 200, color: '#ef4444', label: 'MA200' },
+  { period: 9,   color: '#ffffff', label: 'MA9'   },
+  { period: 20,  color: '#f97316', label: 'MA20'  },
+  { period: 50,  color: '#22c55e', label: 'MA50'  },
+  { period: 100, color: '#ef4444', label: 'MA100' },
+  { period: 200, color: '#3b82f6', label: 'MA200' },
 ] as const;
 
 const RANGES = ['1D', '1W', '1M', '1Y', '5Y', 'MAX'] as const;
