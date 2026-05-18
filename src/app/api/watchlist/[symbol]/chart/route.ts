@@ -1,8 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextRequest, NextResponse } from 'next/server';
-import YahooFinance from 'yahoo-finance2';
-
-const yahooFinance = new YahooFinance();
+import { yahooFinance } from '@/lib/yahoo-finance';
 
 export async function GET(
   request: NextRequest,

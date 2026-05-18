@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import YahooFinance from 'yahoo-finance2';
+import { yahooFinance } from '@/lib/yahoo-finance';
 import { WATCHLIST_SYMBOLS } from '../route';
-
-const yahooFinance = new YahooFinance();
 
 export async function GET(
   request: NextRequest,

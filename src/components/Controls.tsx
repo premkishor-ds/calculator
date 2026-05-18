@@ -33,18 +33,18 @@ export const Controls: React.FC<ControlsProps> = (props) => {
   } = props;
 
   return (
-    <section className="bg-white dark:bg-slate-900/50 backdrop-blur-md p-8 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xl mb-12">
-      <div className="flex justify-between items-center mb-8">
+    <section className="bg-white dark:bg-slate-900/50 backdrop-blur-md p-4 sm:p-6 lg:p-8 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xl mb-12">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-6 sm:mb-8">
         <h3 className="text-sm font-bold uppercase tracking-widest text-slate-400">Calculator Parameters</h3>
         <button 
           onClick={resetAll}
-          className="text-[10px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-full border border-slate-200 dark:border-slate-800 hover:bg-red-500/10 hover:text-red-500 hover:border-red-500/20 transition-all"
+          className="self-start sm:self-auto text-[10px] font-bold uppercase tracking-wider px-3 py-2 rounded-full border border-slate-200 dark:border-slate-800 hover:bg-red-500/10 hover:text-red-500 hover:border-red-500/20 transition-all touch-manipulation"
         >
           Reset to Defaults
         </button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
         
         <div className="space-y-8">
           <div className="space-y-4">
@@ -73,10 +73,10 @@ export const Controls: React.FC<ControlsProps> = (props) => {
               value={cagr} onChange={(e) => setCagr(Number(e.target.value))}
               className="w-full h-2 bg-slate-200 dark:bg-slate-800 rounded-lg appearance-none cursor-pointer accent-blue-500"
             />
-            <div className="flex gap-2">
-              <button onClick={() => setCagr(12)} className="text-[10px] px-2 py-1 rounded bg-slate-100 dark:bg-slate-800 hover:bg-blue-500 hover:text-white transition-colors">Safe (12%)</button>
-              <button onClick={() => setCagr(18)} className="text-[10px] px-2 py-1 rounded bg-slate-100 dark:bg-slate-800 hover:bg-blue-500 hover:text-white transition-colors">Growth (18%)</button>
-              <button onClick={() => setCagr(25)} className="text-[10px] px-2 py-1 rounded bg-slate-100 dark:bg-slate-800 hover:bg-blue-500 hover:text-white transition-colors">Alpha (25%)</button>
+            <div className="flex gap-2 flex-wrap">
+              <button onClick={() => setCagr(12)} className="text-[10px] px-2.5 py-1.5 rounded bg-slate-100 dark:bg-slate-800 hover:bg-blue-500 hover:text-white transition-colors touch-manipulation">Safe (12%)</button>
+              <button onClick={() => setCagr(18)} className="text-[10px] px-2.5 py-1.5 rounded bg-slate-100 dark:bg-slate-800 hover:bg-blue-500 hover:text-white transition-colors touch-manipulation">Growth (18%)</button>
+              <button onClick={() => setCagr(25)} className="text-[10px] px-2.5 py-1.5 rounded bg-slate-100 dark:bg-slate-800 hover:bg-blue-500 hover:text-white transition-colors touch-manipulation">Alpha (25%)</button>
             </div>
           </div>
 

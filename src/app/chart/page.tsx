@@ -13,10 +13,10 @@ import {
   Layers,
   Sparkles,
 } from 'lucide-react';
-import { DEFAULT_SYMBOLS } from '../../utils/symbols';
+import { DEFAULT_SYMBOLS } from '@/utils/symbols';
 
 /* Dynamically import the chart so it's client-only (no SSR) */
-const AdvancedChart = dynamic(() => import('../../components/AdvancedChart'), {
+const AdvancedChart = dynamic(() => import('@/components/AdvancedChart'), {
   ssr: false,
   loading: () => (
     <div className="flex-1 flex items-center justify-center bg-slate-950">
@@ -129,26 +129,25 @@ export default function TradingTerminalPage() {
 
   /* ── Render ────────────────────────────────────────────────── */
   return (
-    <div className="min-h-screen bg-slate-900 text-slate-100 flex flex-col font-sans overflow-hidden">
-
+    <div className="min-h-dvh lg:h-dvh lg:overflow-hidden bg-slate-900 text-slate-100 flex flex-col font-sans">
       {/* ── Header ────────────────────────────────────────────── */}
-      <header className="flex items-center justify-between px-6 py-3.5 bg-slate-950 border-b border-slate-800 shadow-md shrink-0">
-        <div className="flex items-center gap-4">
-          <Link href="/watchlist" className="p-2 hover:bg-slate-800 rounded-xl transition-all text-slate-400 hover:text-white">
+      <header className="flex flex-wrap items-center justify-between gap-3 px-4 sm:px-6 py-3 bg-slate-950 border-b border-slate-800 shadow-md shrink-0 safe-top">
+        <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+          <Link href="/watchlist" className="p-2 hover:bg-slate-800 rounded-xl transition-all text-slate-400 hover:text-white touch-manipulation shrink-0">
             <ArrowLeft className="w-5 h-5" />
           </Link>
-          <div className="flex items-center gap-2.5">
-            <span className="bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-500 bg-clip-text text-transparent font-extrabold text-xl tracking-tight">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-500 bg-clip-text text-transparent font-extrabold text-lg sm:text-xl tracking-tight truncate">
               VISION TERMINAL
             </span>
-            <span className="hidden md:inline-block px-2 py-0.5 bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[10px] font-extrabold rounded-full tracking-wide">
+            <span className="hidden md:inline-block px-2 py-0.5 bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[10px] font-extrabold rounded-full tracking-wide shrink-0">
               PRO
             </span>
           </div>
         </div>
 
         {/* Symbol search */}
-        <form onSubmit={handleSearch} className="relative w-full max-w-xs mx-4">
+        <form onSubmit={handleSearch} className="relative w-full sm:w-auto sm:flex-1 sm:max-w-xs order-last sm:order-none basis-full sm:basis-auto">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
           <input
             type="text"
@@ -177,10 +176,10 @@ export default function TradingTerminalPage() {
       </header>
 
       {/* ── Main Grid ─────────────────────────────────────────── */}
-      <main className="flex-1 grid grid-cols-1 lg:grid-cols-12 overflow-hidden" style={{ height: 'calc(100vh - 61px)' }}>
+      <main className="flex-1 flex flex-col lg:grid lg:grid-cols-12 lg:overflow-hidden min-h-0">
 
         {/* LEFT: Advanced Chart + Stock Info */}
-        <section className="lg:col-span-9 flex flex-col overflow-hidden border-r border-slate-800 bg-slate-950">
+        <section className="lg:col-span-9 flex flex-col min-h-[52dvh] lg:min-h-0 overflow-hidden border-b lg:border-b-0 lg:border-r border-slate-800 bg-slate-950">
 
           {/* Stock header strip */}
           {selectedStock ? (
@@ -224,7 +223,7 @@ export default function TradingTerminalPage() {
           )}
 
           {/* ── Advanced Chart (flex-1 fills remaining height) ── */}
-          <div className="flex-1 min-h-0">
+          <div className="flex-1 min-h-[220px] lg:min-h-0">
             {selectedSymbol && (
               <AdvancedChart
                 symbol={selectedSymbol}
@@ -257,7 +256,7 @@ export default function TradingTerminalPage() {
         </section>
 
         {/* RIGHT: Watchlist Sidebar */}
-        <section className="lg:col-span-3 bg-slate-950 flex flex-col overflow-hidden">
+        <section className="lg:col-span-3 bg-slate-950 flex flex-col overflow-hidden max-h-[42dvh] lg:max-h-none lg:min-h-0 safe-bottom">
 
           <div className="p-4 border-b border-slate-800 shrink-0">
             <h2 className="text-[10px] font-extrabold text-slate-500 uppercase tracking-widest mb-3 flex items-center gap-2">
@@ -289,7 +288,7 @@ export default function TradingTerminalPage() {
                   <button
                     key={stock.symbol}
                     onClick={() => setSelectedSymbol(stock.symbol)}
-                    className={`w-full text-left px-4 py-3.5 flex items-center justify-between gap-3 transition-all border-l-4 ${
+                    className={`w-full text-left px-4 py-3.5 flex items-center justify-between gap-3 transition-all border-l-4 touch-manipulation ${
                       active ? 'bg-slate-900 border-blue-500' : 'hover:bg-slate-900/50 border-transparent'
                     }`}
                   >

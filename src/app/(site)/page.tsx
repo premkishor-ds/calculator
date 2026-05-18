@@ -17,7 +17,7 @@ export default function WealthDashboard() {
   const [years, setYears] = useState(12);
   const [inflation, setInflation] = useState(6);
   const [targetGoal, setTargetGoal] = useState<string>('');
-  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
+  const [theme, setTheme] = useState<'dark' | 'light'>('light');
 
   const resetAll = () => {
     setInitialLumpsum(0);
@@ -30,14 +30,12 @@ export default function WealthDashboard() {
   };
 
 
-  // Load theme
+  // Load theme after mount (inline script in layout sets html class first)
   useEffect(() => {
-    const savedTheme = localStorage.getItem('theme') as 'dark' | 'light';
+    const savedTheme = localStorage.getItem('theme') as 'dark' | 'light' | null;
     const isSystemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    
-    // Use saved preference if it exists, otherwise follow system theme
     const currentTheme = savedTheme || (isSystemDark ? 'dark' : 'light');
-    
+
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setTheme(currentTheme);
     document.documentElement.classList.toggle('dark', currentTheme === 'dark');
@@ -108,7 +106,7 @@ export default function WealthDashboard() {
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors duration-300 font-sans">
-      <div className="w-full px-4 sm:px-8 lg:px-12 py-12">
+      <div className="w-full px-4 sm:px-8 lg:px-12 py-8 sm:py-12 max-w-[1600px] mx-auto min-w-0">
         
         <Header theme={theme} toggleTheme={toggleTheme} />
         <QuickStart />

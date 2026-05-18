@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import YahooFinance from 'yahoo-finance2';
-
-const yahooFinance = new YahooFinance();
+import { yahooFinance } from '@/lib/yahoo-finance';
 
 import { WATCHLIST_SYMBOLS } from '../../../utils/symbols';
 export { WATCHLIST_SYMBOLS };

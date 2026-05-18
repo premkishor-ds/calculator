@@ -271,7 +271,7 @@ export default function AdvancedChart({
     <div className="flex flex-col h-full bg-slate-950 select-none">
 
       {/* Toolbar */}
-      <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-2 border-b border-slate-800/80 shrink-0">
+      <div className="flex flex-wrap items-center justify-between gap-2 px-3 sm:px-4 py-2 border-b border-slate-800/80 shrink-0">
 
         {/* Chart-type toggle */}
         <div className="flex items-center gap-1 bg-slate-900 border border-slate-800 p-1 rounded-xl">
@@ -294,14 +294,14 @@ export default function AdvancedChart({
 
         {/* MA toggles (price mode only) */}
         {chartMode === 'price' && (
-          <div className="flex items-center gap-1.5">
-            <span className="text-[10px] font-bold text-slate-600 uppercase tracking-widest mr-1">MA</span>
+          <div className="flex items-center gap-1 overflow-x-auto scrollbar-none max-w-full pb-1">
+            <span className="text-[10px] font-bold text-slate-600 uppercase tracking-widest mr-1 shrink-0">MA</span>
             {MA_LIST.map(({ period, color, label }) => (
               <button
                 key={period}
                 onClick={() => toggleMA(period)}
                 style={activeMA.has(period) ? { backgroundColor: color + '25', borderColor: color, color } : {}}
-                className={`px-2.5 py-1 rounded-md text-[10px] font-bold border transition-all ${
+                className={`px-2.5 py-1.5 rounded-md text-[10px] font-bold border transition-all shrink-0 touch-manipulation ${
                   activeMA.has(period) ? '' : 'border-slate-700 text-slate-500 hover:text-slate-300'
                 }`}
               >
@@ -312,12 +312,12 @@ export default function AdvancedChart({
         )}
 
         {/* Range buttons */}
-        <div className="flex items-center bg-slate-900 border border-slate-800 p-1 rounded-xl gap-0.5">
+        <div className="flex items-center bg-slate-900 border border-slate-800 p-1 rounded-xl gap-0.5 overflow-x-auto scrollbar-none max-w-full">
           {RANGES.map(rng => (
             <button
               key={rng}
               onClick={() => onRangeChange(rng)}
-              className={`px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all ${
+              className={`px-2.5 sm:px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all shrink-0 touch-manipulation ${
                 chartRange === rng ? 'bg-slate-700 text-white shadow-sm' : 'text-slate-400 hover:text-white'
               }`}
             >

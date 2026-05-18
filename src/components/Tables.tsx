@@ -21,17 +21,17 @@ interface TableProps {
 
 export const ComparisonMatrix: React.FC<TableProps> = ({ matrix }) => (
   <section className="mb-12">
-    <div className="flex items-center gap-4 mb-6">
-      <h2 className="text-2xl font-bold text-cyan-500">Master Comparison Matrix</h2>
+    <div className="flex items-center gap-4 mb-6 min-w-0">
+      <h2 className="text-xl sm:text-2xl font-bold text-cyan-500 shrink-0">Master Comparison Matrix</h2>
       <div className="h-px flex-1 bg-slate-200 dark:bg-slate-800"></div>
     </div>
-    <div className="overflow-x-auto rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xl">
-      <table className="w-full text-left border-collapse">
+    <div className="overflow-x-auto rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xl -mx-0">
+      <table className="w-full text-left border-collapse min-w-[640px]">
         <thead>
           <tr className="bg-slate-100 dark:bg-slate-800/50">
-            <th className="p-4 font-bold text-blue-500 border-b border-slate-200 dark:border-slate-800 text-xs uppercase">Step-Up \ CAGR</th>
+            <th className="p-3 sm:p-4 font-bold text-blue-500 border-b border-slate-200 dark:border-slate-800 text-xs uppercase">Step-Up \ CAGR</th>
             {[15, 18, 20, 22, 25].map(c => (
-              <th key={c} className="p-4 font-bold border-b border-slate-200 dark:border-slate-800 text-xs uppercase">{c}%</th>
+              <th key={c} className="p-3 sm:p-4 font-bold border-b border-slate-200 dark:border-slate-800 text-xs uppercase whitespace-nowrap">{c}%</th>
             ))}
           </tr>
         </thead>

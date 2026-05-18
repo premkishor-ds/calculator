@@ -608,13 +608,25 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
                     </svg>
 
                     {/* Horizontal interactive hover panels overlay */}
-                    <div className="absolute inset-0 flex">
+                    <div className="absolute inset-0 flex touch-none">
                       {points.map((p, idx) => (
                         <div 
                           key={idx} 
                           className="h-full flex-1 cursor-crosshair"
                           onMouseEnter={() => setHoveredPoint(p.data)}
                           onMouseLeave={() => setHoveredPoint(null)}
+                          onTouchStart={() => setHoveredPoint(p.data)}
+                          onTouchMove={(e) => {
+                            const touch = e.touches[0];
+                            if (!touch) return;
+                            const el = document.elementFromPoint(touch.clientX, touch.clientY);
+                            const idxAttr = el?.getAttribute('data-chart-idx');
+                            if (idxAttr != null) {
+                              const i = Number(idxAttr);
+                              if (chartPoints[i]) setHoveredPoint(chartPoints[i]);
+                            }
+                          }}
+                          data-chart-idx={idx}
                         />
                       ))}
                     </div>

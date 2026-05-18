@@ -7,10 +7,11 @@ interface HeaderProps {
 }
 
 export const Header: React.FC<HeaderProps> = ({ theme, toggleTheme }) => (
-  <header className="relative flex flex-col items-center mb-8 text-center">
+  <header className="relative flex flex-col items-center mb-8 text-center px-12 sm:px-16">
     <button 
       onClick={toggleTheme}
-      className="absolute right-0 top-0 p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm hover:scale-105 transition-transform"
+      className="absolute right-0 top-0 p-2.5 sm:p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm hover:scale-105 transition-transform touch-manipulation"
+      aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
     >
       {theme === 'dark' ? <Sun className="w-5 h-5 text-yellow-400" /> : <Moon className="w-5 h-5 text-indigo-600" />}
     </button>
@@ -28,17 +29,17 @@ export const Header: React.FC<HeaderProps> = ({ theme, toggleTheme }) => (
 
 export const QuickStart = () => {
   const items = [
-    { title: "1. Set Your Inputs", desc: "Enter your SIP, Step-up %, and growth (CAGR).", icon: "🏛️", color: "blue" },
-    { title: "2. Define a Goal", desc: "Use 'Target Goal' to reverse-calculate your SIP.", icon: "🎯", color: "cyan" },
-    { title: "3. Check Reality", desc: "View 'Purchasing Power' to see the real value.", icon: "☀️", color: "orange" },
+    { title: "1. Set Your Inputs", desc: "Enter your SIP, Step-up %, and growth (CAGR).", icon: "🏛️", bg: "bg-blue-500/5", border: "border-blue-500/10", badge: "bg-blue-500" },
+    { title: "2. Define a Goal", desc: "Use 'Target Goal' to reverse-calculate your SIP.", icon: "🎯", bg: "bg-cyan-500/5", border: "border-cyan-500/10", badge: "bg-cyan-500" },
+    { title: "3. Check Reality", desc: "View 'Purchasing Power' to see the real value.", icon: "☀️", bg: "bg-orange-500/5", border: "border-orange-500/10", badge: "bg-orange-500" },
   ];
 
   return (
     <section className="mb-12 grid grid-cols-1 md:grid-cols-3 gap-4">
       {items.map((item, i) => (
-        <div key={i} className={`flex items-start gap-4 p-4 rounded-2xl bg-${item.color}-500/5 border border-${item.color}-500/10`}>
-          <div className={`p-2 rounded-lg bg-${item.color}-500 text-white text-sm`}>{item.icon}</div>
-          <div>
+        <div key={i} className={`flex items-start gap-4 p-4 rounded-2xl ${item.bg} border ${item.border}`}>
+          <div className={`p-2 rounded-lg ${item.badge} text-white text-sm shrink-0`}>{item.icon}</div>
+          <div className="min-w-0">
             <p className="text-sm font-bold">{item.title}</p>
             <p className="text-xs text-slate-500">{item.desc}</p>
           </div>

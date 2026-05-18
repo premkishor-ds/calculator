@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useSyncExternalStore, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
   TrendingUp, 
@@ -33,49 +33,57 @@ interface StockData {
   salesGrowth: number;
 }
 
-import { DEFAULT_SYMBOLS } from '../../utils/symbols';
+import { DEFAULT_SYMBOLS } from '@/utils/symbols';
+
+const WATCHLIST_KEY = 'vision_watchlist';
+const WATCHLIST_EVENT = 'vision-watchlist-change';
+
+function readWatchlist(): string[] {
+  try {
+    const saved = localStorage.getItem(WATCHLIST_KEY);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
+  } catch {
+    // use defaults
+  }
+  return DEFAULT_SYMBOLS;
+}
+
+function subscribeWatchlist(onStoreChange: () => void) {
+  window.addEventListener('storage', onStoreChange);
+  window.addEventListener(WATCHLIST_EVENT, onStoreChange);
+  return () => {
+    window.removeEventListener('storage', onStoreChange);
+    window.removeEventListener(WATCHLIST_EVENT, onStoreChange);
+  };
+}
 
 export default function WatchlistPage() {
   const router = useRouter();
-  
-  // Initialize watchlist directly from localStorage during creation to prevent mount flash and synchronous updates
-  const [watchlist, setWatchlist] = useState<string[]>(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('vision_watchlist');
-      if (saved) {
-        try {
-          const parsed = JSON.parse(saved);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            return parsed;
-          }
-        } catch {
-          // Fallback
-        }
-      }
+  const watchlist = useSyncExternalStore(subscribeWatchlist, readWatchlist, () => DEFAULT_SYMBOLS);
+
+  const persistWatchlist = useCallback((next: string[]) => {
+    localStorage.setItem(WATCHLIST_KEY, JSON.stringify(next));
+    window.dispatchEvent(new Event(WATCHLIST_EVENT));
+  }, []);
+
+  useEffect(() => {
+    if (!localStorage.getItem(WATCHLIST_KEY)) {
+      localStorage.setItem(WATCHLIST_KEY, JSON.stringify(DEFAULT_SYMBOLS));
     }
-    return DEFAULT_SYMBOLS;
-  });
+  }, []);
 
   const [stocks, setStocks] = useState<StockData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  
-  // Custom interactive search and add state
   const [search, setSearch] = useState('');
   const [newSymbol, setNewSymbol] = useState('');
   const [addLoading, setAddLoading] = useState(false);
   const [addError, setAddError] = useState('');
-
-  // Sorting state
   const [sortField, setSortField] = useState<keyof StockData>('marketCap');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
-
-  // Sync initial seed with localStorage if it is not set
-  useEffect(() => {
-    if (typeof window !== 'undefined' && !localStorage.getItem('vision_watchlist')) {
-      localStorage.setItem('vision_watchlist', JSON.stringify(DEFAULT_SYMBOLS));
-    }
-  }, []);
 
   // Fetch stocks when watchlist state updates
   useEffect(() => {
@@ -143,8 +151,7 @@ export default function WatchlistPage() {
 
       // Add to list and persist
       const updatedList = [...watchlist, formattedSym];
-      setWatchlist(updatedList);
-      localStorage.setItem('vision_watchlist', JSON.stringify(updatedList));
+      persistWatchlist(updatedList);
       setNewSymbol('');
     } catch {
       setAddError(`Failed to fetch validation stats for ${cleanSym}.`);
@@ -156,15 +163,13 @@ export default function WatchlistPage() {
   // Delete dynamic ticker action
   const handleDeleteStock = (symToDelete: string) => {
     const updatedList = watchlist.filter(s => s.toLowerCase() !== symToDelete.toLowerCase());
-    setWatchlist(updatedList);
-    localStorage.setItem('vision_watchlist', JSON.stringify(updatedList));
+    persistWatchlist(updatedList);
   };
 
   // Reset to default portfolio
   const handleResetWatchlist = () => {
     if (window.confirm("Are you sure you want to restore the default institutional-grade stock watchlist?")) {
-      setWatchlist(DEFAULT_SYMBOLS);
-      localStorage.setItem('vision_watchlist', JSON.stringify(DEFAULT_SYMBOLS));
+      persistWatchlist(DEFAULT_SYMBOLS);
     }
   };
 
