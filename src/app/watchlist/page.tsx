@@ -33,42 +33,7 @@ interface StockData {
   salesGrowth: number;
 }
 
-const DEFAULT_SYMBOLS = [
-  'VOLTAMP.NS',
-  'TDPOWERSYS.NS',
-  'TARIL.NS',
-  'PRECWIRE.NS',
-  'MAZDOCK.NS',
-  'KIRLOSENG.NS',
-  'HSCL.NS',
-  'HFCL.NS',
-  'E2E.NS',
-  'BECTORFOOD.NS',
-  'AURIONPRO.NS',
-  'KEI.NS',
-  'COFORGE.NS',
-  'MANORAMA.NS',
-  'ZENTEC.NS',
-  'APARINDS.NS',
-  'SHILCTECH.NS',
-  'INOXINDIA.NS',
-  'KRN.NS',
-  'IDEAFORGE.NS',
-  'GRSE.NS',
-  'PARAS.NS',
-  'ASTRAMICRO.NS',
-  'SYRMA.NS',
-  'KAYNES.NS',
-  'AEROFLEX.NS',
-  'KMEW.NS',
-  'GVT&D.NS',
-  'CGPOWER.NS',
-  'APOLLO.NS',
-  'UNIMECH.NS',
-  'DATAPATTNS.NS',
-  'MTARTECH.NS',
-  'NETWEB.NS'
-];
+import { DEFAULT_SYMBOLS } from '../../utils/symbols';
 
 export default function WatchlistPage() {
   const router = useRouter();
