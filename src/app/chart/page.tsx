@@ -250,7 +250,7 @@ export default function TradingTerminalPage() {
           )}
 
           {/* ── Advanced Chart (flex-1 fills remaining height) ── */}
-          <div className="flex-1 min-h-[220px] lg:min-h-0">
+          <div className="flex-1 min-h-[320px] lg:min-h-0 relative w-full h-full">
             {selectedSymbol && (
               <AdvancedChart
                 symbol={selectedSymbol}

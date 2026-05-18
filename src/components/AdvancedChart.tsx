@@ -104,8 +104,8 @@ export default function AdvancedChart({
         secondsVisible: false,
         rightOffset: 5,
       },
-      width:  containerRef.current.clientWidth,
-      height: containerRef.current.clientHeight,
+      width:  containerRef.current.clientWidth || 600,
+      height: containerRef.current.clientHeight || 350,
     });
 
     const candle = chart.addSeries(CandlestickSeries, {
@@ -134,14 +134,28 @@ export default function AdvancedChart({
     peLineRef.current = peLine;
     volRef.current    = vol;
 
-    const ro = new ResizeObserver(([e]) =>
-      chartRef.current?.applyOptions({ width: e.contentRect.width, height: e.contentRect.height })
-    );
+    const ro = new ResizeObserver(([e]) => {
+      if (!e) return;
+      const w = e.contentRect.width || 600;
+      const h = e.contentRect.height || 350;
+      chartRef.current?.applyOptions({ width: w, height: h });
+    });
     ro.observe(containerRef.current);
+
+    // Self-correcting layout timeout to fix potential dynamic flexbox race conditions
+    const timer = setTimeout(() => {
+      if (containerRef.current && chartRef.current) {
+        chartRef.current.applyOptions({
+          width: containerRef.current.clientWidth || 600,
+          height: containerRef.current.clientHeight || 350,
+        });
+      }
+    }, 100);
 
     // Capture ref value so cleanup uses the same Map instance
     const maRefsMap = maRefs.current;
     return () => {
+      clearTimeout(timer);
       ro.disconnect();
       chart.remove();
       chartRef.current  = null;
