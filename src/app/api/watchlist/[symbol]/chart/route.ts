@@ -149,14 +149,13 @@ export async function GET(
     // Calculate maximum volume for overlay scaling
     const maxVol = chartQuotes.length > 0 ? Math.max(...chartQuotes.map((q: any) => q.volume || 0)) : 1;
 
-    // Map chart points to price, calculated P/E and volume
+    // Map chart points to OHLCV + PE for candlestick chart support
     const points = chartQuotes
       .filter((q: any) => q.close !== undefined && q.close !== null)
       .map((q: any) => {
         const qDate = new Date(q.date);
         let activeEps = currentEps;
 
-        // If historical P/E is requested for 5y/max, find the matching fiscal period's EPS
         if (needsHistoricalEps && sortedFinancials.length > 0) {
           for (let i = sortedFinancials.length - 1; i >= 0; i--) {
             if (sortedFinancials[i].date <= qDate) {
@@ -166,15 +165,27 @@ export async function GET(
           }
         }
 
-        const peVal = activeEps > 0 ? Number((q.close / activeEps).toFixed(2)) : 0;
+        const close = Number(q.close.toFixed(2));
+        const open  = Number((q.open  || q.close).toFixed(2));
+        const high  = Number((q.high  || q.close).toFixed(2));
+        const low   = Number((q.low   || q.close).toFixed(2));
+        const peVal = activeEps > 0 ? Number((close / activeEps).toFixed(2)) : 0;
 
         return {
+          // Unix timestamp in seconds — required by lightweight-charts
+          time: Math.floor(qDate.getTime() / 1000),
           date: formatPointDate(qDate, range),
-          close: Number(q.close.toFixed(2)),
+          open,
+          high,
+          low,
+          close,
           volume: q.volume || 0,
           pe: peVal
         };
-      });
+      })
+      // Deduplicate by timestamp (keep last occurrence), then sort ascending
+      .filter((p: any, idx: number, arr: any[]) => arr.findIndex((x: any) => x.time === p.time) === idx)
+      .sort((a: any, b: any) => a.time - b.time);
 
     return NextResponse.json({
       range,
