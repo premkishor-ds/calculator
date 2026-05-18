@@ -56,6 +56,11 @@ export default function TradingTerminalPage() {
   const [terminalSearch,   setTerminalSearch]    = useState('');
   const [terminalSearchError, setTerminalSearchError] = useState('');
   const [terminalSearching, setTerminalSearching] = useState(false);
+  
+  // Expanded dynamic technical & fundamental analysis panel state
+  const [deepData,         setDeepData]         = useState<any>(null);
+  const [deepLoading,      setDeepLoading]      = useState(false);
+  const [activeTab,        setActiveTab]        = useState<'technicals' | 'fundamentals' | 'profile' | 'proscons'>('technicals');
 
   /* Derived */
   const selectedStock = watchlistStocks.find(s => s.symbol === selectedSymbol) || null;
@@ -121,6 +126,28 @@ export default function TradingTerminalPage() {
       setTerminalSearching(false);
     }
   };
+
+  /* ── Load Deep Data ────────────────────────────────────────── */
+  useEffect(() => {
+    if (!selectedSymbol) return;
+    let active = true;
+    (async () => {
+      try {
+        setDeepLoading(true);
+        const res = await fetch(`/api/watchlist/${encodeURIComponent(selectedSymbol)}`);
+        if (!res.ok) throw new Error();
+        const data = await res.json();
+        if (active) {
+          setDeepData(data);
+        }
+      } catch (err) {
+        console.error("Deep fetch error:", err);
+      } finally {
+        if (active) setDeepLoading(false);
+      }
+    })();
+    return () => { active = false; };
+  }, [selectedSymbol]);
 
   const filteredWatchlist = watchlistStocks.filter(s =>
     s.symbol.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -235,22 +262,214 @@ export default function TradingTerminalPage() {
             )}
           </div>
 
-          {/* Metrics strip */}
+          {/* Detailed Intelligence Dashboard Strip */}
           {selectedStock && (
-            <div className="grid grid-cols-3 sm:grid-cols-6 gap-px bg-slate-800 border-t border-slate-800 shrink-0">
-              {[
-                { label: 'Mkt Cap',    value: `₹${(selectedStock.marketCap / 10000000).toFixed(0)}Cr` },
-                { label: 'P/E',        value: selectedStock.pe > 0 ? selectedStock.pe.toFixed(1) : '—', color: 'text-purple-400' },
-                { label: 'EPS',        value: selectedStock.eps > 0 ? `₹${selectedStock.eps.toFixed(2)}` : '—' },
-                { label: 'P/BV',       value: selectedStock.cmpBv > 0 ? `${selectedStock.cmpBv}x` : '—' },
-                { label: 'Div Yield',  value: selectedStock.divYield > 0 ? `${selectedStock.divYield}%` : '0%', color: 'text-emerald-400' },
-                { label: 'Promoters', value: selectedStock.promHold > 0 ? `${selectedStock.promHold}%` : '—' },
-              ].map(({ label, value, color }) => (
-                <div key={label} className="bg-slate-950 px-4 py-2.5 text-center">
-                  <div className="text-[9px] text-slate-500 font-extrabold uppercase tracking-widest">{label}</div>
-                  <div className={`text-xs font-extrabold mt-1 ${color ?? 'text-white'}`}>{value}</div>
+            <div className="flex flex-col bg-slate-950 border-t border-slate-800 shrink-0 select-none">
+              
+              {/* Tab selector bar */}
+              <div className="flex items-center justify-between border-b border-slate-900 bg-slate-950/80 px-4 py-1 shrink-0 overflow-x-auto scrollbar-none">
+                <div className="flex items-center gap-1.5 min-w-0">
+                  {[
+                    { id: 'technicals', label: '📈 Technicals' },
+                    { id: 'fundamentals', label: '📊 Fundamentals' },
+                    { id: 'profile', label: '🏢 Profile' },
+                    { id: 'proscons', label: '✔️ Pros & Cons' }
+                  ].map(tab => (
+                    <button
+                      key={tab.id}
+                      onClick={() => setActiveTab(tab.id as any)}
+                      className={`px-3 py-2 text-[10px] font-extrabold uppercase tracking-wider rounded-lg transition-all shrink-0 ${
+                        activeTab === tab.id
+                          ? 'bg-slate-900 text-blue-400 border border-blue-500/20'
+                          : 'text-slate-500 hover:text-slate-350'
+                      }`}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
                 </div>
-              ))}
+
+                {/* Micro quote details */}
+                <div className="hidden sm:flex items-center gap-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest shrink-0">
+                  <div>Mkt Cap: <span className="text-white">₹{(selectedStock.marketCap / 10000000).toFixed(0)}Cr</span></div>
+                  <div>P/E: <span className="text-purple-400">{selectedStock.pe > 0 ? selectedStock.pe.toFixed(1) : '—'}</span></div>
+                  <div>P/BV: <span className="text-white">{selectedStock.cmpBv > 0 ? `${selectedStock.cmpBv}x` : '—'}</span></div>
+                </div>
+              </div>
+
+              {/* Tab contents panel (Fixed height with scroll safety) */}
+              <div className="h-[120px] overflow-y-auto p-4 bg-slate-950/40 text-slate-100 scrollbar-none">
+                {deepLoading ? (
+                  <div className="h-full flex items-center justify-center gap-2">
+                    <RefreshCw className="w-3.5 h-3.5 text-blue-500 animate-spin" />
+                    <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-500">
+                      Querying complete corporate intelligence...
+                    </span>
+                  </div>
+                ) : (
+                  <>
+                    {/* TECHNICALS TAB */}
+                    {activeTab === 'technicals' && (
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
+                        <div className="bg-slate-900/40 border border-slate-900 p-2.5 rounded-xl">
+                          <span className="text-[9px] text-slate-500 font-extrabold uppercase tracking-widest block">50-Day SMA</span>
+                          <p className="font-extrabold text-slate-100 mt-1">
+                            {deepData?.ratios?.fiftyDayAverage ? `₹${deepData.ratios.fiftyDayAverage.toFixed(1)}` : '—'}
+                          </p>
+                          {deepData?.ratios?.fiftyDayAverage && (
+                            <span className={`text-[9px] font-extrabold block mt-0.5 ${
+                              selectedStock.price >= deepData.ratios.fiftyDayAverage ? 'text-emerald-400' : 'text-red-400'
+                            }`}>
+                              {((selectedStock.price - deepData.ratios.fiftyDayAverage) / deepData.ratios.fiftyDayAverage * 100).toFixed(1)}% vs Avg
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="bg-slate-900/40 border border-slate-900 p-2.5 rounded-xl">
+                          <span className="text-[9px] text-slate-500 font-extrabold uppercase tracking-widest block">200-Day SMA</span>
+                          <p className="font-extrabold text-slate-100 mt-1">
+                            {deepData?.ratios?.twoHundredDayAverage ? `₹${deepData.ratios.twoHundredDayAverage.toFixed(1)}` : '—'}
+                          </p>
+                          {deepData?.ratios?.twoHundredDayAverage && (
+                            <span className={`text-[9px] font-extrabold block mt-0.5 ${
+                              selectedStock.price >= deepData.ratios.twoHundredDayAverage ? 'text-emerald-400' : 'text-red-400'
+                            }`}>
+                              {((selectedStock.price - deepData.ratios.twoHundredDayAverage) / deepData.ratios.twoHundredDayAverage * 100).toFixed(1)}% vs Avg
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="bg-slate-900/40 border border-slate-900 p-2.5 rounded-xl col-span-2">
+                          <div className="flex justify-between items-center text-[9px] text-slate-500 font-extrabold uppercase tracking-widest">
+                            <span>52-Week High/Low</span>
+                            <span className="text-slate-400 font-bold">
+                              H: ₹{deepData?.ratios?.fiftyTwoWeekHigh?.toFixed(0)} | L: ₹{deepData?.ratios?.fiftyTwoWeekLow?.toFixed(0)}
+                            </span>
+                          </div>
+                          
+                          {/* Visual high to low progress bar */}
+                          {deepData?.ratios?.fiftyTwoWeekHigh && deepData?.ratios?.fiftyTwoWeekLow && (
+                            <div className="mt-2.5">
+                              <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden relative">
+                                <div 
+                                  className="absolute bg-gradient-to-r from-blue-500 to-indigo-500 h-full rounded-full"
+                                  style={{
+                                    left: '0%',
+                                    width: `${Math.min(100, Math.max(0, 
+                                      ((selectedStock.price - deepData.ratios.fiftyTwoWeekLow) / 
+                                      (deepData.ratios.fiftyTwoWeekHigh - deepData.ratios.fiftyTwoWeekLow)) * 100
+                                    ))}%`
+                                  }}
+                                />
+                              </div>
+                              <div className="flex justify-between items-center text-[8px] text-slate-500 font-extrabold mt-1">
+                                <span>Low ({((selectedStock.price - deepData.ratios.fiftyTwoWeekLow) / deepData.ratios.fiftyTwoWeekLow * 100).toFixed(0)}% Up)</span>
+                                <span>High ({((deepData.ratios.fiftyTwoWeekHigh - selectedStock.price) / selectedStock.price * 100).toFixed(0)}% Down)</span>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* FUNDAMENTALS TAB */}
+                    {activeTab === 'fundamentals' && (
+                      <div className="grid grid-cols-3 sm:grid-cols-6 gap-3 text-xs">
+                        <div className="bg-slate-900/40 border border-slate-900 p-2 text-center rounded-xl">
+                          <span className="text-[8px] text-slate-500 font-extrabold uppercase tracking-widest block">ROE</span>
+                          <span className="font-extrabold text-white mt-0.5 block">
+                            {deepData?.ratios?.roe ? `${deepData.ratios.roe.toFixed(1)}%` : '—'}
+                          </span>
+                        </div>
+                        <div className="bg-slate-900/40 border border-slate-900 p-2 text-center rounded-xl">
+                          <span className="text-[8px] text-slate-500 font-extrabold uppercase tracking-widest block">ROA</span>
+                          <span className="font-extrabold text-white mt-0.5 block">
+                            {deepData?.ratios?.roa ? `${deepData.ratios.roa.toFixed(1)}%` : '—'}
+                          </span>
+                        </div>
+                        <div className="bg-slate-900/40 border border-slate-900 p-2 text-center rounded-xl">
+                          <span className="text-[8px] text-slate-500 font-extrabold uppercase tracking-widest block">Debt/Eq</span>
+                          <span className={`font-extrabold mt-0.5 block ${
+                            (deepData?.ratios?.debtToEquity / 100) > 1.5 ? 'text-red-400' : 'text-emerald-400'
+                          }`}>
+                            {deepData?.ratios?.debtToEquity !== undefined ? (deepData.ratios.debtToEquity / 100).toFixed(2) : '—'}
+                          </span>
+                        </div>
+                        <div className="bg-slate-900/40 border border-slate-900 p-2 text-center rounded-xl">
+                          <span className="text-[8px] text-slate-500 font-extrabold uppercase tracking-widest block">Profit Margin</span>
+                          <span className="font-extrabold text-emerald-400 mt-0.5 block">
+                            {deepData?.ratios?.profitMargin ? `${deepData.ratios.profitMargin.toFixed(1)}%` : '—'}
+                          </span>
+                        </div>
+                        <div className="bg-slate-900/40 border border-slate-900 p-2 text-center rounded-xl">
+                          <span className="text-[8px] text-slate-500 font-extrabold uppercase tracking-widest block">Profit Growth</span>
+                          <span className={`font-extrabold mt-0.5 block ${
+                            selectedStock.profitGrowth >= 0 ? 'text-emerald-400' : 'text-red-400'
+                          }`}>
+                            {selectedStock.profitGrowth !== 0 ? `${selectedStock.profitGrowth}%` : '—'}
+                          </span>
+                        </div>
+                        <div className="bg-slate-900/40 border border-slate-900 p-2 text-center rounded-xl">
+                          <span className="text-[8px] text-slate-500 font-extrabold uppercase tracking-widest block">Sales Growth</span>
+                          <span className={`font-extrabold mt-0.5 block ${
+                            selectedStock.salesGrowth >= 0 ? 'text-emerald-400' : 'text-red-400'
+                          }`}>
+                            {selectedStock.salesGrowth !== 0 ? `${selectedStock.salesGrowth}%` : '—'}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* PROFILE TAB */}
+                    {activeTab === 'profile' && (
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs leading-relaxed">
+                        <div className="space-y-1 bg-slate-900/40 border border-slate-900 p-2.5 rounded-xl">
+                          <div>Sector: <span className="text-white font-extrabold">{deepData?.profile?.sector || '—'}</span></div>
+                          <div>Industry: <span className="text-white font-extrabold">{deepData?.profile?.industry || '—'}</span></div>
+                          {deepData?.profile?.employees > 0 && (
+                            <div>Employees: <span className="text-white font-extrabold">{deepData.profile.employees.toLocaleString()}</span></div>
+                          )}
+                        </div>
+                        <div className="md:col-span-2 text-[10px] text-slate-400 bg-slate-900/20 border border-slate-900/50 p-2.5 rounded-xl max-h-[90px] overflow-y-auto scrollbar-none font-medium">
+                          <span className="font-extrabold text-slate-350 block mb-1">Company Summary:</span>
+                          {deepData?.profile?.summary || 'No description available for this ticker.'}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* PROS & CONS TAB */}
+                    {activeTab === 'proscons' && (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-[10px] leading-relaxed">
+                        <div className="bg-slate-900/30 border border-slate-900/50 p-2.5 rounded-xl">
+                          <span className="text-emerald-400 font-extrabold uppercase block mb-1">Strengths / Advantages</span>
+                          <ul className="space-y-1 text-slate-400 font-medium list-disc list-inside">
+                            {deepData?.pros?.length ? (
+                              deepData.pros.slice(0, 3).map((p: string, idx: number) => (
+                                <li key={idx} className="truncate">{p}</li>
+                              ))
+                            ) : (
+                              <li>Solid market position with consistent operational metrics.</li>
+                            )}
+                          </ul>
+                        </div>
+                        <div className="bg-slate-900/30 border border-slate-900/50 p-2.5 rounded-xl">
+                          <span className="text-red-400 font-extrabold uppercase block mb-1">Risks / Limitations</span>
+                          <ul className="space-y-1 text-slate-400 font-medium list-disc list-inside">
+                            {deepData?.cons?.length ? (
+                              deepData.cons.slice(0, 3).map((c: string, idx: number) => (
+                                <li key={idx} className="truncate">{c}</li>
+                              ))
+                            ) : (
+                              <li>Exposed to equity market volatilities and economic variances.</li>
+                            )}
+                          </ul>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+
             </div>
           )}
         </section>
