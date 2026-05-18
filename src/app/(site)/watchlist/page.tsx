@@ -38,15 +38,32 @@ import { DEFAULT_SYMBOLS } from '@/utils/symbols';
 const WATCHLIST_KEY = 'vision_watchlist';
 const WATCHLIST_EVENT = 'vision-watchlist-change';
 
+let lastWatchlistString = '';
+let cachedWatchlistArray: string[] = DEFAULT_SYMBOLS;
+
 function readWatchlist(): string[] {
+  if (typeof window === 'undefined') return DEFAULT_SYMBOLS;
   try {
     const saved = localStorage.getItem(WATCHLIST_KEY);
     if (saved) {
+      if (saved === lastWatchlistString) {
+        return cachedWatchlistArray;
+      }
       const parsed = JSON.parse(saved);
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        lastWatchlistString = saved;
+        cachedWatchlistArray = parsed;
+        return parsed;
+      }
     }
   } catch {
     // use defaults
+  }
+  
+  const defaultStr = JSON.stringify(DEFAULT_SYMBOLS);
+  if (defaultStr !== lastWatchlistString) {
+    lastWatchlistString = defaultStr;
+    cachedWatchlistArray = DEFAULT_SYMBOLS;
   }
   return DEFAULT_SYMBOLS;
 }
