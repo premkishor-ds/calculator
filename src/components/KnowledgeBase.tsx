@@ -11,7 +11,7 @@ export const KnowledgeBase = () => (
       <div className="space-y-4">
         <h3 className="font-bold text-lg text-indigo-500">The Power of 25% CAGR</h3>
         <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
-          In the Indian stock market, 25% CAGR is considered the "Holy Grail" of alpha. It typically comes from high-conviction small and midcap portfolios. 
+          In the Indian stock market, 25% CAGR is considered the &quot;Holy Grail&quot; of alpha. It typically comes from high-conviction small and midcap portfolios. 
           At this rate, your money doubles every ~2.9 years, creating a massive explosion in the final 5 years of your 20-year journey.
         </p>
       </div>

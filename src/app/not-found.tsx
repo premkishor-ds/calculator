@@ -3,6 +3,8 @@
 import React from 'react';
 import { Home, AlertCircle } from 'lucide-react';
 
+import Link from 'next/link';
+
 export default function NotFound() {
   return (
     <div className="min-h-[70vh] flex flex-col items-center justify-center px-6 text-center">
@@ -11,14 +13,14 @@ export default function NotFound() {
       </div>
       <h1 className="text-4xl font-bold mb-4">404: Page Not Found</h1>
       <p className="text-slate-500 mb-8 max-w-md">
-        The wealth roadmap you are looking for has either moved or doesn't exist. Let's get you back to the calculator.
+        The wealth roadmap you are looking for has either moved or doesn&apos;t exist. Let&apos;s get you back to the calculator.
       </p>
-      <a 
+      <Link 
         href="/" 
         className="flex items-center gap-2 px-8 py-4 rounded-full bg-blue-500 text-white font-bold hover:bg-blue-600 transition-all shadow-lg shadow-blue-500/30"
       >
         <Home className="w-5 h-5" /> Return to Dashboard
-      </a>
+      </Link>
     </div>
   );
 }

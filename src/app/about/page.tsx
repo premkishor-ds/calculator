@@ -1,6 +1,6 @@
 import React from 'react';
 import { Metadata } from 'next';
-import { Target, Shield, Zap, TrendingUp, BarChart3, Users } from 'lucide-react';
+import { Shield, Zap, TrendingUp, BarChart3, Users } from 'lucide-react';
 
 export const metadata: Metadata = {
   title: 'About Our Financial Engineering | Vision Wealth - DataForger.com',
@@ -101,7 +101,7 @@ export default function AboutPage() {
         <div className="relative z-10 max-w-2xl">
           <h2 className="text-4xl font-bold mb-6">Built for the Indian Context.</h2>
           <p className="text-slate-400 mb-8 leading-relaxed">
-            The Indian economy is at a historic pivot point. As the country moves toward a $10 Trillion economy, the equity markets represent the single greatest wealth-creation opportunity of our lifetime. DataForger is here to ensure you don't just participate—you dominate.
+            The Indian economy is at a historic pivot point. As the country moves toward a $10 Trillion economy, the equity markets represent the single greatest wealth-creation opportunity of our lifetime. DataForger is here to ensure you don&apos;t just participate—you dominate.
           </p>
           <div className="flex gap-4">
             <div className="px-4 py-2 rounded-full bg-white/10 text-[10px] uppercase font-bold tracking-widest">#MakeInIndia</div>

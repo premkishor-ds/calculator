@@ -21,14 +21,17 @@ export const metadata: Metadata = {
   },
 };
 
+import Link from 'next/link';
+
 const Nav = () => (
   <nav className="sticky top-4 z-50 flex justify-center px-4">
     <div className="flex items-center gap-6 px-6 py-3 rounded-full bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl border border-slate-200 dark:border-slate-800 shadow-lg">
-      <a href="/" className="text-sm font-bold bg-gradient-to-r from-cyan-400 to-blue-600 bg-clip-text text-transparent">Vision Wealth</a>
+      <Link href="/" className="text-sm font-bold bg-gradient-to-r from-cyan-400 to-blue-600 bg-clip-text text-transparent">Vision Wealth</Link>
       <div className="h-4 w-px bg-slate-300 dark:bg-slate-700"></div>
-      <a href="/about" className="text-xs font-medium hover:text-blue-500 transition-colors">About</a>
-      <a href="/faq" className="text-xs font-medium hover:text-blue-500 transition-colors">FAQ</a>
-      <a href="/blog" className="text-xs font-medium hover:text-blue-500 transition-colors">Blog</a>
+      <Link href="/about" className="text-xs font-medium hover:text-blue-500 transition-colors">About</Link>
+      <Link href="/faq" className="text-xs font-medium hover:text-blue-500 transition-colors">FAQ</Link>
+      <Link href="/blog" className="text-xs font-medium hover:text-blue-500 transition-colors">Blog</Link>
+      <Link href="/watchlist" className="text-xs font-medium hover:text-blue-500 transition-colors">Watchlist</Link>
     </div>
   </nav>
 );
@@ -44,9 +47,9 @@ const Footer = () => (
       </div>
       <div className="flex flex-col gap-2">
         <h4 className="font-bold mb-2">Platform</h4>
-        <a href="/about" className="text-xs text-slate-500 hover:text-blue-500">How it works</a>
-        <a href="/faq" className="text-xs text-slate-500 hover:text-blue-500">Support & FAQ</a>
-        <a href="/blog" className="text-xs text-slate-500 hover:text-blue-500">Wealth Articles</a>
+        <Link href="/about" className="text-xs text-slate-500 hover:text-blue-500">How it works</Link>
+        <Link href="/faq" className="text-xs text-slate-500 hover:text-blue-500">Support & FAQ</Link>
+        <Link href="/blog" className="text-xs text-slate-500 hover:text-blue-500">Wealth Articles</Link>
       </div>
       <div>
         <h4 className="font-bold mb-4">Domain</h4>

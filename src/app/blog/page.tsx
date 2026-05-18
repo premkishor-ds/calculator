@@ -1,6 +1,6 @@
 import React from 'react';
 import { Metadata } from 'next';
-import { BookOpen, ArrowRight, Clock, User, Tag } from 'lucide-react';
+import { ArrowRight, Clock, Tag } from 'lucide-react';
 
 export const metadata: Metadata = {
   title: 'Equity Insights Blog | Multibagger Strategies - Vision Wealth',
@@ -106,7 +106,7 @@ export default function BlogPage() {
       <section className="p-12 rounded-[3.5rem] bg-slate-900 text-white flex flex-col md:flex-row items-center justify-between gap-12">
         <div className="max-w-xl">
           <h2 className="text-4xl font-bold mb-4">Join 10,000+ Investors.</h2>
-          <p className="text-slate-400 mb-0">Get our weekly "Alpha Report" delivered to your inbox. No spam, just math-heavy wealth insights.</p>
+          <p className="text-slate-400 mb-0">Get our weekly &quot;Alpha Report&quot; delivered to your inbox. No spam, just math-heavy wealth insights.</p>
         </div>
         <div className="flex w-full md:w-auto gap-4">
           <input 

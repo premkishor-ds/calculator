@@ -38,6 +38,7 @@ export default function WealthDashboard() {
     // Use saved preference if it exists, otherwise follow system theme
     const currentTheme = savedTheme || (isSystemDark ? 'dark' : 'light');
     
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setTheme(currentTheme);
     document.documentElement.classList.toggle('dark', currentTheme === 'dark');
   }, []);
