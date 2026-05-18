@@ -32,6 +32,7 @@ const Nav = () => (
       <Link href="/faq" className="text-xs font-medium hover:text-blue-500 transition-colors">FAQ</Link>
       <Link href="/blog" className="text-xs font-medium hover:text-blue-500 transition-colors">Blog</Link>
       <Link href="/watchlist" className="text-xs font-medium hover:text-blue-500 transition-colors">Watchlist</Link>
+      <Link href="/chart" className="text-xs font-medium hover:text-blue-500 transition-colors">Terminal</Link>
     </div>
   </nav>
 );
