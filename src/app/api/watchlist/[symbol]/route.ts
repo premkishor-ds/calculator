@@ -25,8 +25,13 @@ export async function GET(
     threeYearsAgo.setFullYear(threeYearsAgo.getFullYear() - 3);
     const quarterlyPeriod1 = `${threeYearsAgo.getFullYear()}-01-01`;
 
-    // Fetch live summary, historical statements in parallel
-    const [summaryRes, balanceSheetRes, financialsRes, cashFlowRes, quarterlyFinancialsRes] = await Promise.allSettled([
+    // Calculate dynamic 1 year ago date for chart high fidelity
+    const oneYearAgo = new Date();
+    oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+    const chartPeriod1 = oneYearAgo.toISOString();
+
+    // Fetch live summary, historical statements and chart data in parallel
+    const [summaryRes, balanceSheetRes, financialsRes, cashFlowRes, quarterlyFinancialsRes, chartRes] = await Promise.allSettled([
       yahooFinance.quoteSummary(symbol, {
         modules: ['price', 'summaryDetail', 'defaultKeyStatistics', 'financialData', 'majorHoldersBreakdown', 'assetProfile']
       }),
@@ -49,6 +54,10 @@ export async function GET(
         period1: quarterlyPeriod1,
         module: 'financials',
         type: 'quarterly'
+      }),
+      yahooFinance.chart(symbol, {
+        period1: chartPeriod1,
+        interval: '1d'
       })
     ]);
 
@@ -65,6 +74,8 @@ export async function GET(
     const cashFlows = cashFlowRes.status === 'fulfilled' ? (cashFlowRes.value as any[]) : [];
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const quarterlyFinancials = quarterlyFinancialsRes.status === 'fulfilled' ? (quarterlyFinancialsRes.value as any[]) : [];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const chartQuotes = chartRes.status === 'fulfilled' ? ((chartRes.value as any).quotes || []) : [];
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const price = (summary.price || {}) as any;
@@ -198,6 +209,15 @@ export async function GET(
     .sort((a, b) => b.rawDate - a.rawDate)
     .slice(0, 12);
 
+    // Format chart prices (reduce data density to ~60 points for high fidelity Line SVG)
+    const step = Math.max(1, Math.floor(chartQuotes.length / 60));
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const chartData = chartQuotes.filter((_: any, idx: number) => idx % step === 0).map((q: any) => ({
+      date: q.date ? new Date(q.date).toLocaleDateString('en-IN', { month: 'short', day: 'numeric' }) : '',
+      close: Number((q.close || q.adjclose || 0).toFixed(2)),
+      volume: q.volume || 0,
+    }));
+
     // Fetch peer values dynamically from WATCHLIST_SYMBOLS
     const normalizedSymbolUpper = symbol.toUpperCase();
     const cleanTarget = normalizedSymbolUpper.trim().replace('.NS', '');
@@ -297,6 +317,7 @@ export async function GET(
       profitLoss: profitLossData,
       cashFlow: cashFlowData,
       quarterlyProfitLoss: quarterlyProfitLossData,
+      chartData: chartData,
       peers: peersData,
       pros,
       cons,

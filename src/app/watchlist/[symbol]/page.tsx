@@ -19,7 +19,8 @@ import {
   AlertTriangle,
   Calendar,
   Globe,
-  Briefcase
+  Briefcase,
+  LineChart
 } from 'lucide-react';
 
 interface Ratios {
@@ -122,6 +123,12 @@ interface CorporateProfile {
   officers: OfficerItem[];
 }
 
+interface ChartPoint {
+  date: string;
+  close: number;
+  volume: number;
+}
+
 interface StockDetails {
   ratios: Ratios;
   profile: CorporateProfile;
@@ -129,6 +136,7 @@ interface StockDetails {
   profitLoss: ProfitLossItem[];
   cashFlow: CashFlowItem[];
   quarterlyProfitLoss: QuarterlyItem[];
+  chartData: ChartPoint[];
   peers: PeerItem[];
   pros: string[];
   cons: string[];
@@ -140,6 +148,7 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState<'ratios' | 'qpl' | 'pl' | 'bs' | 'cf' | 'peers' | 'shareholding' | 'about'>('ratios');
+  const [hoveredPoint, setHoveredPoint] = useState<ChartPoint | null>(null);
 
   const decodedSymbol = decodeURIComponent(resolvedParams.symbol);
 
@@ -195,7 +204,7 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
     );
   }
 
-  const { ratios, profile, balanceSheet, profitLoss, cashFlow, quarterlyProfitLoss, peers, pros, cons } = data;
+  const { ratios, profile, balanceSheet, profitLoss, cashFlow, quarterlyProfitLoss, chartData, peers, pros, cons } = data;
   const isPositive = ratios.change >= 0;
 
   // Render statements chronologically
@@ -203,6 +212,37 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
   const chronologicalAnnual = profitLoss ? [...profitLoss].reverse() : [];
   const chronologicalBS = balanceSheet ? [...balanceSheet].reverse() : [];
   const chronologicalCF = cashFlow ? [...cashFlow].reverse() : [];
+
+  // SVG Chart Setup
+  const chartPoints = chartData || [];
+  const closeValues = chartPoints.map(p => p.close);
+  const maxClose = closeValues.length > 0 ? Math.max(...closeValues) : 100;
+  const minClose = closeValues.length > 0 ? Math.min(...closeValues) : 0;
+  const closeRange = maxClose - minClose || 1;
+
+  const svgWidth = 800;
+  const svgHeight = 220;
+  const padding = 15;
+  const graphWidth = svgWidth - padding * 2;
+  const graphHeight = svgHeight - padding * 2;
+
+  // Map elements to high fidelity coordinate points
+  const points = chartPoints.map((p, idx) => {
+    const x = padding + (idx / Math.max(1, chartPoints.length - 1)) * graphWidth;
+    const y = svgHeight - padding - ((p.close - minClose) / closeRange) * graphHeight;
+    return { x, y, data: p };
+  });
+
+  const linePath = points.map((p, idx) => `${idx === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
+  const areaPath = points.length > 0 
+    ? `${linePath} L ${points[points.length - 1].x} ${svgHeight - padding} L ${points[0].x} ${svgHeight - padding} Z`
+    : '';
+
+  // Max volume setup
+  const maxVol = chartPoints.length > 0 ? Math.max(...chartPoints.map(p => p.volume)) : 1;
+
+  // Hover target tracking
+  const activePoint = hoveredPoint || (chartPoints.length > 0 ? chartPoints[chartPoints.length - 1] : null);
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors duration-300 font-sans pb-20">
@@ -348,6 +388,118 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
         {activeTab === 'ratios' && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             
+            {/* Interactive high-fidelity Price & Volume Chart block */}
+            {chartPoints.length > 0 && (
+              <div className="md:col-span-3 bg-white dark:bg-slate-900/50 backdrop-blur-md rounded-3xl border border-slate-200 dark:border-slate-800 p-6 shadow-xl">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                  <div>
+                    <h3 className="text-lg font-bold flex items-center gap-2 text-slate-900 dark:text-white">
+                      <LineChart className="w-5 h-5 text-blue-500" /> Historical Price & Volume (1 Year)
+                    </h3>
+                    <p className="text-xs text-slate-400 mt-1 font-medium">Interactive Chartink/TradingView styled line graph with volume spike overlays.</p>
+                  </div>
+
+                  {activePoint && (
+                    <div className="flex flex-wrap gap-3 sm:gap-6 items-center bg-slate-50 dark:bg-slate-850 px-4 py-2.5 rounded-2xl text-xs font-semibold text-slate-500">
+                      <div>Date: <span className="text-slate-800 dark:text-white font-bold">{activePoint.date}</span></div>
+                      <div>Price: <span className="text-blue-500 font-extrabold">₹{activePoint.close.toFixed(2)}</span></div>
+                      <div>Volume: <span className="text-slate-850 dark:text-slate-200">{(activePoint.volume / 100000).toFixed(2)}L</span></div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="relative w-full">
+                  <svg viewBox={`0 0 ${svgWidth} ${svgHeight}`} className="w-full h-auto overflow-visible select-none">
+                    <defs>
+                      <linearGradient id="chart-gradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.25" />
+                        <stop offset="100%" stopColor="#3b82f6" stopOpacity="0.00" />
+                      </linearGradient>
+                    </defs>
+
+                    {/* horizontal helper gridlines */}
+                    <line x1={padding} y1={padding} x2={svgWidth - padding} y2={padding} stroke="currentColor" className="text-slate-100 dark:text-slate-800/40" strokeWidth="1" strokeDasharray="4 4" />
+                    <line x1={padding} y1={svgHeight / 2} x2={svgWidth - padding} y2={svgHeight / 2} stroke="currentColor" className="text-slate-100 dark:text-slate-800/40" strokeWidth="1" strokeDasharray="4 4" />
+                    <line x1={padding} y1={svgHeight - padding} x2={svgWidth - padding} y2={svgHeight - padding} stroke="currentColor" className="text-slate-150 dark:text-slate-800/80" strokeWidth="1" />
+
+                    {/* Area under curve */}
+                    {areaPath && <path d={areaPath} fill="url(#chart-gradient)" />}
+
+                    {/* Volume bars (bottom 15%) */}
+                    {points.map((p, idx) => {
+                      const barHeight = (p.data.volume / maxVol) * 35;
+                      const yStart = svgHeight - padding;
+                      const yEnd = yStart - barHeight;
+                      return (
+                        <line 
+                          key={idx} 
+                          x1={p.x} 
+                          y1={yStart} 
+                          x2={p.x} 
+                          y2={yEnd} 
+                          stroke="currentColor" 
+                          className="text-slate-200 dark:text-slate-850" 
+                          strokeWidth="2.5" 
+                        />
+                      );
+                    })}
+
+                    {/* SVG price stroke path */}
+                    {linePath && (
+                      <path 
+                        d={linePath} 
+                        fill="none" 
+                        stroke="#3b82f6" 
+                        strokeWidth="2.5" 
+                        strokeLinecap="round" 
+                        strokeLinejoin="round" 
+                        className="drop-shadow-[0_2px_8px_rgba(59,130,246,0.3)]"
+                      />
+                    )}
+
+                    {/* Hover vertical alignment line */}
+                    {activePoint && points.find(p => p.data.date === activePoint.date) && (
+                      <line 
+                        x1={points.find(p => p.data.date === activePoint.date)!.x} 
+                        y1={padding} 
+                        x2={points.find(p => p.data.date === activePoint.date)!.x} 
+                        y2={svgHeight - padding} 
+                        stroke="currentColor" 
+                        className="text-blue-500/30" 
+                        strokeWidth="1.5" 
+                        strokeDasharray="2 2"
+                      />
+                    )}
+
+                    {/* Hover target circle indicator */}
+                    {activePoint && points.find(p => p.data.date === activePoint.date) && (
+                      <circle 
+                        cx={points.find(p => p.data.date === activePoint.date)!.x} 
+                        cy={points.find(p => p.data.date === activePoint.date)!.y} 
+                        r="5" 
+                        fill="#3b82f6" 
+                        stroke="white" 
+                        strokeWidth="1.5" 
+                        className="drop-shadow-[0_0_4px_rgba(59,130,246,0.8)]"
+                      />
+                    )}
+                  </svg>
+
+                  {/* Horizontal interactive hover panels overlay */}
+                  <div className="absolute inset-0 flex">
+                    {points.map((p, idx) => (
+                      <div 
+                        key={idx} 
+                        className="h-full flex-1 cursor-crosshair"
+                        onMouseEnter={() => setHoveredPoint(p.data)}
+                        onMouseLeave={() => setHoveredPoint(null)}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Fundamental Ratios Panel */}
             <div className="md:col-span-2 space-y-6">
               <div className="bg-white dark:bg-slate-900/50 backdrop-blur-md rounded-3xl border border-slate-200 dark:border-slate-800 p-6 shadow-xl">
