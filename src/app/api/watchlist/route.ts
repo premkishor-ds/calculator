@@ -3,7 +3,7 @@ import YahooFinance from 'yahoo-finance2';
 
 const yahooFinance = new YahooFinance();
 
-const WATCHLIST_SYMBOLS = [
+export const WATCHLIST_SYMBOLS = [
   'VOLTAMP.NS',
   'TDPOWERSYS.NS',
   'TARIL.NS',

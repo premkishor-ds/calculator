@@ -2,7 +2,23 @@
 
 import React, { useEffect, useState, use } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, TrendingUp, TrendingDown, RefreshCw, FileText, PieChart, Info, Shield, Layers, Scale } from 'lucide-react';
+import { 
+  ArrowLeft, 
+  TrendingUp, 
+  TrendingDown, 
+  RefreshCw, 
+  FileText, 
+  PieChart, 
+  Info, 
+  Shield, 
+  Layers, 
+  Scale, 
+  DollarSign, 
+  Users, 
+  CheckCircle, 
+  AlertTriangle,
+  Calendar
+} from 'lucide-react';
 
 interface Ratios {
   price: number;
@@ -50,10 +66,42 @@ interface ProfitLossItem {
   eps: number;
 }
 
+interface QuarterlyItem {
+  date: string;
+  revenue: number;
+  costOfRevenue: number;
+  grossProfit: number;
+  operatingIncome: number;
+  netIncome: number;
+  eps: number;
+}
+
+interface CashFlowItem {
+  date: string;
+  operatingCashFlow: number;
+  investingCashFlow: number;
+  financingCashFlow: number;
+  freeCashFlow: number;
+}
+
+interface PeerItem {
+  symbol: string;
+  name: string;
+  price: number;
+  pe: number;
+  marketCap: number;
+  divYield: number;
+}
+
 interface StockDetails {
   ratios: Ratios;
   balanceSheet: BalanceSheetItem[];
   profitLoss: ProfitLossItem[];
+  cashFlow: CashFlowItem[];
+  quarterlyProfitLoss: QuarterlyItem[];
+  peers: PeerItem[];
+  pros: string[];
+  cons: string[];
 }
 
 export default function StockDetailPage({ params }: { params: Promise<{ symbol: string }> }) {
@@ -61,7 +109,7 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
   const [data, setData] = useState<StockDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [activeTab, setActiveTab] = useState<'ratios' | 'pl' | 'bs' | 'shareholding'>('ratios');
+  const [activeTab, setActiveTab] = useState<'ratios' | 'pl' | 'qpl' | 'bs' | 'cf' | 'peers' | 'shareholding'>('ratios');
 
   const decodedSymbol = decodeURIComponent(resolvedParams.symbol);
 
@@ -98,7 +146,7 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
     return (
       <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col justify-center items-center gap-4">
         <RefreshCw className="w-8 h-8 text-blue-500 animate-spin" />
-        <p className="text-slate-500 font-medium text-sm">Compiling financial intelligence for {decodedSymbol.replace('.NS', '')}...</p>
+        <p className="text-slate-500 font-medium text-sm">Compiling complete financial intelligence for {decodedSymbol.replace('.NS', '')}...</p>
       </div>
     );
   }
@@ -117,8 +165,15 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
     );
   }
 
-  const { ratios, balanceSheet, profitLoss } = data;
+  const { ratios, balanceSheet, profitLoss, cashFlow, quarterlyProfitLoss, peers, pros, cons } = data;
   const isPositive = ratios.change >= 0;
+
+  // Render quarterly statements sorted chronologically (oldest at top, newest at bottom)
+  const chronologicalQuarterly = quarterlyProfitLoss ? [...quarterlyProfitLoss].reverse() : [];
+  // Render annual statements chronologically
+  const chronologicalAnnual = profitLoss ? [...profitLoss].reverse() : [];
+  const chronologicalBS = balanceSheet ? [...balanceSheet].reverse() : [];
+  const chronologicalCF = cashFlow ? [...cashFlow].reverse() : [];
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors duration-300 font-sans pb-20">
@@ -189,6 +244,16 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
             Overview & Ratios
           </button>
           <button
+            onClick={() => setActiveTab('qpl')}
+            className={`pb-4 px-2 text-sm font-semibold border-b-2 whitespace-nowrap transition-all ${
+              activeTab === 'qpl'
+                ? 'border-blue-500 text-blue-500 dark:text-blue-400'
+                : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+            }`}
+          >
+            Quarterly Results
+          </button>
+          <button
             onClick={() => setActiveTab('pl')}
             className={`pb-4 px-2 text-sm font-semibold border-b-2 whitespace-nowrap transition-all ${
               activeTab === 'pl'
@@ -196,7 +261,7 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
                 : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
             }`}
           >
-            Profit & Loss
+            Profit & Loss (10Y)
           </button>
           <button
             onClick={() => setActiveTab('bs')}
@@ -206,7 +271,27 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
                 : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
             }`}
           >
-            Balance Sheet
+            Balance Sheet (10Y)
+          </button>
+          <button
+            onClick={() => setActiveTab('cf')}
+            className={`pb-4 px-2 text-sm font-semibold border-b-2 whitespace-nowrap transition-all ${
+              activeTab === 'cf'
+                ? 'border-blue-500 text-blue-500 dark:text-blue-400'
+                : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+            }`}
+          >
+            Cash Flow (10Y)
+          </button>
+          <button
+            onClick={() => setActiveTab('peers')}
+            className={`pb-4 px-2 text-sm font-semibold border-b-2 whitespace-nowrap transition-all ${
+              activeTab === 'peers'
+                ? 'border-blue-500 text-blue-500 dark:text-blue-400'
+                : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+            }`}
+          >
+            Peer Comparison
           </button>
           <button
             onClick={() => setActiveTab('shareholding')}
@@ -299,7 +384,89 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
                 </div>
               </div>
             </div>
+
+            {/* Pros & Cons Section */}
+            <div className="md:col-span-3 bg-white dark:bg-slate-900/50 backdrop-blur-md rounded-3xl border border-slate-200 dark:border-slate-800 p-6 sm:p-8 shadow-xl">
+              <h3 className="text-lg font-bold mb-6 text-slate-900 dark:text-white">Vision Analysis: Pros & Cons</h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                {/* Pros */}
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2 text-emerald-500 font-bold text-sm">
+                    <CheckCircle className="w-5 h-5" />
+                    <span>PROS / ADVANTAGES</span>
+                  </div>
+                  <ul className="space-y-3">
+                    {pros.map((pro, index) => (
+                      <li key={index} className="flex gap-2 items-start text-sm text-slate-600 dark:text-slate-350">
+                        <span className="text-emerald-500 mt-0.5">•</span>
+                        <span>{pro}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                {/* Cons */}
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2 text-red-500 font-bold text-sm">
+                    <AlertTriangle className="w-5 h-5" />
+                    <span>CONS / LIMITATIONS</span>
+                  </div>
+                  <ul className="space-y-3">
+                    {cons.map((con, index) => (
+                      <li key={index} className="flex gap-2 items-start text-sm text-slate-600 dark:text-slate-350">
+                        <span className="text-red-500 mt-0.5">•</span>
+                        <span>{con}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            </div>
             
+          </div>
+        )}
+
+        {activeTab === 'qpl' && (
+          <div className="bg-white dark:bg-slate-900/50 backdrop-blur-md rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden">
+            <div className="p-6 border-b border-slate-200 dark:border-slate-800 flex items-center gap-2">
+              <Calendar className="w-5 h-5 text-blue-500" />
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white">Quarterly Financial Results (Last 12 Quarters)</h3>
+            </div>
+            {!chronologicalQuarterly || chronologicalQuarterly.length === 0 ? (
+              <div className="p-12 text-center text-slate-500 font-medium">Historical quarterly statements are currently unavailable for this stock symbol.</div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse min-w-[800px]">
+                  <thead>
+                    <tr className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-800 text-xs font-bold uppercase tracking-wider text-slate-500">
+                      <th className="p-4">Fiscal Period</th>
+                      <th className="p-4 text-right">Total Revenue</th>
+                      <th className="p-4 text-right">Cost of Revenue</th>
+                      <th className="p-4 text-right">Gross Profit</th>
+                      <th className="p-4 text-right">Operating Income</th>
+                      <th className="p-4 text-right font-bold text-slate-800 dark:text-white">Net Income</th>
+                      <th className="p-4 text-right">Basic EPS</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-150 dark:divide-slate-800 text-sm">
+                    {chronologicalQuarterly.map((item, idx) => (
+                      <tr key={idx} className="hover:bg-slate-50 dark:hover:bg-slate-800/20 transition-colors">
+                        <td className="p-4 font-bold text-slate-900 dark:text-white">{item.date}</td>
+                        <td className="p-4 text-right font-medium">₹{item.revenue ? (item.revenue / 10000000).toFixed(2) : '0.00'}Cr</td>
+                        <td className="p-4 text-right">₹{item.costOfRevenue ? (item.costOfRevenue / 10000000).toFixed(2) : '0.00'}Cr</td>
+                        <td className="p-4 text-right font-medium text-slate-700 dark:text-slate-350">₹{item.grossProfit ? (item.grossProfit / 10000000).toFixed(2) : '0.00'}Cr</td>
+                        <td className="p-4 text-right font-medium text-slate-700 dark:text-slate-350">₹{item.operatingIncome ? (item.operatingIncome / 10000000).toFixed(2) : '0.00'}Cr</td>
+                        <td className={`p-4 text-right font-bold ${item.netIncome >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                          ₹{item.netIncome ? (item.netIncome / 10000000).toFixed(2) : '0.00'}Cr
+                        </td>
+                        <td className="p-4 text-right font-semibold text-slate-900 dark:text-white">₹{item.eps?.toFixed(2)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         )}
 
@@ -307,9 +474,9 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
           <div className="bg-white dark:bg-slate-900/50 backdrop-blur-md rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden">
             <div className="p-6 border-b border-slate-200 dark:border-slate-800 flex items-center gap-2">
               <FileText className="w-5 h-5 text-blue-500" />
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white">Annual Profit & Loss Statement (₹)</h3>
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white">Annual Profit & Loss Statement (10-Year Trend)</h3>
             </div>
-            {profitLoss.length === 0 ? (
+            {!chronologicalAnnual || chronologicalAnnual.length === 0 ? (
               <div className="p-12 text-center text-slate-500 font-medium">Historical P&L data is currently unavailable for this stock symbol.</div>
             ) : (
               <div className="overflow-x-auto">
@@ -326,13 +493,13 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-150 dark:divide-slate-800 text-sm">
-                    {profitLoss.map((item, idx) => (
+                    {chronologicalAnnual.map((item, idx) => (
                       <tr key={idx} className="hover:bg-slate-50 dark:hover:bg-slate-800/20 transition-colors">
                         <td className="p-4 font-bold text-slate-900 dark:text-white">{item.date}</td>
                         <td className="p-4 text-right font-medium">₹{item.revenue ? (item.revenue / 10000000).toFixed(2) : '0.00'}Cr</td>
                         <td className="p-4 text-right">₹{item.costOfRevenue ? (item.costOfRevenue / 10000000).toFixed(2) : '0.00'}Cr</td>
-                        <td className="p-4 text-right font-medium text-slate-700 dark:text-slate-300">₹{item.grossProfit ? (item.grossProfit / 10000000).toFixed(2) : '0.00'}Cr</td>
-                        <td className="p-4 text-right font-medium text-slate-700 dark:text-slate-300">₹{item.operatingIncome ? (item.operatingIncome / 10000000).toFixed(2) : '0.00'}Cr</td>
+                        <td className="p-4 text-right font-medium text-slate-700 dark:text-slate-350">₹{item.grossProfit ? (item.grossProfit / 10000000).toFixed(2) : '0.00'}Cr</td>
+                        <td className="p-4 text-right font-medium text-slate-700 dark:text-slate-350">₹{item.operatingIncome ? (item.operatingIncome / 10000000).toFixed(2) : '0.00'}Cr</td>
                         <td className={`p-4 text-right font-semibold ${item.netIncome >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
                           ₹{item.netIncome ? (item.netIncome / 10000000).toFixed(2) : '0.00'}Cr
                         </td>
@@ -350,9 +517,9 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
           <div className="bg-white dark:bg-slate-900/50 backdrop-blur-md rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden">
             <div className="p-6 border-b border-slate-200 dark:border-slate-800 flex items-center gap-2">
               <Layers className="w-5 h-5 text-blue-500" />
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white">Annual Balance Sheet (₹)</h3>
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white">Annual Balance Sheet (10-Year Trend)</h3>
             </div>
-            {balanceSheet.length === 0 ? (
+            {!chronologicalBS || chronologicalBS.length === 0 ? (
               <div className="p-12 text-center text-slate-500 font-medium">Historical Balance Sheet is currently unavailable for this stock symbol.</div>
             ) : (
               <div className="overflow-x-auto">
@@ -369,7 +536,7 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-150 dark:divide-slate-800 text-sm">
-                    {balanceSheet.map((item, idx) => (
+                    {chronologicalBS.map((item, idx) => (
                       <tr key={idx} className="hover:bg-slate-50 dark:hover:bg-slate-800/20 transition-colors">
                         <td className="p-4 font-bold text-slate-900 dark:text-white">{item.date}</td>
                         <td className="p-4 text-right font-medium">₹{(item.totalAssets / 10000000).toFixed(2)}Cr</td>
@@ -378,6 +545,104 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
                         <td className="p-4 text-right">₹{(item.totalLiabilities / 10000000).toFixed(2)}Cr</td>
                         <td className="p-4 text-right font-medium text-red-500">₹{item.debt ? (item.debt / 10000000).toFixed(2) : '0.00'}Cr</td>
                         <td className="p-4 text-right font-semibold text-emerald-500">₹{(item.equity / 10000000).toFixed(2)}Cr</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === 'cf' && (
+          <div className="bg-white dark:bg-slate-900/50 backdrop-blur-md rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden">
+            <div className="p-6 border-b border-slate-200 dark:border-slate-800 flex items-center gap-2">
+              <DollarSign className="w-5 h-5 text-blue-500" />
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white">Annual Cash Flow Statement (10-Year Trend)</h3>
+            </div>
+            {!chronologicalCF || chronologicalCF.length === 0 ? (
+              <div className="p-12 text-center text-slate-500 font-medium">Historical Cash Flow data is currently unavailable for this stock symbol.</div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse min-w-[800px]">
+                  <thead>
+                    <tr className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-800 text-xs font-bold uppercase tracking-wider text-slate-500">
+                      <th className="p-4">Fiscal Period</th>
+                      <th className="p-4 text-right">Operating Cash Flow</th>
+                      <th className="p-4 text-right">Investing Cash Flow</th>
+                      <th className="p-4 text-right">Financing Cash Flow</th>
+                      <th className="p-4 text-right font-bold text-slate-850 dark:text-white">Free Cash Flow</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-150 dark:divide-slate-800 text-sm">
+                    {chronologicalCF.map((item, idx) => (
+                      <tr key={idx} className="hover:bg-slate-50 dark:hover:bg-slate-800/20 transition-colors">
+                        <td className="p-4 font-bold text-slate-900 dark:text-white">{item.date}</td>
+                        <td className={`p-4 text-right font-medium ${item.operatingCashFlow >= 0 ? 'text-slate-700 dark:text-slate-350' : 'text-red-500'}`}>
+                          ₹{item.operatingCashFlow ? (item.operatingCashFlow / 10000000).toFixed(2) : '0.00'}Cr
+                        </td>
+                        <td className={`p-4 text-right ${item.investingCashFlow >= 0 ? 'text-slate-700 dark:text-slate-350' : 'text-red-500'}`}>
+                          ₹{item.investingCashFlow ? (item.investingCashFlow / 10000000).toFixed(2) : '0.00'}Cr
+                        </td>
+                        <td className={`p-4 text-right ${item.financingCashFlow >= 0 ? 'text-slate-700 dark:text-slate-350' : 'text-red-500'}`}>
+                          ₹{item.financingCashFlow ? (item.financingCashFlow / 10000000).toFixed(2) : '0.00'}Cr
+                        </td>
+                        <td className={`p-4 text-right font-bold ${item.freeCashFlow >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                          ₹{item.freeCashFlow ? (item.freeCashFlow / 10000000).toFixed(2) : '0.00'}Cr
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === 'peers' && (
+          <div className="bg-white dark:bg-slate-900/50 backdrop-blur-md rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden">
+            <div className="p-6 border-b border-slate-200 dark:border-slate-800 flex items-center gap-2">
+              <Users className="w-5 h-5 text-blue-500" />
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white">Comparative Peer Analysis</h3>
+            </div>
+            {!peers || peers.length === 0 ? (
+              <div className="p-12 text-center text-slate-500 font-medium">Comparative peers are currently unavailable for this sector.</div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse min-w-[800px]">
+                  <thead>
+                    <tr className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-800 text-xs font-bold uppercase tracking-wider text-slate-500">
+                      <th className="p-4">Ticker Symbol</th>
+                      <th className="p-4">Company Name</th>
+                      <th className="p-4 text-right">Current Price (₹)</th>
+                      <th className="p-4 text-right">P/E Ratio</th>
+                      <th className="p-4 text-right">Market Cap (₹)</th>
+                      <th className="p-4 text-right">Div. Yield (%)</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-150 dark:divide-slate-800 text-sm">
+                    {/* Current Stock row for visual highlighting */}
+                    <tr className="bg-blue-500/5 hover:bg-blue-500/10 transition-colors font-semibold">
+                      <td className="p-4 text-blue-500 font-bold">{ratios.symbol.replace('.NS', '')} (Current)</td>
+                      <td className="p-4 text-slate-800 dark:text-white">{ratios.name}</td>
+                      <td className="p-4 text-right">₹{ratios.price.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                      <td className="p-4 text-right">{ratios.pe > 0 ? ratios.pe.toFixed(2) : '--'}</td>
+                      <td className="p-4 text-right">₹{(ratios.marketCap / 10000000).toFixed(2)}Cr</td>
+                      <td className="p-4 text-right">{ratios.divYield > 0 ? `${ratios.divYield.toFixed(2)}%` : '0.00%'}</td>
+                    </tr>
+                    
+                    {peers.map((peer, idx) => (
+                      <tr key={idx} className="hover:bg-slate-50 dark:hover:bg-slate-800/20 transition-colors">
+                        <td className="p-4 font-bold text-slate-900 dark:text-white">
+                          <Link href={`/watchlist/${encodeURIComponent(peer.symbol)}`} className="text-slate-950 dark:text-slate-200 hover:text-blue-500 transition-colors underline">
+                            {peer.symbol.replace('.NS', '')}
+                          </Link>
+                        </td>
+                        <td className="p-4">{peer.name}</td>
+                        <td className="p-4 text-right">₹{peer.price.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                        <td className="p-4 text-right">{peer.pe > 0 ? peer.pe.toFixed(2) : '--'}</td>
+                        <td className="p-4 text-right">₹{(peer.marketCap / 10000000).toFixed(2)}Cr</td>
+                        <td className="p-4 text-right">{peer.divYield > 0 ? `${peer.divYield.toFixed(2)}%` : '0.00%'}</td>
                       </tr>
                     ))}
                   </tbody>
