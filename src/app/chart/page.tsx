@@ -206,7 +206,7 @@ export default function TradingTerminalPage() {
       <main className="flex-1 flex flex-col lg:grid lg:grid-cols-12 lg:overflow-hidden min-h-0">
 
         {/* LEFT: Advanced Chart + Stock Info */}
-        <section className="lg:col-span-9 flex flex-col min-h-[52dvh] lg:min-h-0 overflow-hidden border-b lg:border-b-0 lg:border-r border-slate-800 bg-slate-950">
+        <section className="lg:col-span-9 flex flex-col min-h-[52dvh] lg:min-h-0 lg:overflow-hidden border-b lg:border-b-0 lg:border-r border-slate-800 bg-slate-950">
 
           {/* Stock header strip */}
           {selectedStock ? (
