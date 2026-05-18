@@ -60,7 +60,7 @@ export default function TradingTerminalPage() {
   // Expanded dynamic technical & fundamental analysis panel state
   const [deepData,         setDeepData]         = useState<any>(null);
   const [deepLoading,      setDeepLoading]      = useState(false);
-  const [activeTab,        setActiveTab]        = useState<'technicals' | 'fundamentals' | 'profile' | 'proscons'>('technicals');
+  const [activeTab,        setActiveTab]        = useState<'technicals' | 'fundamentals' | 'profile' | 'proscons' | 'strategy'>('technicals');
 
   /* Derived */
   const selectedStock = watchlistStocks.find(s => s.symbol === selectedSymbol) || null;
@@ -273,7 +273,8 @@ export default function TradingTerminalPage() {
                     { id: 'technicals', label: '📈 Technicals' },
                     { id: 'fundamentals', label: '📊 Fundamentals' },
                     { id: 'profile', label: '🏢 Profile' },
-                    { id: 'proscons', label: '✔️ Pros & Cons' }
+                    { id: 'proscons', label: '✔️ Pros & Cons' },
+                    { id: 'strategy', label: '🎯 Strategy' }
                   ].map(tab => (
                     <button
                       key={tab.id}
@@ -466,6 +467,79 @@ export default function TradingTerminalPage() {
                         </div>
                       </div>
                     )}
+
+                    {/* STRATEGY TAB */}
+                    {activeTab === 'strategy' && (() => {
+                      const roe = deepData?.ratios?.roe || 0;
+                      const debt = (deepData?.ratios?.debtToEquity || 0) / 100;
+                      const pe = selectedStock.pe || 0;
+                      const price = selectedStock.price || 0;
+                      const sma200 = deepData?.ratios?.twoHundredDayAverage || 0;
+                      const sma50 = deepData?.ratios?.fiftyDayAverage || 0;
+
+                      // Decision engine math
+                      let score = 50;
+                      if (roe > 20) score += 15;
+                      else if (roe > 12) score += 5;
+                      else if (roe < 8 && roe > 0) score -= 10;
+
+                      if (debt > 0 && debt < 0.5) score += 10;
+                      else if (debt > 1.5) score -= 15;
+
+                      if (pe > 0 && pe < 25) score += 10;
+                      else if (pe > 75) score -= 15;
+
+                      if (price > 0 && sma200 > 0) {
+                        if (price > sma200) score += 15;
+                        else score -= 15;
+                      }
+                      if (price > 0 && sma50 > 0) {
+                        if (price > sma50) score += 5;
+                      }
+
+                      let rating = "HOLD (NEUTRAL)";
+                      let badgeColor = "bg-amber-500/10 text-amber-400 border-amber-500/20";
+                      let textColor = "text-amber-400";
+                      let stance = " Sideways consolidation or premium valuation suggests waiting for a better price entry. Strong fundamentals hold, but short-term upside is capped.";
+
+                      if (score >= 65) {
+                        rating = "ACCUMULATE (BUY)";
+                        badgeColor = "bg-emerald-500/10 text-emerald-400 border-emerald-500/20";
+                        textColor = "text-emerald-400";
+                        stance = " Dynamic technical support combined with solid Return on Equity (ROE) makes this a high-conviction buy. Favorable long-term wealth compounding candidate.";
+                      } else if (score < 45) {
+                        rating = "REDUCE / SELL";
+                        badgeColor = "bg-rose-500/10 text-rose-400 border-rose-500/20";
+                        textColor = "text-rose-400";
+                        stance = " Elevated multiples (high P/E), significant leverage, or pricing below key moving averages (200 SMA) warrants technical caution. Risk profile is high.";
+                      }
+
+                      return (
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs leading-relaxed">
+                          <div className="flex flex-col justify-center items-center bg-slate-900/40 border border-slate-900 p-3 rounded-xl text-center shrink-0">
+                            <span className="text-[8px] text-slate-500 font-extrabold uppercase tracking-widest block">Vision Stance</span>
+                            <div className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase border mt-2 ${badgeColor}`}>
+                              {rating}
+                            </div>
+                            <span className="text-[8px] text-slate-500 font-bold mt-2">Score: {score}/100</span>
+                          </div>
+
+                          <div className="md:col-span-2 bg-slate-900/20 border border-slate-900/50 p-2.5 rounded-xl max-h-[90px] overflow-y-auto scrollbar-none font-medium text-[10px] text-slate-400">
+                            <span className="font-extrabold text-slate-300 block mb-1">Detailed Analyst Rationale:</span>
+                            <span className={`font-extrabold ${textColor}`}>{rating}:</span>{stance}
+                            
+                            {/* Detailed dynamic bullet-points based on score parameters */}
+                            <ul className="mt-2 space-y-1 list-disc list-inside text-slate-500 font-semibold">
+                              {roe > 15 && <li>Robust Return on Equity ({roe.toFixed(1)}%) indicates excellent capital efficiency.</li>}
+                              {debt > 0 && debt < 1.0 && <li>Healthy balance sheet with low gearing (D/E ratio at {debt.toFixed(2)}x).</li>}
+                              {pe > 0 && pe < 35 && <li>Attractive valuation multiple (P/E at {pe.toFixed(1)}x) relative to growth indices.</li>}
+                              {price > sma200 && sma200 > 0 && <li>Bullish technical structure supported by trades above 200 SMA.</li>}
+                              {price < sma200 && sma200 > 0 && <li>Bearish trend alert — trading below 200 SMA indicating heavy overhead resistance.</li>}
+                            </ul>
+                          </div>
+                        </div>
+                      );
+                    })()}
                   </>
                 )}
               </div>
