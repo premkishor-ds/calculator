@@ -127,6 +127,7 @@ interface ChartPoint {
   date: string;
   close: number;
   volume: number;
+  pe?: number;
 }
 
 interface StockDetails {
@@ -149,6 +150,13 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState<'ratios' | 'qpl' | 'pl' | 'bs' | 'cf' | 'peers' | 'shareholding' | 'about'>('ratios');
   const [hoveredPoint, setHoveredPoint] = useState<ChartPoint | null>(null);
+
+  // Dynamic price & PE chart state
+  const [chartRange, setChartRange] = useState<string>('1Y');
+  const [chartType, setChartType] = useState<'price' | 'pe'>('price');
+  const [dynamicChartData, setDynamicChartData] = useState<ChartPoint[]>([]);
+  const [chartLoading, setChartLoading] = useState<boolean>(false);
+  const [chartError, setChartError] = useState<string>('');
 
   const decodedSymbol = decodeURIComponent(resolvedParams.symbol);
 
@@ -181,6 +189,42 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
     };
   }, [decodedSymbol]);
 
+  // Synchronize dynamic chart data when selected range or preloaded details changes
+  useEffect(() => {
+    if (!data) return;
+
+    // Direct client bypass for preloaded 1Y range to optimize initial load
+    if (chartRange === '1Y') {
+      const initialPoints = (data.chartData || []).map((p: ChartPoint) => ({
+        date: p.date,
+        close: p.close,
+        volume: p.volume,
+        pe: p.close > 0 && data.ratios.eps > 0 ? Number((p.close / data.ratios.eps).toFixed(2)) : 0
+      }));
+      setTimeout(() => {
+        setDynamicChartData(initialPoints);
+      }, 0);
+      return;
+    }
+
+    const fetchChartRange = async () => {
+      try {
+        setChartLoading(true);
+        setChartError('');
+        const res = await fetch(`/api/watchlist/${encodeURIComponent(decodedSymbol)}/chart?range=${chartRange.toLowerCase()}`);
+        if (!res.ok) throw new Error('Failed to fetch historical chart data');
+        const chartJSON = await res.json();
+        setDynamicChartData(chartJSON.points || []);
+      } catch (err: unknown) {
+        setChartError(err instanceof Error ? err.message : 'Something went wrong fetching chart');
+      } finally {
+        setChartLoading(false);
+      }
+    };
+
+    fetchChartRange();
+  }, [chartRange, decodedSymbol, data]);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col justify-center items-center gap-4">
@@ -204,7 +248,7 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
     );
   }
 
-  const { ratios, profile, balanceSheet, profitLoss, cashFlow, quarterlyProfitLoss, chartData, peers, pros, cons } = data;
+  const { ratios, profile, balanceSheet, profitLoss, cashFlow, quarterlyProfitLoss, peers, pros, cons } = data;
   const isPositive = ratios.change >= 0;
 
   // Render statements chronologically
@@ -213,12 +257,16 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
   const chronologicalBS = balanceSheet ? [...balanceSheet].reverse() : [];
   const chronologicalCF = cashFlow ? [...cashFlow].reverse() : [];
 
-  // SVG Chart Setup
-  const chartPoints = chartData || [];
-  const closeValues = chartPoints.map(p => p.close);
-  const maxClose = closeValues.length > 0 ? Math.max(...closeValues) : 100;
-  const minClose = closeValues.length > 0 ? Math.min(...closeValues) : 0;
-  const closeRange = maxClose - minClose || 1;
+  // SVG Chart Setup (Dynamic Price or PE)
+  const chartPoints = dynamicChartData || [];
+  
+  const activeValues = chartType === 'price'
+    ? chartPoints.map(p => p.close || 0)
+    : chartPoints.map(p => p.pe || 0);
+
+  const maxVal = activeValues.length > 0 ? Math.max(...activeValues) : 100;
+  const minVal = activeValues.length > 0 ? Math.min(...activeValues) : 0;
+  const valRange = maxVal - minVal || 1;
 
   const svgWidth = 800;
   const svgHeight = 220;
@@ -228,8 +276,9 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
 
   // Map elements to high fidelity coordinate points
   const points = chartPoints.map((p, idx) => {
+    const yValue = chartType === 'price' ? (p.close || 0) : (p.pe || 0);
     const x = padding + (idx / Math.max(1, chartPoints.length - 1)) * graphWidth;
-    const y = svgHeight - padding - ((p.close - minClose) / closeRange) * graphHeight;
+    const y = svgHeight - padding - ((yValue - minVal) / valRange) * graphHeight;
     return { x, y, data: p };
   });
 
@@ -239,7 +288,7 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
     : '';
 
   // Max volume setup
-  const maxVol = chartPoints.length > 0 ? Math.max(...chartPoints.map(p => p.volume)) : 1;
+  const maxVol = chartPoints.length > 0 ? Math.max(...chartPoints.map(p => p.volume || 0)) : 1;
 
   // Hover target tracking
   const activePoint = hoveredPoint || (chartPoints.length > 0 ? chartPoints[chartPoints.length - 1] : null);
@@ -389,116 +438,190 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             
             {/* Interactive high-fidelity Price & Volume Chart block */}
-            {chartPoints.length > 0 && (
-              <div className="md:col-span-3 bg-white dark:bg-slate-900/50 backdrop-blur-md rounded-3xl border border-slate-200 dark:border-slate-800 p-6 shadow-xl">
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-                  <div>
-                    <h3 className="text-lg font-bold flex items-center gap-2 text-slate-900 dark:text-white">
-                      <LineChart className="w-5 h-5 text-blue-500" /> Historical Price & Volume (1 Year)
+            <div className="md:col-span-3 bg-white dark:bg-slate-900/50 backdrop-blur-md rounded-3xl border border-slate-200 dark:border-slate-800 p-6 shadow-xl">
+              <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 mb-6">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <LineChart className={`w-5 h-5 ${chartType === 'price' ? 'text-blue-500' : 'text-purple-500'}`} />
+                    <h3 className="text-lg font-bold text-slate-900 dark:text-white">
+                      {chartType === 'price' ? 'Historical Price & Volume' : 'Historical P/E Ratio Trend'} ({chartRange})
                     </h3>
-                    <p className="text-xs text-slate-400 mt-1 font-medium">Interactive Chartink/TradingView styled line graph with volume spike overlays.</p>
                   </div>
-
-                  {activePoint && (
-                    <div className="flex flex-wrap gap-3 sm:gap-6 items-center bg-slate-50 dark:bg-slate-850 px-4 py-2.5 rounded-2xl text-xs font-semibold text-slate-500">
-                      <div>Date: <span className="text-slate-800 dark:text-white font-bold">{activePoint.date}</span></div>
-                      <div>Price: <span className="text-blue-500 font-extrabold">₹{activePoint.close.toFixed(2)}</span></div>
-                      <div>Volume: <span className="text-slate-850 dark:text-slate-200">{(activePoint.volume / 100000).toFixed(2)}L</span></div>
-                    </div>
-                  )}
+                  <p className="text-xs text-slate-400 mt-1 font-medium">
+                    {chartType === 'price' 
+                      ? 'Interactive Chartink/TradingView styled line graph with volume spike overlays.'
+                      : 'Dynamic price-to-earnings multiple trend calculated using chronological reported filings.'}
+                  </p>
                 </div>
 
-                <div className="relative w-full">
-                  <svg viewBox={`0 0 ${svgWidth} ${svgHeight}`} className="w-full h-auto overflow-visible select-none">
-                    <defs>
-                      <linearGradient id="chart-gradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.25" />
-                        <stop offset="100%" stopColor="#3b82f6" stopOpacity="0.00" />
-                      </linearGradient>
-                    </defs>
+                {/* Price vs PE toggle & Interval selectors */}
+                <div className="flex flex-wrap items-center gap-4 w-full lg:w-auto">
+                  {/* Price / PE Selectors */}
+                  <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
+                    <button
+                      onClick={() => setChartType('price')}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                        chartType === 'price'
+                          ? 'bg-blue-500 text-white shadow-md'
+                          : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                      }`}
+                    >
+                      Price Chart
+                    </button>
+                    <button
+                      onClick={() => setChartType('pe')}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                        chartType === 'pe'
+                          ? 'bg-purple-500 text-white shadow-md'
+                          : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                      }`}
+                    >
+                      P/E Ratio
+                    </button>
+                  </div>
 
-                    {/* horizontal helper gridlines */}
-                    <line x1={padding} y1={padding} x2={svgWidth - padding} y2={padding} stroke="currentColor" className="text-slate-100 dark:text-slate-800/40" strokeWidth="1" strokeDasharray="4 4" />
-                    <line x1={padding} y1={svgHeight / 2} x2={svgWidth - padding} y2={svgHeight / 2} stroke="currentColor" className="text-slate-100 dark:text-slate-800/40" strokeWidth="1" strokeDasharray="4 4" />
-                    <line x1={padding} y1={svgHeight - padding} x2={svgWidth - padding} y2={svgHeight - padding} stroke="currentColor" className="text-slate-150 dark:text-slate-800/80" strokeWidth="1" />
-
-                    {/* Area under curve */}
-                    {areaPath && <path d={areaPath} fill="url(#chart-gradient)" />}
-
-                    {/* Volume bars (bottom 15%) */}
-                    {points.map((p, idx) => {
-                      const barHeight = (p.data.volume / maxVol) * 35;
-                      const yStart = svgHeight - padding;
-                      const yEnd = yStart - barHeight;
-                      return (
-                        <line 
-                          key={idx} 
-                          x1={p.x} 
-                          y1={yStart} 
-                          x2={p.x} 
-                          y2={yEnd} 
-                          stroke="currentColor" 
-                          className="text-slate-200 dark:text-slate-850" 
-                          strokeWidth="2.5" 
-                        />
-                      );
-                    })}
-
-                    {/* SVG price stroke path */}
-                    {linePath && (
-                      <path 
-                        d={linePath} 
-                        fill="none" 
-                        stroke="#3b82f6" 
-                        strokeWidth="2.5" 
-                        strokeLinecap="round" 
-                        strokeLinejoin="round" 
-                        className="drop-shadow-[0_2px_8px_rgba(59,130,246,0.3)]"
-                      />
-                    )}
-
-                    {/* Hover vertical alignment line */}
-                    {activePoint && points.find(p => p.data.date === activePoint.date) && (
-                      <line 
-                        x1={points.find(p => p.data.date === activePoint.date)!.x} 
-                        y1={padding} 
-                        x2={points.find(p => p.data.date === activePoint.date)!.x} 
-                        y2={svgHeight - padding} 
-                        stroke="currentColor" 
-                        className="text-blue-500/30" 
-                        strokeWidth="1.5" 
-                        strokeDasharray="2 2"
-                      />
-                    )}
-
-                    {/* Hover target circle indicator */}
-                    {activePoint && points.find(p => p.data.date === activePoint.date) && (
-                      <circle 
-                        cx={points.find(p => p.data.date === activePoint.date)!.x} 
-                        cy={points.find(p => p.data.date === activePoint.date)!.y} 
-                        r="5" 
-                        fill="#3b82f6" 
-                        stroke="white" 
-                        strokeWidth="1.5" 
-                        className="drop-shadow-[0_0_4px_rgba(59,130,246,0.8)]"
-                      />
-                    )}
-                  </svg>
-
-                  {/* Horizontal interactive hover panels overlay */}
-                  <div className="absolute inset-0 flex">
-                    {points.map((p, idx) => (
-                      <div 
-                        key={idx} 
-                        className="h-full flex-1 cursor-crosshair"
-                        onMouseEnter={() => setHoveredPoint(p.data)}
-                        onMouseLeave={() => setHoveredPoint(null)}
-                      />
+                  {/* Range Selectors */}
+                  <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
+                    {['1D', '1W', '1M', '1Y', '5Y', 'MAX'].map((r) => (
+                      <button
+                        key={r}
+                        onClick={() => setChartRange(r)}
+                        className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                          chartRange === r
+                            ? `${chartType === 'price' ? 'bg-blue-500' : 'bg-purple-500'} text-white shadow-md`
+                            : 'text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+                        }`}
+                      >
+                        {r}
+                      </button>
                     ))}
                   </div>
                 </div>
               </div>
-            )}
+
+              {activePoint && (
+                <div className="flex flex-wrap gap-3 sm:gap-6 items-center bg-slate-50 dark:bg-slate-850 px-4 py-2.5 rounded-2xl text-xs font-semibold text-slate-500 mb-6">
+                  <div>Date: <span className="text-slate-800 dark:text-white font-bold">{activePoint.date}</span></div>
+                  {chartType === 'price' ? (
+                    <>
+                      <div>Price: <span className="text-blue-500 font-extrabold">₹{activePoint.close.toFixed(2)}</span></div>
+                      {activePoint.volume > 0 && (
+                        <div>Volume: <span className="text-slate-850 dark:text-slate-200">{(activePoint.volume / 100000).toFixed(2)}L</span></div>
+                      )}
+                    </>
+                  ) : (
+                    <div>P/E Ratio: <span className="text-purple-500 font-extrabold">{activePoint.pe !== undefined && activePoint.pe > 0 ? activePoint.pe.toFixed(2) : '--'}</span></div>
+                  )}
+                </div>
+              )}
+
+              <div className="relative w-full min-h-[220px]">
+                {chartLoading && (
+                  <div className="absolute inset-0 bg-white/60 dark:bg-slate-900/60 backdrop-blur-[2px] flex items-center justify-center z-30 rounded-2xl">
+                    <div className="flex flex-col items-center gap-2">
+                      <RefreshCw className={`w-8 h-8 ${chartType === 'price' ? 'text-blue-500' : 'text-purple-500'} animate-spin`} />
+                      <span className="text-xs font-bold text-slate-550 dark:text-slate-400">Loading historical trend...</span>
+                    </div>
+                  </div>
+                )}
+
+                {chartError ? (
+                  <div className="py-20 text-center text-red-500 font-semibold">{chartError}</div>
+                ) : chartPoints.length === 0 ? (
+                  <div className="py-20 text-center text-slate-500 font-semibold">No historical data available for this range.</div>
+                ) : (
+                  <>
+                    <svg viewBox={`0 0 ${svgWidth} ${svgHeight}`} className="w-full h-auto overflow-visible select-none">
+                      <defs>
+                        <linearGradient id="chart-gradient" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor={chartType === 'price' ? '#3b82f6' : '#a855f7'} stopOpacity="0.25" />
+                          <stop offset="100%" stopColor={chartType === 'price' ? '#3b82f6' : '#a855f7'} stopOpacity="0.00" />
+                        </linearGradient>
+                      </defs>
+
+                      {/* horizontal helper gridlines */}
+                      <line x1={padding} y1={padding} x2={svgWidth - padding} y2={padding} stroke="currentColor" className="text-slate-100 dark:text-slate-800/40" strokeWidth="1" strokeDasharray="4 4" />
+                      <line x1={padding} y1={svgHeight / 2} x2={svgWidth - padding} y2={svgHeight / 2} stroke="currentColor" className="text-slate-100 dark:text-slate-800/40" strokeWidth="1" strokeDasharray="4 4" />
+                      <line x1={padding} y1={svgHeight - padding} x2={svgWidth - padding} y2={svgHeight - padding} stroke="currentColor" className="text-slate-150 dark:text-slate-800/80" strokeWidth="1" />
+
+                      {/* Area under curve */}
+                      {areaPath && <path d={areaPath} fill="url(#chart-gradient)" />}
+
+                      {/* Volume bars (bottom 15%) - only show for Price chart */}
+                      {chartType === 'price' && points.map((p, idx) => {
+                        const barHeight = (p.data.volume / maxVol) * 35;
+                        const yStart = svgHeight - padding;
+                        const yEnd = yStart - barHeight;
+                        return (
+                          <line 
+                            key={idx} 
+                            x1={p.x} 
+                            y1={yStart} 
+                            x2={p.x} 
+                            y2={yEnd} 
+                            stroke="currentColor" 
+                            className="text-slate-200 dark:text-slate-850" 
+                            strokeWidth="2.5" 
+                          />
+                        );
+                      })}
+
+                      {/* SVG stroke path */}
+                      {linePath && (
+                        <path 
+                          d={linePath} 
+                          fill="none" 
+                          stroke={chartType === 'price' ? '#3b82f6' : '#a855f7'} 
+                          strokeWidth="2.5" 
+                          strokeLinecap="round" 
+                          strokeLinejoin="round" 
+                          className={`drop-shadow-[0_2px_8px_${chartType === 'price' ? 'rgba(59,130,246,0.3)' : 'rgba(168,85,247,0.3)'}]`}
+                        />
+                      )}
+
+                      {/* Hover vertical alignment line */}
+                      {activePoint && points.find(p => p.data.date === activePoint.date) && (
+                        <line 
+                          x1={points.find(p => p.data.date === activePoint.date)!.x} 
+                          y1={padding} 
+                          x2={points.find(p => p.data.date === activePoint.date)!.x} 
+                          y2={svgHeight - padding} 
+                          stroke="currentColor" 
+                          className={chartType === 'price' ? 'text-blue-500/30' : 'text-purple-500/30'} 
+                          strokeWidth="1.5" 
+                          strokeDasharray="2 2"
+                        />
+                      )}
+
+                      {/* Hover target circle indicator */}
+                      {activePoint && points.find(p => p.data.date === activePoint.date) && (
+                        <circle 
+                          cx={points.find(p => p.data.date === activePoint.date)!.x} 
+                          cy={points.find(p => p.data.date === activePoint.date)!.y} 
+                          r="5" 
+                          fill={chartType === 'price' ? '#3b82f6' : '#a855f7'} 
+                          stroke="white" 
+                          strokeWidth="1.5" 
+                          className={`drop-shadow-[0_0_4px_${chartType === 'price' ? 'rgba(59,130,246,0.8)' : 'rgba(168,85,247,0.8)'}]`}
+                        />
+                      )}
+                    </svg>
+
+                    {/* Horizontal interactive hover panels overlay */}
+                    <div className="absolute inset-0 flex">
+                      {points.map((p, idx) => (
+                        <div 
+                          key={idx} 
+                          className="h-full flex-1 cursor-crosshair"
+                          onMouseEnter={() => setHoveredPoint(p.data)}
+                          onMouseLeave={() => setHoveredPoint(null)}
+                        />
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
 
             {/* Fundamental Ratios Panel */}
             <div className="md:col-span-2 space-y-6">
