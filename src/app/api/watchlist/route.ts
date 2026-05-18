@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import YahooFinance from 'yahoo-finance2';
 
 const yahooFinance = new YahooFinance();
@@ -40,10 +40,22 @@ export const WATCHLIST_SYMBOLS = [
   'NETWEB.NS'
 ];
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const { searchParams } = new URL(request.url);
+    const symbolsParam = searchParams.get('symbols');
+
+    let targetSymbols = WATCHLIST_SYMBOLS;
+    if (symbolsParam) {
+      targetSymbols = symbolsParam.split(',').map(s => s.trim()).filter(Boolean);
+    }
+
+    if (targetSymbols.length === 0) {
+      return NextResponse.json([]);
+    }
+
     const quotes = await Promise.all(
-      WATCHLIST_SYMBOLS.map(async (rawSymbol) => {
+      targetSymbols.map(async (rawSymbol) => {
         try {
           const trimmed = rawSymbol.trim();
           const symbol = (trimmed.includes('.') ? trimmed : `${trimmed}.NS`).toUpperCase();
@@ -60,7 +72,7 @@ export async function GET() {
     const validQuotes = quotes.filter(quote => quote !== null);
     
     if (validQuotes.length === 0) {
-      return NextResponse.json({ error: 'Failed to fetch live stock data' }, { status: 502 });
+      return NextResponse.json([], { status: 200 }); // Return empty array instead of 502 for failed single additions
     }
     
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
