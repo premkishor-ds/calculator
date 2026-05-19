@@ -4,6 +4,14 @@ import { yahooFinance } from '@/lib/yahoo-finance';
 import { WATCHLIST_SYMBOLS } from '../../../utils/symbols';
 export { WATCHLIST_SYMBOLS };
 
+interface CacheEntry {
+  data: any;
+  timestamp: number;
+}
+
+const memoryCache = new Map<string, CacheEntry>();
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes cache TTL
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -16,6 +24,13 @@ export async function GET(request: NextRequest) {
 
     if (targetSymbols.length === 0) {
       return NextResponse.json([]);
+    }
+
+    // Generate unique cache key based on requested symbols
+    const cacheKey = targetSymbols.sort().join(',');
+    const cached = memoryCache.get(cacheKey);
+    if (cached && (Date.now() - cached.timestamp < CACHE_TTL_MS)) {
+      return NextResponse.json(cached.data);
     }
 
     const quotes = await Promise.all(
@@ -73,6 +88,9 @@ export async function GET(request: NextRequest) {
         salesGrowth: Number(salesGrowth.toFixed(2)),
       };
     });
+
+    // Save to local memory cache before returning
+    memoryCache.set(cacheKey, { data: stockData, timestamp: Date.now() });
 
     return NextResponse.json(stockData);
   } catch (error) {
