@@ -16,7 +16,8 @@ import {
   TrendingUp as StockIcon,
   Star
 } from 'lucide-react';
-import { DEFAULT_SYMBOLS } from '@/utils/symbols';
+import { DEFAULT_SYMBOLS, DEFAULT_SEEDS } from '@/utils/symbols';
+import { buildAllTags, DEFAULT_CUSTOM_TAGS, CUSTOM_TAG_IDS, type TagDef, type CustomTagRaw } from '@/utils/tags';
 
 interface StockData {
   symbol: string;
@@ -34,12 +35,14 @@ interface StockData {
   profitGrowth: number;
   salesGrowth: number;
   isFavourite?: boolean;
+  tags?: string[];
 }
 
 interface BackendStock {
   symbol: string;
   name: string;
   isFavourite?: boolean;
+  tags?: string[];
 }
 
 interface LiveStock {
@@ -59,6 +62,12 @@ interface LiveStock {
   salesGrowth: number;
 }
 
+interface WatchlistObj {
+  _id?: string;
+  name: string;
+  isDefault?: boolean;
+}
+
 const BACKEND_API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api';
 
 export default function WatchlistPage() {
@@ -76,6 +85,39 @@ export default function WatchlistPage() {
   const [apiFailed, setApiFailed] = useState(false);
   const [showFavouritesOnly, setShowFavouritesOnly] = useState(false);
 
+  // Watchlists State
+  const [watchlists, setWatchlists] = useState<WatchlistObj[]>([]);
+  const [selectedWatchlist, setSelectedWatchlist] = useState<string>('default');
+  const [newWatchlistName, setNewWatchlistName] = useState<string>('');
+  const [creatingWatchlist, setCreatingWatchlist] = useState<boolean>(false);
+  const [wlError, setWlError] = useState<string>('');
+
+  // Tags State
+  const [activeTagFilter, setActiveTagFilter] = useState<string>('all');
+  const [customTagRaw, setCustomTagRaw] = useState<CustomTagRaw[]>(DEFAULT_CUSTOM_TAGS);
+  const [tagPopoverSym, setTagPopoverSym] = useState<string | null>(null);
+  const [editingTag, setEditingTag] = useState<CustomTagRaw | null>(null);
+  const [editLabel, setEditLabel] = useState('');
+  const [editColor, setEditColor] = useState('');
+  const [editSaving, setEditSaving] = useState(false);
+
+  // Derived: full tag list (static + custom)
+  const allTags = buildAllTags(customTagRaw);
+  const tagMap = Object.fromEntries(allTags.map(t => [t.id, t]));
+
+  // Fetch watchlists list
+  const fetchWatchlists = useCallback(async () => {
+    try {
+      const res = await fetch(`${BACKEND_API_URL}/watchlists`);
+      if (res.ok) {
+        const data = await res.json();
+        setWatchlists(data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch watchlists:', err);
+    }
+  }, []);
+
   // Fetch stocks from the Mongoose backend and merge with live Yahoo Finance quotes
   const fetchStocksFromAPI = useCallback(async () => {
     try {
@@ -86,7 +128,7 @@ export default function WatchlistPage() {
       // 1. Try to fetch stocks from Express backend API
       let backendStocks: BackendStock[] = [];
       try {
-        const backendRes = await fetch(`${BACKEND_API_URL}/stocks`);
+        const backendRes = await fetch(`${BACKEND_API_URL}/stocks?watchlist=${encodeURIComponent(selectedWatchlist)}`);
         if (!backendRes.ok) throw new Error();
         backendStocks = await backendRes.json();
       } catch (err) {
@@ -101,7 +143,8 @@ export default function WatchlistPage() {
         backendStocks = DEFAULT_SYMBOLS.map(symbol => ({
           symbol,
           name: symbol.split('.')[0] + ' Ltd.',
-          isFavourite: false
+          isFavourite: false,
+          tags: []
         }));
       }
 
@@ -126,7 +169,8 @@ export default function WatchlistPage() {
         return {
           ...liveStock,
           name: backendStock ? backendStock.name : liveStock.name,
-          isFavourite: backendStock ? !!backendStock.isFavourite : false
+          isFavourite: backendStock ? !!backendStock.isFavourite : false,
+          tags: backendStock ? (backendStock.tags || []) : []
         };
       });
 
@@ -136,7 +180,12 @@ export default function WatchlistPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [selectedWatchlist]);
+
+  // Fetch watchlists on mount
+  useEffect(() => {
+    fetchWatchlists();
+  }, [fetchWatchlists]);
 
   // Fetch stocks on mount and schedule live updates every 60s
   useEffect(() => {
@@ -145,7 +194,113 @@ export default function WatchlistPage() {
     });
     const interval = setInterval(fetchStocksFromAPI, 60000);
     return () => clearInterval(interval);
-  }, [fetchStocksFromAPI]);
+  }, [fetchStocksFromAPI, selectedWatchlist]);
+
+  // Load custom tags on mount
+  useEffect(() => {
+    fetch('/api/custom-tags')
+      .then(r => r.json())
+      .then(data => { if (Array.isArray(data) && data.length) setCustomTagRaw(data); })
+      .catch(() => {});
+  }, []);
+
+  // Create watchlist
+  const handleCreateWatchlist = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setWlError('');
+    const cleanName = newWatchlistName.trim();
+    if (!cleanName) return;
+
+    try {
+      setCreatingWatchlist(true);
+      const res = await fetch(`${BACKEND_API_URL}/watchlists`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: cleanName })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setWatchlists(prev => [...prev, data]);
+        setSelectedWatchlist(data.name);
+        setNewWatchlistName('');
+      } else {
+        const errData = await res.json();
+        setWlError(errData.error || 'Failed to create watchlist');
+      }
+    } catch {
+      setWlError('Network error while creating watchlist');
+    } finally {
+      setCreatingWatchlist(false);
+    }
+  };
+
+  // Delete watchlist
+  const handleDeleteWatchlist = async (nameToDelete: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!window.confirm(`Are you sure you want to delete the watchlist "${nameToDelete}"? This will permanently delete all stocks inside it.`)) return;
+
+    try {
+      const res = await fetch(`${BACKEND_API_URL}/watchlists/${encodeURIComponent(nameToDelete)}`, {
+        method: 'DELETE'
+      });
+      if (res.ok) {
+        setWatchlists(prev => prev.filter(w => w.name !== nameToDelete));
+        if (selectedWatchlist === nameToDelete) {
+          setSelectedWatchlist('default');
+        }
+      } else {
+        const errData = await res.json();
+        alert(errData.error || 'Failed to delete watchlist');
+      }
+    } catch {
+      alert('Network error while deleting watchlist');
+    }
+  };
+
+  // Toggle Tag
+  const handleToggleTag = async (sym: string, tagId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const stock = stocks.find(s => s.symbol === sym);
+    if (!stock) return;
+    const current = stock.tags ?? [];
+    const next = current.includes(tagId) ? current.filter(t => t !== tagId) : [...current, tagId];
+    
+    // optimistic update
+    setStocks(prev => prev.map(s => s.symbol === sym ? { ...s, tags: next } : s));
+    
+    if (!apiFailed) {
+      try {
+        await fetch(`${BACKEND_API_URL}/stocks/${encodeURIComponent(sym)}?watchlist=${encodeURIComponent(selectedWatchlist)}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tags: next, watchlist: selectedWatchlist })
+        });
+      } catch {
+        // revert on failure
+        setStocks(prev => prev.map(s => s.symbol === sym ? { ...s, tags: current } : s));
+      }
+    }
+  };
+
+  // Edit custom tag
+  const handleSaveCustomTag = async () => {
+    if (!editingTag || !editLabel.trim()) return;
+    setEditSaving(true);
+    try {
+      const res = await fetch(`/api/custom-tags/${editingTag.tagId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ label: editLabel.trim(), color: editColor }),
+      });
+      if (res.ok) {
+        const updated: CustomTagRaw = await res.json();
+        setCustomTagRaw(prev => prev.map(t => t.tagId === updated.tagId ? updated : t));
+      }
+    } finally {
+      setEditSaving(false);
+      setEditingTag(null);
+    }
+  };
 
   const handleSort = (field: keyof StockData) => {
     if (sortField === field) {
@@ -187,7 +342,7 @@ export default function WatchlistPage() {
       const validatedStock = testData[0];
 
       // 2. Add to Mongoose backend API (if online)
-      let dbStock = { symbol: validatedStock.symbol, name: validatedStock.name, isFavourite: false };
+      let dbStock = { symbol: validatedStock.symbol, name: validatedStock.name, isFavourite: false, tags: [], watchlist: selectedWatchlist };
       if (!apiFailed) {
         try {
           const backendPostRes = await fetch(`${BACKEND_API_URL}/stocks`, {
@@ -196,7 +351,8 @@ export default function WatchlistPage() {
             body: JSON.stringify({
               symbol: validatedStock.symbol,
               name: validatedStock.name,
-              isFavourite: false
+              isFavourite: false,
+              watchlist: selectedWatchlist
             })
           });
           if (backendPostRes.ok) {
@@ -215,7 +371,8 @@ export default function WatchlistPage() {
       const nextStock: StockData = {
         ...validatedStock,
         name: dbStock.name,
-        isFavourite: !!dbStock.isFavourite
+        isFavourite: !!dbStock.isFavourite,
+        tags: dbStock.tags || []
       };
       setStocks(prev => [nextStock, ...prev]);
       setNewSymbol('');
@@ -241,10 +398,10 @@ export default function WatchlistPage() {
 
       // 2. Call backend if online
       if (!apiFailed) {
-        const res = await fetch(`${BACKEND_API_URL}/stocks/${encodeURIComponent(symbolToToggle)}`, {
+        const res = await fetch(`${BACKEND_API_URL}/stocks/${encodeURIComponent(symbolToToggle)}?watchlist=${encodeURIComponent(selectedWatchlist)}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ isFavourite: nextFavStatus })
+          body: JSON.stringify({ isFavourite: nextFavStatus, watchlist: selectedWatchlist })
         });
         if (!res.ok) {
           throw new Error('Failed to toggle favourite status in database');
@@ -263,14 +420,14 @@ export default function WatchlistPage() {
     }
   };
 
-  // Delete dynamic ticker action
+  // Delete stock from active watchlist
   const handleDeleteStock = async (symToDelete: string) => {
-    if (!confirm(`Are you sure you want to delete ${symToDelete.split('.')[0]} from the watchlist?`)) return;
+    if (!confirm(`Are you sure you want to delete ${symToDelete.split('.')[0]} from the active watchlist?`)) return;
 
     try {
       // 1. Call backend if online
       if (!apiFailed) {
-        const res = await fetch(`${BACKEND_API_URL}/stocks/${encodeURIComponent(symToDelete)}`, {
+        const res = await fetch(`${BACKEND_API_URL}/stocks/${encodeURIComponent(symToDelete)}?watchlist=${encodeURIComponent(selectedWatchlist)}`, {
           method: 'DELETE'
         });
         if (!res.ok) {
@@ -286,64 +443,27 @@ export default function WatchlistPage() {
     }
   };
 
-  // Reset watchlist back to standard institutional defaults
+  // Reset active watchlist back to standard institutional defaults
   const handleResetWatchlist = async () => {
-    if (!window.confirm("Are you sure you want to restore the default institutional-grade stock watchlist?")) return;
+    if (!window.confirm(`Are you sure you want to restore the default institutional-grade stock watchlist for the current workspace?`)) return;
 
     try {
       setLoading(true);
       if (!apiFailed) {
-        // Delete all current stocks
+        // Delete all current stocks in this specific watchlist
         await Promise.all(
           stocks.map(s =>
-            fetch(`${BACKEND_API_URL}/stocks/${encodeURIComponent(s.symbol)}`, { method: 'DELETE' }).catch(() => {})
+            fetch(`${BACKEND_API_URL}/stocks/${encodeURIComponent(s.symbol)}?watchlist=${encodeURIComponent(selectedWatchlist)}`, { method: 'DELETE' }).catch(() => {})
           )
         );
 
         // Add back the default institutional-grade seed list
-        const defaultSeeds = [
-          { symbol: 'VOLTAMP.NS', name: 'Voltamp Transformers Ltd.' },
-          { symbol: 'TDPOWERSYS.NS', name: 'TD Power Systems Ltd.' },
-          { symbol: 'TARIL.NS', name: 'Transformers & Rectifiers (India) Ltd.' },
-          { symbol: 'PRECWIRE.NS', name: 'Precision Wires India Ltd.' },
-          { symbol: 'MAZDOCK.NS', name: 'Mazagon Dock Shipbuilders Ltd.' },
-          { symbol: 'KIRLOSENG.NS', name: 'Kirloskar Oil Engines Ltd.' },
-          { symbol: 'HSCL.NS', name: 'Himadri Speciality Chemical Ltd.' },
-          { symbol: 'HFCL.NS', name: 'HFCL Ltd.' },
-          { symbol: 'E2E.NS', name: 'E2E Networks Ltd.' },
-          { symbol: 'BECTORFOOD.NS', name: 'Mrs. Bectors Food Specialities Ltd.' },
-          { symbol: 'AURIONPRO.NS', name: 'Aurionpro Solutions Ltd.' },
-          { symbol: 'KEI.NS', name: 'KEI Industries Ltd.' },
-          { symbol: 'COFORGE.NS', name: 'Coforge Ltd.' },
-          { symbol: 'MANORAMA.NS', name: 'Manorama Industries Ltd.' },
-          { symbol: 'ZENTEC.NS', name: 'Zen Technologies Ltd.' },
-          { symbol: 'APARINDS.NS', name: 'Apar Industries Ltd.' },
-          { symbol: 'SHILCTECH.NS', name: 'Shilpa Medicare Ltd.' },
-          { symbol: 'INOXINDIA.NS', name: 'Inox India Ltd.' },
-          { symbol: 'KRN.NS', name: 'KRN Heat Exchanger and Refrigeration Ltd.' },
-          { symbol: 'IDEAFORGE.NS', name: 'ideaForge Technology Ltd.' },
-          { symbol: 'GRSE.NS', name: 'Garden Reach Shipbuilders & Engineers Ltd.' },
-          { symbol: 'PARAS.NS', name: 'Paras Defence and Space Technologies Ltd.' },
-          { symbol: 'ASTRAMICRO.NS', name: 'Astra Microwave Products Ltd.' },
-          { symbol: 'SYRMA.NS', name: 'Syrma SGS Technology Ltd.' },
-          { symbol: 'KAYNES.NS', name: 'Kaynes Technology India Ltd.' },
-          { symbol: 'AEROFLEX.NS', name: 'Aeroflex Industries Ltd.' },
-          { symbol: 'KMEW.NS', name: 'Knowledge Marine & Export Works Ltd.' },
-          { symbol: 'GVT&D.NS', name: 'GE Vernova T&D India Ltd.' },
-          { symbol: 'CGPOWER.NS', name: 'CG Power & Industrial Solutions Ltd.' },
-          { symbol: 'APOLLO.NS', name: 'Apollo Hospitals Enterprise Ltd.' },
-          { symbol: 'UNIMECH.NS', name: 'Unimech Aerospace and Manufacture Ltd.' },
-          { symbol: 'DATAPATTNS.NS', name: 'Data Patterns (India) Ltd.' },
-          { symbol: 'MTARTECH.NS', name: 'MTAR Technologies Ltd.' },
-          { symbol: 'NETWEB.NS', name: 'Netweb Technologies India Ltd.' }
-        ];
-
         await Promise.all(
-          defaultSeeds.map(item =>
+          DEFAULT_SEEDS.map(item =>
             fetch(`${BACKEND_API_URL}/stocks`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ symbol: item.symbol, name: item.name, isFavourite: false })
+              body: JSON.stringify({ symbol: item.symbol, name: item.name, isFavourite: false, watchlist: selectedWatchlist })
             }).catch(() => {})
           )
         );
@@ -361,7 +481,8 @@ export default function WatchlistPage() {
       const matchesSearch = stock.symbol.toLowerCase().includes(search.toLowerCase()) || 
                            stock.name.toLowerCase().includes(search.toLowerCase());
       const matchesFav = showFavouritesOnly ? !!stock.isFavourite : true;
-      return matchesSearch && matchesFav;
+      const matchesTag = activeTagFilter === 'all' ? true : (stock.tags ?? []).includes(activeTagFilter);
+      return matchesSearch && matchesFav && matchesTag;
     })
     .sort((a, b) => {
       const aVal = a[sortField];
@@ -422,14 +543,14 @@ export default function WatchlistPage() {
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `vision_wealth_screener.csv`);
+    link.setAttribute("download", `vision_${selectedWatchlist}_screener.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors duration-300 font-sans pb-20">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors duration-300 font-sans pb-20" onClick={() => setTagPopoverSym(null)}>
       <div className="w-full px-4 sm:px-6 lg:px-8 py-12 max-w-[1600px] mx-auto">
         
         {/* Page title and description */}
@@ -461,6 +582,67 @@ export default function WatchlistPage() {
             >
               Reset Default Portfolio
             </button>
+          </div>
+        </div>
+
+        {/* Watchlist Manager Panel */}
+        <div className="bg-white dark:bg-slate-900/50 backdrop-blur-md rounded-3xl border border-slate-200 dark:border-slate-800 p-6 mb-8 shadow-sm">
+          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
+            <div>
+              <label className="text-[10px] text-slate-400 dark:text-slate-500 font-extrabold uppercase tracking-widest mb-1.5 block">Select Portfolio Watchlist Workspace</label>
+              <div className="flex flex-wrap gap-2">
+                {watchlists.map(wl => {
+                  const active = selectedWatchlist === wl.name;
+                  return (
+                    <div 
+                      key={wl.name} 
+                      className={`flex items-center gap-1.5 px-4 py-2.5 rounded-2xl text-xs font-bold transition-all border select-none cursor-pointer ${
+                        active
+                          ? 'bg-blue-500/10 border-blue-500/30 text-blue-650 dark:text-blue-400 font-black shadow-sm'
+                          : 'bg-transparent border-slate-200 dark:border-slate-850 text-slate-600 dark:text-slate-400 hover:border-slate-350 dark:hover:border-slate-700'
+                      }`}
+                      onClick={() => { setSelectedWatchlist(wl.name); setActiveTagFilter('all'); }}
+                    >
+                      <span>{wl.name === 'default' ? '🏛️ Institutional Screener' : `📁 ${wl.name}`}</span>
+                      {!wl.isDefault && wl.name !== 'default' && (
+                        <button
+                          type="button"
+                          onClick={(e) => handleDeleteWatchlist(wl.name, e)}
+                          className="p-0.5 rounded-md hover:bg-red-500/10 text-slate-400 hover:text-red-500 transition-colors shrink-0 ml-1.5"
+                          title={`Delete "${wl.name}" Watchlist`}
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Create Watchlist Form */}
+            <form onSubmit={handleCreateWatchlist} className="w-full lg:w-auto shrink-0 flex flex-col sm:flex-row gap-2.5">
+              <div className="relative flex-1 sm:w-64">
+                <input
+                  type="text"
+                  maxLength={32}
+                  placeholder="New workspace name..."
+                  value={newWatchlistName}
+                  onChange={(e) => { setNewWatchlistName(e.target.value); setWlError(''); }}
+                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-850 rounded-2xl text-xs font-bold text-slate-850 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-655 focus:outline-none focus:border-blue-500"
+                />
+                {wlError && (
+                  <span className="absolute left-1 top-full mt-1 text-[10px] text-red-500 font-bold">{wlError}</span>
+                )}
+              </div>
+              <button
+                type="submit"
+                disabled={creatingWatchlist || !newWatchlistName.trim()}
+                className="px-4 py-3 bg-blue-500 hover:bg-blue-600 disabled:bg-blue-400 text-white rounded-2xl text-xs font-bold transition-all shadow-md active:scale-[0.98] shrink-0"
+              >
+                {creatingWatchlist ? 'Creating...' : '+ Create Workspace'}
+              </button>
+            </form>
           </div>
         </div>
 
@@ -515,31 +697,142 @@ export default function WatchlistPage() {
           </div>
         </div>
 
-        {/* Watchlist Mode Tabs */}
-        <div className="flex gap-2 mb-6 p-1 bg-slate-200/50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-md">
-          <button
-            type="button"
-            onClick={() => setShowFavouritesOnly(false)}
-            className={`flex-1 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition-all ${
-              !showFavouritesOnly
-                ? 'bg-white dark:bg-slate-800 text-blue-500 dark:text-blue-400 shadow-md border border-slate-200/20'
-                : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
-            }`}
-          >
-            All Watchlist ({stocks.length})
-          </button>
-          <button
-            type="button"
-            onClick={() => setShowFavouritesOnly(true)}
-            className={`flex-1 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-1.5 ${
-              showFavouritesOnly
-                ? 'bg-white dark:bg-slate-800 text-yellow-500 shadow-md border border-slate-200/20'
-                : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
-            }`}
-          >
-            ★ Starred Favorites ({stocks.filter(s => s.isFavourite).length})
-          </button>
+        {/* Watchlist Mode Tabs & Tag Filters Grid */}
+        <div className="flex flex-col md:flex-row gap-4 justify-between items-start md:items-center mb-6">
+          <div className="flex gap-2 p-1 bg-slate-200/50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full md:w-auto max-w-md">
+            <button
+              type="button"
+              onClick={() => { setShowFavouritesOnly(false); setActiveTagFilter('all'); }}
+              className={`flex-1 md:flex-initial px-5 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition-all ${
+                !showFavouritesOnly && activeTagFilter === 'all'
+                  ? 'bg-white dark:bg-slate-800 text-blue-500 dark:text-blue-400 shadow-md border border-slate-200/20'
+                  : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+              }`}
+            >
+              All Watchlist ({stocks.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => { setShowFavouritesOnly(true); setActiveTagFilter('all'); }}
+              className={`flex-1 md:flex-initial px-5 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-1.5 ${
+                showFavouritesOnly && activeTagFilter === 'all'
+                  ? 'bg-white dark:bg-slate-800 text-yellow-500 shadow-md border border-slate-200/20'
+                  : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+              }`}
+            >
+              ★ Starred Favorites ({stocks.filter(s => s.isFavourite).length})
+            </button>
+          </div>
         </div>
+
+        {/* Real-time Sector & Strategy Tag Filter Strip */}
+        <div className="mb-8 p-6 bg-white dark:bg-slate-900/40 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm">
+          <span className="text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-widest block mb-3">Filter Institutional Sectors & Strategy Tags</span>
+          <div className="flex flex-wrap gap-1.5">
+            <button
+              type="button"
+              onClick={() => { setActiveTagFilter('all'); setShowFavouritesOnly(false); }}
+              className={`px-3 py-1.5 rounded-full text-xs font-extrabold border transition-all ${
+                activeTagFilter === 'all' && !showFavouritesOnly
+                  ? 'bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-white border-slate-350 dark:border-slate-600 shadow-sm'
+                  : 'bg-transparent text-slate-500 border-slate-200 dark:border-slate-850 hover:border-slate-400 dark:hover:border-slate-600'
+              }`}
+            >
+              All Symbols ({stocks.length})
+            </button>
+            {allTags.map((tag: TagDef) => {
+              const count = stocks.filter(s => (s.tags ?? []).includes(tag.id)).length;
+              if (count === 0 && activeTagFilter !== tag.id) return null;
+              const isCustom = CUSTOM_TAG_IDS.includes(tag.id as typeof CUSTOM_TAG_IDS[number]);
+              const raw = isCustom ? customTagRaw.find(t => t.tagId === tag.id) : null;
+              return (
+                <div key={tag.id} className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => { setActiveTagFilter(activeTagFilter === tag.id ? 'all' : tag.id); setShowFavouritesOnly(false); }}
+                    className={`px-3 py-1.5 rounded-full text-xs font-extrabold border transition-all ${
+                      activeTagFilter === tag.id ? 'opacity-100 shadow-md' : 'opacity-60 hover:opacity-90'
+                    } ${
+                      !raw
+                        ? (activeTagFilter === tag.id
+                            ? tag.color
+                            : 'bg-transparent text-slate-500 border-slate-200 dark:border-slate-850 hover:border-slate-400 dark:hover:border-slate-600')
+                        : ''
+                    }`}
+                    style={raw ? {
+                      backgroundColor: raw.color + '25',
+                      color: raw.color,
+                      borderColor: raw.color + '60',
+                    } : {}}
+                  >
+                    <span className="w-1.5 h-1.5 rounded-full shrink-0 mr-1.5 inline-block" style={{ backgroundColor: tag.dot }} />
+                    {tag.label} {count > 0 && `(${count})`}
+                  </button>
+                  {isCustom && (
+                    <button
+                      type="button"
+                      onClick={e => { e.stopPropagation(); const r = customTagRaw.find(t => t.tagId === tag.id)!; setEditingTag(r); setEditLabel(r.label); setEditColor(r.color); }}
+                      className="text-slate-400 hover:text-slate-600 dark:text-slate-600 dark:hover:text-slate-350 transition-colors text-xs"
+                      title="Edit tag name & color"
+                    >✎</button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Edit Custom Tag Dialog Modal */}
+        {editingTag && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in" onClick={() => setEditingTag(null)}>
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-3xl p-6 w-full max-w-xs shadow-2xl" onClick={e => e.stopPropagation()}>
+              <h2 className="text-sm font-extrabold text-slate-900 dark:text-white mb-1">Edit Custom Tag</h2>
+              <p className="text-[10px] text-slate-400 dark:text-slate-500 mb-4">Rename and recolor <span style={{ color: editColor }} className="font-extrabold">{editingTag.tagId}</span></p>
+              <div className="flex flex-col gap-3">
+                <input
+                  autoFocus
+                  type="text"
+                  maxLength={24}
+                  value={editLabel}
+                  onChange={e => setEditLabel(e.target.value)}
+                  placeholder="Tag name…"
+                  className="w-full px-4 py-2.5 bg-slate-55 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-blue-500 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-600 focus:outline-none"
+                />
+                <div className="flex items-center gap-3">
+                  <label className="text-[10px] text-slate-400 dark:text-slate-500 font-bold shrink-0">Color</label>
+                  <input
+                    type="color"
+                    value={editColor}
+                    onChange={e => setEditColor(e.target.value)}
+                    className="w-10 h-8 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 cursor-pointer"
+                  />
+                  <span className="text-[10px] font-mono text-slate-450 dark:text-slate-500">{editColor}</span>
+                  <span className="ml-auto px-2.5 py-1 rounded-full text-[10px] font-extrabold border"
+                    style={{ backgroundColor: editColor + '25', color: editColor, borderColor: editColor + '60' }}>
+                    {editLabel || 'Preview'}
+                  </span>
+                </div>
+                <div className="flex gap-2 mt-1">
+                  <button
+                    type="button"
+                    disabled={editSaving || !editLabel.trim()}
+                    onClick={handleSaveCustomTag}
+                    className="flex-1 py-2.5 bg-blue-500 hover:bg-blue-600 disabled:bg-blue-400 text-white rounded-xl text-xs font-extrabold transition-all"
+                  >
+                    {editSaving ? 'Saving…' : 'Save'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEditingTag(null)}
+                    className="px-4 py-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 rounded-xl text-xs font-bold transition-all"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {apiFailed && (
           <div className="mb-6 px-4 py-3 bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-extrabold rounded-2xl flex items-center justify-between animate-pulse max-w-md">
@@ -561,7 +854,7 @@ export default function WatchlistPage() {
             <div className="p-20 text-center text-slate-500 font-semibold">
               {showFavouritesOnly 
                 ? "No starred favorite stocks found. Star your key tickers to filter them here!"
-                : "Your watchlist is empty. Add standard Yahoo Finance tickers above to build your custom portfolio."
+                : "No matching stocks found with active criteria. Star your key tickers or manage tag categories above."
               }
             </div>
           ) : (
@@ -570,7 +863,7 @@ export default function WatchlistPage() {
                 <thead>
                   <tr className="bg-slate-50 dark:bg-slate-800/40 border-b border-slate-200 dark:border-slate-800">
                     {renderHeader("Ticker Symbol", "symbol", false, true)}
-                    {renderHeader("Company Name", "name", false)}
+                    {renderHeader("Company Name & Tags", "name", false)}
                     {renderHeader("Price (INR)", "price")}
                     {renderHeader("Change (%)", "changePercent")}
                     {renderHeader("Mkt Cap (Cr)", "marketCap")}
@@ -592,43 +885,131 @@ export default function WatchlistPage() {
                         key={idx} 
                         className="hover:bg-slate-50 dark:hover:bg-slate-800/20 transition-colors group"
                       >
-                        {/* Ticker link to detailed cockpit with favorite toggle */}
+                        {/* Ticker link to detailed cockpit with favorite toggle and tag manager */}
                         <td className="p-4 font-bold text-slate-900 dark:text-white sticky left-0 bg-white dark:bg-slate-900 group-hover:bg-slate-50 dark:group-hover:bg-slate-850/60 z-10 transition-colors shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
-                          <div className="flex items-center gap-2.5">
+                          <div className="flex items-center gap-2">
+                            {/* Star Favourite button */}
                             <button
                               type="button"
                               onClick={() => handleToggleFavourite(stock.symbol, !!stock.isFavourite)}
-                              className={`p-1 rounded-lg transition-all hover:scale-115 ${
+                              className={`p-1 rounded-lg transition-all hover:scale-115 shrink-0 ${
                                 stock.isFavourite
                                   ? 'text-yellow-450 hover:text-yellow-500'
-                                  : 'text-slate-300 dark:text-slate-700 hover:text-slate-500'
+                                  : 'text-slate-355 dark:text-slate-700 hover:text-slate-500'
                               }`}
                               title={stock.isFavourite ? "Remove from Favourites" : "Mark as Favourite"}
                             >
                               <Star className={`w-4 h-4 ${stock.isFavourite ? 'fill-yellow-400 text-yellow-400' : ''}`} />
                             </button>
+
+                            {/* Tags Popover Trigger */}
+                            <div className="relative shrink-0">
+                              <button
+                                type="button"
+                                onClick={e => { e.stopPropagation(); setTagPopoverSym(tagPopoverSym === stock.symbol ? null : stock.symbol); }}
+                                className={`p-1 rounded-lg border transition-all hover:scale-105 flex items-center justify-center ${
+                                  (stock.tags ?? []).length > 0
+                                    ? 'bg-blue-500/10 border-blue-500/20 text-blue-550 dark:text-blue-400'
+                                    : 'bg-white dark:bg-slate-850 border-slate-205 dark:border-slate-700 text-slate-400 dark:text-slate-500 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10'
+                                }`}
+                                title="Manage Tags"
+                              >
+                                <Plus className="w-3.5 h-3.5" />
+                              </button>
+
+                              {/* Tag popover dropdown */}
+                              {tagPopoverSym === stock.symbol && (
+                                <div
+                                  className="absolute left-0 top-8 z-50 w-52 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl p-2 animate-fade-in"
+                                  onClick={e => e.stopPropagation()}
+                                >
+                                  <p className="text-[9px] font-extrabold text-slate-400 dark:text-slate-550 uppercase tracking-widest mb-2 px-1">Assign Tags</p>
+                                  <div className="flex flex-col gap-0.5 max-h-60 overflow-y-auto scrollbar-thin">
+                                    {allTags.map((tag: TagDef) => {
+                                      const isActive = (stock.tags ?? []).includes(tag.id);
+                                      return tag.custom ? (
+                                        <button
+                                          key={tag.id}
+                                          type="button"
+                                          onClick={e => handleToggleTag(stock.symbol, tag.id, e)}
+                                          className={`flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs font-bold transition-all text-left ${
+                                            isActive ? 'border shadow-sm' : 'text-slate-600 dark:text-slate-450 hover:bg-slate-50 dark:hover:bg-slate-800'
+                                          }`}
+                                          style={isActive ? { backgroundColor: tag.dot + '20', color: tag.dot, borderColor: tag.dot + '50' } : {}}
+                                        >
+                                          <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: isActive ? tag.dot : '#64748b' }} />
+                                          {tag.label}
+                                          {isActive && <span className="ml-auto text-xs text-blue-500">✓</span>}
+                                        </button>
+                                      ) : (
+                                        <button
+                                          key={tag.id}
+                                          type="button"
+                                          onClick={e => handleToggleTag(stock.symbol, tag.id, e)}
+                                          className={`flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs font-bold transition-all text-left ${
+                                            isActive ? tag.color + ' border shadow-sm' : 'text-slate-655 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
+                                          }`}
+                                        >
+                                          <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: isActive ? tag.dot : '#64748b' }} />
+                                          {tag.label}
+                                          {isActive && <span className="ml-auto text-xs">✓</span>}
+                                        </button>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Ticker Link */}
                             <span 
                               onClick={() => router.push(`/watchlist/${encodeURIComponent(stock.symbol)}`)}
-                              className="text-slate-950 dark:text-slate-100 hover:text-blue-500 dark:hover:text-blue-400 transition-colors cursor-pointer underline"
+                              className="text-slate-950 dark:text-slate-100 hover:text-blue-500 dark:hover:text-blue-400 transition-colors cursor-pointer underline ml-1"
                             >
                               {stock.symbol.replace('.NS', '')}
                             </span>
                           </div>
                         </td>
-                        <td className="p-4 font-medium text-slate-500 dark:text-slate-400">{stock.name}</td>
-                        <td className="p-4 text-right font-bold">₹{stock.price.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+
+                        {/* Company Name & Tag badging */}
+                        <td className="p-4 font-medium text-slate-500 dark:text-slate-400">
+                          <div className="flex flex-col gap-1.5">
+                            <span className="text-slate-700 dark:text-slate-350">{stock.name}</span>
+                            {/* Assigned tag pills */}
+                            {(stock.tags ?? []).length > 0 && (
+                              <div className="flex flex-wrap gap-1 max-w-xs sm:max-w-sm">
+                                {(stock.tags ?? []).map(tid => {
+                                  const td = tagMap[tid];
+                                  if (!td) return null;
+                                  return td.custom ? (
+                                    <span key={tid} className="px-2 py-0.5 rounded-full text-[9px] font-extrabold border shrink-0 transition-all hover:scale-102"
+                                      style={{ backgroundColor: td.dot + '25', color: td.dot, borderColor: td.dot + '60' }}>
+                                      {td.label}
+                                    </span>
+                                  ) : (
+                                    <span key={tid} className={`px-2 py-0.5 rounded-full text-[9px] font-extrabold border shrink-0 transition-all hover:scale-102 ${td.color}`}>
+                                      {td.label}
+                                    </span>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </div>
+                        </td>
+
+                        <td className="p-4 text-right font-bold text-slate-900 dark:text-slate-100">₹{stock.price.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
                         <td className={`p-4 text-right font-bold ${isPositive ? 'text-emerald-500' : 'text-red-500'}`}>
                           <span className="flex items-center justify-end gap-1">
                             {isPositive ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
                             <span>{isPositive ? '+' : ''}{stock.changePercent.toFixed(2)}%</span>
                           </span>
                         </td>
-                        <td className="p-4 text-right font-medium">₹{(stock.marketCap / 10000000).toFixed(2)}Cr</td>
-                        <td className="p-4 text-right font-medium">{stock.pe > 0 ? stock.pe.toFixed(2) : '--'}</td>
-                        <td className="p-4 text-right font-medium">₹{stock.eps > 0 ? stock.eps.toFixed(2) : '--'}</td>
-                        <td className="p-4 text-right font-medium">{stock.cmpBv > 0 ? stock.cmpBv.toFixed(2) : '--'}</td>
-                        <td className="p-4 text-right font-medium">{stock.divYield > 0 ? `${stock.divYield.toFixed(2)}%` : '0.00%'}</td>
-                        <td className="p-4 text-right font-medium">{stock.promHold > 0 ? `${stock.promHold.toFixed(2)}%` : '--'}</td>
+                        <td className="p-4 text-right font-medium text-slate-700 dark:text-slate-300">₹{(stock.marketCap / 10000000).toFixed(2)}Cr</td>
+                        <td className="p-4 text-right font-medium text-slate-700 dark:text-slate-300">{stock.pe > 0 ? stock.pe.toFixed(2) : '--'}</td>
+                        <td className="p-4 text-right font-medium text-slate-700 dark:text-slate-300">₹{stock.eps > 0 ? stock.eps.toFixed(2) : '--'}</td>
+                        <td className="p-4 text-right font-medium text-slate-700 dark:text-slate-300">{stock.cmpBv > 0 ? stock.cmpBv.toFixed(2) : '--'}</td>
+                        <td className="p-4 text-right font-medium text-slate-700 dark:text-slate-300">{stock.divYield > 0 ? `${stock.divYield.toFixed(2)}%` : '0.00%'}</td>
+                        <td className="p-4 text-right font-medium text-slate-700 dark:text-slate-300">{stock.promHold > 0 ? `${stock.promHold.toFixed(2)}%` : '--'}</td>
                         <td className={`p-4 text-right font-semibold ${stock.profitGrowth >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
                           {stock.profitGrowth !== 0 ? `${stock.profitGrowth.toFixed(2)}%` : '--'}
                         </td>

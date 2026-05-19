@@ -101,7 +101,13 @@ export default function TradingTerminalPage() {
     localStorage.setItem('theme', newTheme);
     document.documentElement.classList.toggle('dark', newTheme === 'dark');
   };
-  const [selectedSymbol,   setSelectedSymbol]   = useState<string>('CGPOWER.NS');
+  interface WatchlistObj {
+    _id?: string;
+    name: string;
+    isDefault?: boolean;
+  }
+
+  const [selectedSymbol,   setSelectedSymbol]   = useState<string>(DEFAULT_SYMBOLS[0] || 'VOLTAMP.NS');
   const [searchQuery,      setSearchQuery]       = useState('');
   const [watchlistLoading, setWatchlistLoading] = useState(true);
   const [chartRange,       setChartRange]        = useState('1Y');
@@ -112,6 +118,13 @@ export default function TradingTerminalPage() {
   const [activeTagFilter,  setActiveTagFilter]   = useState<string>('all');
   const [tagPopoverSym,    setTagPopoverSym]     = useState<string | null>(null);
   const [apiFailed,        setApiFailed]         = useState(false);
+
+  // Watchlists State
+  const [watchlists,       setWatchlists]        = useState<WatchlistObj[]>([]);
+  const [selectedWatchlist, setSelectedWatchlist] = useState<string>('default');
+  const [newWatchlistName, setNewWatchlistName]  = useState<string>('');
+  const [wlError,          setWlError]           = useState<string>('');
+
   // Custom tags
   const [customTagRaw,     setCustomTagRaw]      = useState<CustomTagRaw[]>(DEFAULT_CUSTOM_TAGS);
   const [editingTag,       setEditingTag]        = useState<CustomTagRaw | null>(null);
@@ -140,7 +153,23 @@ export default function TradingTerminalPage() {
   /* Derived */
   const selectedStock = watchlistStocks.find(s => s.symbol === selectedSymbol) || null;
 
-  /* ── Load watchlist from Backend API ────────────────────────── */
+  /* ── Load watchlists and stocks from Backend API ────────────────────────── */
+  const fetchWatchlists = React.useCallback(async () => {
+    try {
+      const res = await fetch(`${BACKEND_API_URL}/watchlists`);
+      if (res.ok) {
+        const data = await res.json();
+        setWatchlists(data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch watchlists:', err);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchWatchlists();
+  }, [fetchWatchlists]);
+
   useEffect(() => {
     let active = true;
     (async () => {
@@ -148,8 +177,8 @@ export default function TradingTerminalPage() {
         setWatchlistLoading(true);
         setApiFailed(false);
 
-        // 1. Try to fetch stocks from Mongoose backend API
-        const backendRes = await fetch(`${BACKEND_API_URL}/stocks`);
+        // 1. Try to fetch stocks from Mongoose backend API with active watchlist context
+        const backendRes = await fetch(`${BACKEND_API_URL}/stocks?watchlist=${encodeURIComponent(selectedWatchlist)}`);
         if (!backendRes.ok) {
           throw new Error('Backend API returned non-200 status');
         }
@@ -188,8 +217,10 @@ export default function TradingTerminalPage() {
           });
 
           setWatchlistStocks(mergedData);
-          const def = mergedData.find((s: StockQuote) => s.symbol === 'CGPOWER.NS');
-          setSelectedSymbol(def ? 'CGPOWER.NS' : mergedData[0]?.symbol ?? 'CGPOWER.NS');
+          if (mergedData.length > 0) {
+            const def = mergedData.find((s: StockQuote) => s.symbol === selectedSymbol) || mergedData[0];
+            setSelectedSymbol(def.symbol);
+          }
         }
       } catch (err) {
         console.error('Backend API error - Falling back to local default stocks list:', err);
@@ -212,8 +243,8 @@ export default function TradingTerminalPage() {
                 tags: [] as string[]
               }));
               setWatchlistStocks(fallbackData);
-              const def = fallbackData.find((s: StockQuote) => s.symbol === 'CGPOWER.NS');
-              setSelectedSymbol(def ? 'CGPOWER.NS' : fallbackData[0]?.symbol ?? 'CGPOWER.NS');
+              const def = fallbackData.find((s: StockQuote) => s.symbol === selectedSymbol) || fallbackData[0];
+              setSelectedSymbol(def.symbol);
             }
           } catch (fallbackErr) {
             console.error('Fallback fetch error:', fallbackErr);
@@ -224,7 +255,7 @@ export default function TradingTerminalPage() {
       }
     })();
     return () => { active = false; };
-  }, []);
+  }, [selectedWatchlist]);
 
   /* ── Load custom tags ──────────────────────────────────────── */
   useEffect(() => {
@@ -283,7 +314,7 @@ export default function TradingTerminalPage() {
           const backendRes = await fetch(`${BACKEND_API_URL}/stocks`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ symbol: stock.symbol, name: stock.name, isFavourite: false })
+            body: JSON.stringify({ symbol: stock.symbol, name: stock.name, isFavourite: false, watchlist: selectedWatchlist })
           });
           if (backendRes.ok) {
             const dbStock = await backendRes.json();
@@ -333,7 +364,8 @@ export default function TradingTerminalPage() {
             body: JSON.stringify({
               symbol: stock.symbol,
               name: stock.name, // Stored in correct format
-              isFavourite: false
+              isFavourite: false,
+              watchlist: selectedWatchlist
             })
           });
           if (backendPostRes.ok) {
@@ -378,10 +410,10 @@ export default function TradingTerminalPage() {
     setWatchlistStocks(prev => prev.map(s => s.symbol === sym ? { ...s, tags: next } : s));
     if (!apiFailed) {
       try {
-        await fetch(`${BACKEND_API_URL}/stocks/${encodeURIComponent(sym)}`, {
+        await fetch(`${BACKEND_API_URL}/stocks/${encodeURIComponent(sym)}?watchlist=${encodeURIComponent(selectedWatchlist)}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ tags: next })
+          body: JSON.stringify({ tags: next, watchlist: selectedWatchlist })
         });
       } catch {
         // revert on failure
@@ -397,10 +429,10 @@ export default function TradingTerminalPage() {
       const nextFavStatus = !currentFavStatus;
 
       if (!apiFailed) {
-        const res = await fetch(`${BACKEND_API_URL}/stocks/${encodeURIComponent(symbolToToggle)}`, {
+        const res = await fetch(`${BACKEND_API_URL}/stocks/${encodeURIComponent(symbolToToggle)}?watchlist=${encodeURIComponent(selectedWatchlist)}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ isFavourite: nextFavStatus })
+          body: JSON.stringify({ isFavourite: nextFavStatus, watchlist: selectedWatchlist })
         });
         if (!res.ok) {
           throw new Error('Failed to toggle favourite status in database');
@@ -427,7 +459,7 @@ export default function TradingTerminalPage() {
 
     try {
       if (!apiFailed) {
-        const res = await fetch(`${BACKEND_API_URL}/stocks/${encodeURIComponent(symbolToDelete)}`, {
+        const res = await fetch(`${BACKEND_API_URL}/stocks/${encodeURIComponent(symbolToDelete)}?watchlist=${encodeURIComponent(selectedWatchlist)}`, {
           method: 'DELETE'
         });
         if (!res.ok) {
@@ -1045,6 +1077,87 @@ export default function TradingTerminalPage() {
         <section className="lg:col-span-3 bg-white dark:bg-slate-950 flex flex-col overflow-hidden max-h-[42dvh] lg:max-h-none lg:min-h-0 safe-bottom border-t lg:border-t-0 lg:border-l border-slate-200 dark:border-slate-800 shadow-lg">
 
           <div className="p-4 border-b border-slate-100 dark:border-slate-800 shrink-0">
+            {/* Watchlist switcher widget */}
+            <div className="mb-4 bg-slate-50 dark:bg-slate-900/60 p-3 rounded-2xl border border-slate-150 dark:border-slate-800/80">
+              <div className="flex justify-between items-center mb-2">
+                <label className="text-[9px] font-extrabold text-slate-455 dark:text-slate-500 uppercase tracking-widest">Active Workspace</label>
+                <form 
+                  onSubmit={async (e) => {
+                    e.preventDefault();
+                    if (!newWatchlistName.trim()) return;
+                    setWlError('');
+                    try {
+                      const res = await fetch(`${BACKEND_API_URL}/watchlists`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ name: newWatchlistName.trim() })
+                      });
+                      if (res.ok) {
+                        const data = await res.json();
+                        setWatchlists(prev => [...prev, data]);
+                        setSelectedWatchlist(data.name);
+                        setNewWatchlistName('');
+                      } else {
+                        const err = await res.json();
+                        setWlError(err.error || 'Error');
+                      }
+                    } catch {
+                      setWlError('Error');
+                    }
+                  }} 
+                  className="flex gap-1 items-center"
+                >
+                  <input
+                    type="text"
+                    placeholder="+ New..."
+                    value={newWatchlistName}
+                    onChange={e => { setNewWatchlistName(e.target.value); setWlError(''); }}
+                    className="w-16 px-1.5 py-0.5 bg-white dark:bg-slate-950 border border-slate-250 dark:border-slate-800 rounded-lg text-[9px] font-bold text-slate-800 dark:text-slate-100 placeholder:text-slate-505 focus:outline-none animate-fade-in"
+                  />
+                </form>
+              </div>
+
+              {wlError && <p className="text-[8px] text-red-500 font-extrabold mb-1">{wlError}</p>}
+
+              <div className="flex flex-wrap gap-1 max-h-24 overflow-y-auto scrollbar-thin">
+                {watchlists.map(wl => {
+                  const active = selectedWatchlist === wl.name;
+                  return (
+                    <div
+                      key={wl.name}
+                      onClick={() => { setSelectedWatchlist(wl.name); setActiveTagFilter('all'); }}
+                      className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[9px] font-bold border transition-all cursor-pointer select-none ${
+                        active
+                          ? 'bg-blue-500/10 border-blue-500/30 text-blue-655 dark:text-blue-400 font-black shadow-sm'
+                          : 'bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-850 text-slate-500 hover:border-slate-300 dark:hover:border-slate-800'
+                      }`}
+                    >
+                      <span className="truncate max-w-[80px]">{wl.name === 'default' ? '🏛️ Institutional' : wl.name}</span>
+                      {!wl.isDefault && wl.name !== 'default' && (
+                        <button
+                          type="button"
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            if (!window.confirm(`Delete watchlist "${wl.name}"?`)) return;
+                            try {
+                              const res = await fetch(`${BACKEND_API_URL}/watchlists/${encodeURIComponent(wl.name)}`, { method: 'DELETE' });
+                              if (res.ok) {
+                                setWatchlists(prev => prev.filter(w => w.name !== wl.name));
+                                if (selectedWatchlist === wl.name) setSelectedWatchlist('default');
+                              }
+                            } catch {}
+                          }}
+                          className="text-slate-400 hover:text-red-500 transition-colors ml-0.5 shrink-0"
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
             <h2 className="text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-3 flex items-center gap-2">
               <Layers className="w-3.5 h-3.5 text-blue-550 dark:text-blue-500" /> WATCHLIST
               <button
