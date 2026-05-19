@@ -20,7 +20,8 @@ import {
   Calendar,
   Globe,
   Briefcase,
-  LineChart
+  LineChart,
+  Newspaper
 } from 'lucide-react';
 
 interface Ratios {
@@ -130,6 +131,13 @@ interface ChartPoint {
   pe?: number;
 }
 
+interface NewsItem {
+  title: string;
+  publisher: string;
+  link: string;
+  date: string;
+}
+
 interface StockDetails {
   ratios: Ratios;
   profile: CorporateProfile;
@@ -141,6 +149,7 @@ interface StockDetails {
   peers: PeerItem[];
   pros: string[];
   cons: string[];
+  news?: NewsItem[];
 }
 
 export default function StockDetailPage({ params }: { params: Promise<{ symbol: string }> }) {
@@ -148,7 +157,7 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
   const [data, setData] = useState<StockDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [activeTab, setActiveTab] = useState<'ratios' | 'qpl' | 'pl' | 'bs' | 'cf' | 'peers' | 'shareholding' | 'about'>('ratios');
+  const [activeTab, setActiveTab] = useState<'ratios' | 'qpl' | 'pl' | 'bs' | 'cf' | 'peers' | 'shareholding' | 'about' | 'news'>('ratios');
   const [hoveredPoint, setHoveredPoint] = useState<ChartPoint | null>(null);
 
   // Dynamic price & PE chart state
@@ -360,6 +369,16 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
             }`}
           >
             Overview & Ratios
+          </button>
+          <button
+            onClick={() => setActiveTab('news')}
+            className={`pb-4 px-2 text-sm font-semibold border-b-2 whitespace-nowrap transition-all ${
+              activeTab === 'news'
+                ? 'border-blue-500 text-blue-500 dark:text-blue-400'
+                : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+            }`}
+          >
+            Latest News
           </button>
           <button
             onClick={() => setActiveTab('about')}
@@ -789,6 +808,53 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
                 </div>
               </div>
             </div>
+
+            {/* Recent News Preview */}
+            <div className="md:col-span-3 bg-white dark:bg-slate-900/50 backdrop-blur-md rounded-3xl border border-slate-200 dark:border-slate-800 p-6 sm:p-8 shadow-xl mt-6">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-lg font-bold flex items-center gap-2 text-slate-900 dark:text-white">
+                  <Newspaper className="w-5 h-5 text-blue-500" /> Recent Stock News
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('news')}
+                  className="text-xs font-bold text-blue-500 hover:text-blue-600 flex items-center gap-1 group"
+                >
+                  View All News <span className="group-hover:translate-x-0.5 transition-transform">→</span>
+                </button>
+              </div>
+
+              {!data.news || data.news.length === 0 ? (
+                <div className="text-slate-500 font-medium text-sm py-4 text-center">No recent news updates found.</div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {data.news.slice(0, 3).map((item, idx) => (
+                    <a
+                      key={idx}
+                      href={item.link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="p-5 bg-slate-50/50 dark:bg-slate-800/30 hover:bg-blue-500/5 dark:hover:bg-blue-500/10 border border-slate-200 dark:border-slate-800 hover:border-blue-500/30 rounded-2xl transition-all group flex flex-col justify-between"
+                    >
+                      <div>
+                        <div className="flex items-center justify-between gap-4 mb-2.5">
+                          <span className="text-[9px] font-extrabold uppercase tracking-wider text-blue-600 dark:text-blue-400 bg-blue-500/10 px-1.5 py-0.5 rounded">
+                            {item.publisher}
+                          </span>
+                          <span className="text-[9px] text-slate-400 font-medium">{item.date}</span>
+                        </div>
+                        <h4 className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-blue-500 transition-colors leading-snug line-clamp-3">
+                          {item.title}
+                        </h4>
+                      </div>
+                      <div className="mt-4 flex items-center text-[10px] font-bold text-blue-500 hover:text-blue-600">
+                        Read Story <span className="ml-1 group-hover:translate-x-0.5 transition-transform">→</span>
+                      </div>
+                    </a>
+                  ))}
+                </div>
+              )}
+            </div>
             
           </div>
         )}
@@ -1175,6 +1241,47 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
                 * **Retail & Public Allocation**: Represents open market equity held by retail investors and corporate treasuries.
               </div>
             </div>
+          </div>
+        )}
+
+        {activeTab === 'news' && (
+          <div className="bg-white dark:bg-slate-900/50 backdrop-blur-md rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden p-6 sm:p-8">
+            <div className="flex items-center gap-2 mb-6 border-b border-slate-200 dark:border-slate-800 pb-4">
+              <Newspaper className="w-5 h-5 text-blue-500" />
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white">Latest News & Corporate Updates</h3>
+            </div>
+            {!data.news || data.news.length === 0 ? (
+              <div className="p-12 text-center text-slate-500 font-medium">No recent news articles found for this stock symbol.</div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {data.news.map((item, idx) => (
+                  <a
+                    key={idx}
+                    href={item.link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex flex-col justify-between p-5 bg-slate-50/50 dark:bg-slate-800/30 hover:bg-blue-500/5 dark:hover:bg-blue-500/10 border border-slate-200 dark:border-slate-800 hover:border-blue-500/30 rounded-2xl transition-all group duration-300"
+                  >
+                    <div>
+                      <div className="flex items-center justify-between gap-4 mb-2.5">
+                        <span className="text-[10px] font-extrabold uppercase tracking-wider text-blue-600 dark:text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded">
+                          {item.publisher}
+                        </span>
+                        <span className="text-[10px] text-slate-400 font-medium">
+                          {item.date}
+                        </span>
+                      </div>
+                      <h4 className="text-sm font-bold text-slate-900 dark:text-white group-hover:text-blue-500 transition-colors leading-snug">
+                        {item.title}
+                      </h4>
+                    </div>
+                    <div className="mt-4 flex items-center text-[11px] font-bold text-blue-500 hover:text-blue-600">
+                      Read Article <span className="ml-1 group-hover:translate-x-1 transition-transform">→</span>
+                    </div>
+                  </a>
+                ))}
+              </div>
+            )}
           </div>
         )}
 

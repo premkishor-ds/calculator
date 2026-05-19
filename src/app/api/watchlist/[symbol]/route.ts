@@ -28,8 +28,8 @@ export async function GET(
     oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
     const chartPeriod1 = oneYearAgo.toISOString();
 
-    // Fetch live summary, historical statements and chart data in parallel
-    const [summaryRes, balanceSheetRes, financialsRes, cashFlowRes, quarterlyFinancialsRes, chartRes] = await Promise.allSettled([
+    // Fetch live summary, historical statements, chart data and latest news in parallel
+    const [summaryRes, balanceSheetRes, financialsRes, cashFlowRes, quarterlyFinancialsRes, chartRes, newsRes] = await Promise.allSettled([
       yahooFinance.quoteSummary(symbol, {
         modules: ['price', 'summaryDetail', 'defaultKeyStatistics', 'financialData', 'majorHoldersBreakdown', 'assetProfile']
       }),
@@ -56,7 +56,8 @@ export async function GET(
       yahooFinance.chart(symbol, {
         period1: chartPeriod1,
         interval: '1d'
-      })
+      }),
+      yahooFinance.search(symbol)
     ]);
 
     if (summaryRes.status === 'rejected') {
@@ -74,6 +75,25 @@ export async function GET(
     const quarterlyFinancials = quarterlyFinancialsRes.status === 'fulfilled' ? (quarterlyFinancialsRes.value as any[]) : [];
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const chartQuotes = chartRes.status === 'fulfilled' ? ((chartRes.value as any).quotes || []) : [];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const rawNews = newsRes.status === 'fulfilled' ? ((newsRes.value as any).news || []) : [];
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const formattedNews = rawNews.slice(0, 10).map((n: any) => {
+      const pubTime = n.providerPublishTime;
+      const time = pubTime instanceof Date 
+        ? pubTime 
+        : new Date(Number(pubTime) * 1000);
+      const dateStr = !isNaN(time.getTime()) 
+        ? time.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+        : 'N/A';
+      return {
+        title: n.title || 'Latest Corporate News Update',
+        publisher: n.publisher || 'Financial Source',
+        link: n.link || '#',
+        date: dateStr
+      };
+    });
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const price = (summary.price || {}) as any;
@@ -319,6 +339,7 @@ export async function GET(
       peers: peersData,
       pros,
       cons,
+      news: formattedNews
     });
   } catch (error) {
     console.error('Failed to fetch dynamic stock details:', error);

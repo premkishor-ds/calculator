@@ -12,11 +12,12 @@ import {
   ChevronRight,
   Layers,
   Sparkles,
-  Star,
   Trash2,
   Plus,
+  Star,
 } from 'lucide-react';
 import { DEFAULT_SYMBOLS } from '@/utils/symbols';
+import { buildAllTags, DEFAULT_CUSTOM_TAGS, CUSTOM_TAG_IDS, type TagDef, type CustomTagRaw } from '@/utils/tags';
 
 /* Dynamically import the chart so it's client-only (no SSR) */
 const AdvancedChart = dynamic(() => import('@/components/AdvancedChart'), {
@@ -47,6 +48,7 @@ interface StockQuote {
   profitGrowth: number;
   salesGrowth: number;
   isFavourite?: boolean;
+  tags?: string[];
   _id?: string;
 }
 
@@ -54,6 +56,7 @@ interface BackendStock {
   symbol: string;
   name: string;
   isFavourite?: boolean;
+  tags?: string[];
   _id?: string;
 }
 
@@ -87,12 +90,27 @@ export default function TradingTerminalPage() {
   const [terminalSearch,   setTerminalSearch]    = useState('');
   const [terminalSearchError, setTerminalSearchError] = useState('');
   const [terminalSearching, setTerminalSearching] = useState(false);
-  const [showFavouritesOnly, setShowFavouritesOnly] = useState(false);
+  const [activeTagFilter,  setActiveTagFilter]   = useState<string>('all');
+  const [tagPopoverSym,    setTagPopoverSym]     = useState<string | null>(null);
   const [apiFailed,        setApiFailed]         = useState(false);
+  // Custom tags
+  const [customTagRaw,     setCustomTagRaw]      = useState<CustomTagRaw[]>(DEFAULT_CUSTOM_TAGS);
+  const [editingTag,       setEditingTag]        = useState<CustomTagRaw | null>(null);
+  const [editLabel,        setEditLabel]         = useState('');
+  const [editColor,        setEditColor]         = useState('');
+  const [editSaving,       setEditSaving]        = useState(false);
+
+  // Derived: full tag list (static + custom)
+  const allTags = buildAllTags(customTagRaw);
+  const tagMap  = Object.fromEntries(allTags.map(t => [t.id, t]));
   const [showAddModal,     setShowAddModal]      = useState(false);
   const [addSymbolInput,   setAddSymbolInput]    = useState('');
   const [addModalError,    setAddModalError]     = useState('');
   const [addModalLoading,  setAddModalLoading]   = useState(false);
+  const [suggestions,      setSuggestions]       = useState<{symbol:string;name:string;exchange:string}[]>([]);
+  const [suggestLoading,   setSuggestLoading]    = useState(false);
+  const [showSuggestions,  setShowSuggestions]   = useState(false);
+  const suggestTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Expanded dynamic technical & fundamental analysis panel state
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -143,8 +161,9 @@ export default function TradingTerminalPage() {
             );
             return {
               ...liveStock,
-              name: backendStock ? backendStock.name : liveStock.name, // Keep stored name in correct format
+              name: backendStock ? backendStock.name : liveStock.name,
               isFavourite: backendStock ? !!backendStock.isFavourite : false,
+              tags: backendStock?.tags ?? [],
               _id: backendStock ? backendStock._id : undefined
             };
           });
@@ -170,7 +189,8 @@ export default function TradingTerminalPage() {
               const data = await res.json();
               const fallbackData = data.map((s: LiveStock) => ({
                 ...s,
-                isFavourite: false
+                isFavourite: false,
+                tags: [] as string[]
               }));
               setWatchlistStocks(fallbackData);
               const def = fallbackData.find((s: StockQuote) => s.symbol === 'CGPOWER.NS');
@@ -187,28 +207,58 @@ export default function TradingTerminalPage() {
     return () => { active = false; };
   }, []);
 
+  /* ── Load custom tags ──────────────────────────────────────── */
+  useEffect(() => {
+    fetch('/api/custom-tags')
+      .then(r => r.json())
+      .then(data => { if (Array.isArray(data) && data.length) setCustomTagRaw(data); })
+      .catch(() => {});
+  }, []);
+
+  const handleSaveCustomTag = async () => {
+    if (!editingTag || !editLabel.trim()) return;
+    setEditSaving(true);
+    try {
+      const res = await fetch(`/api/custom-tags/${editingTag.tagId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ label: editLabel.trim(), color: editColor }),
+      });
+      if (res.ok) {
+        const updated: CustomTagRaw = await res.json();
+        setCustomTagRaw(prev => prev.map(t => t.tagId === updated.tagId ? updated : t));
+      }
+    } finally {
+      setEditSaving(false);
+      setEditingTag(null);
+    }
+  };
+
   /* ── Add Stock Modal ───────────────────────────────────────── */
   const handleAddStock = async (e: React.FormEvent) => {
     e.preventDefault();
     const raw = addSymbolInput.trim().toUpperCase();
     if (!raw) return;
     const sym = raw.includes('.') ? raw : `${raw}.NS`;
+    await submitAddStock(sym);
+  };
 
-    if (watchlistStocks.some(s => s.symbol.toUpperCase() === sym)) {
+  const submitAddStock = async (sym: string) => {
+    if (watchlistStocks.some(s => s.symbol.toUpperCase() === sym.toUpperCase())) {
       setAddModalError(`${sym} is already in your watchlist.`);
       return;
     }
-
     try {
       setAddModalLoading(true);
       setAddModalError('');
+      setShowSuggestions(false);
       const res = await fetch(`/api/watchlist?symbols=${encodeURIComponent(sym)}`);
       if (!res.ok) throw new Error('Ticker not found.');
       const data = await res.json();
       if (!data?.length) throw new Error('No quote returned.');
       const stock = data[0];
 
-      let savedStock = { ...stock, isFavourite: false };
+      let savedStock = { ...stock, isFavourite: false, tags: [] as string[] };
       if (!apiFailed) {
         try {
           const backendRes = await fetch(`${BACKEND_API_URL}/stocks`, {
@@ -218,7 +268,7 @@ export default function TradingTerminalPage() {
           });
           if (backendRes.ok) {
             const dbStock = await backendRes.json();
-            savedStock = { ...stock, name: dbStock.name, isFavourite: !!dbStock.isFavourite, _id: dbStock._id };
+            savedStock = { ...stock, name: dbStock.name, isFavourite: !!dbStock.isFavourite, tags: dbStock.tags ?? [], _id: dbStock._id };
           }
         } catch { /* backend offline, continue locally */ }
       }
@@ -226,6 +276,7 @@ export default function TradingTerminalPage() {
       setWatchlistStocks(prev => [savedStock, ...prev]);
       setSelectedSymbol(savedStock.symbol);
       setAddSymbolInput('');
+      setSuggestions([]);
       setShowAddModal(false);
     } catch (err: unknown) {
       setAddModalError(err instanceof Error ? err.message : 'Search failed');
@@ -294,6 +345,29 @@ export default function TradingTerminalPage() {
       setTerminalSearchError(err instanceof Error ? err.message : 'Search failed');
     } finally {
       setTerminalSearching(false);
+    }
+  };
+
+  /* ── Toggle Tag ─────────────────────────────────────────────── */
+  const handleToggleTag = async (sym: string, tagId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const stock = watchlistStocks.find(s => s.symbol === sym);
+    if (!stock) return;
+    const current = stock.tags ?? [];
+    const next = current.includes(tagId) ? current.filter(t => t !== tagId) : [...current, tagId];
+    // optimistic update
+    setWatchlistStocks(prev => prev.map(s => s.symbol === sym ? { ...s, tags: next } : s));
+    if (!apiFailed) {
+      try {
+        await fetch(`${BACKEND_API_URL}/stocks/${encodeURIComponent(sym)}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tags: next })
+        });
+      } catch {
+        // revert on failure
+        setWatchlistStocks(prev => prev.map(s => s.symbol === sym ? { ...s, tags: current } : s));
+      }
     }
   };
 
@@ -383,13 +457,13 @@ export default function TradingTerminalPage() {
   const filteredWatchlist = watchlistStocks.filter(s => {
     const matchesSearch = s.symbol.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          s.name.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesFav = showFavouritesOnly ? !!s.isFavourite : true;
-    return matchesSearch && matchesFav;
+    const matchesTag = activeTagFilter === 'all' ? true : (s.tags ?? []).includes(activeTagFilter);
+    return matchesSearch && matchesTag;
   });
 
   /* ── Render ────────────────────────────────────────────────── */
   return (
-    <div className="min-h-dvh lg:h-dvh lg:overflow-hidden bg-slate-900 text-slate-100 flex flex-col font-sans">
+    <div className="min-h-dvh lg:h-dvh lg:overflow-hidden bg-slate-900 text-slate-100 flex flex-col font-sans" onClick={() => setTagPopoverSym(null)}>
       {/* ── Header ────────────────────────────────────────────── */}
       <header className="flex flex-wrap items-center justify-between gap-3 px-4 sm:px-6 py-3 bg-slate-950 border-b border-slate-800 shadow-md shrink-0 safe-top">
         <div className="flex items-center gap-3 sm:gap-4 min-w-0">
@@ -442,21 +516,115 @@ export default function TradingTerminalPage() {
         </div>
       </header>
 
+      {/* ── Edit Custom Tag Modal ────────────────────────────── */}
+      {editingTag && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => setEditingTag(null)}>
+          <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 w-full max-w-xs shadow-2xl" onClick={e => e.stopPropagation()}>
+            <h2 className="text-sm font-extrabold text-white mb-1">Edit Custom Tag</h2>
+            <p className="text-[10px] text-slate-500 mb-4">Rename and recolor <span style={{ color: editColor }} className="font-extrabold">{editingTag.tagId}</span></p>
+            <div className="flex flex-col gap-3">
+              <input
+                autoFocus
+                type="text"
+                maxLength={24}
+                value={editLabel}
+                onChange={e => setEditLabel(e.target.value)}
+                placeholder="Tag name…"
+                className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 focus:border-blue-500/50 rounded-xl text-xs font-semibold text-slate-100 placeholder:text-slate-600 focus:outline-none"
+              />
+              <div className="flex items-center gap-3">
+                <label className="text-[10px] text-slate-400 font-bold shrink-0">Color</label>
+                <input
+                  type="color"
+                  value={editColor}
+                  onChange={e => setEditColor(e.target.value)}
+                  className="w-10 h-8 rounded-lg border border-slate-700 bg-slate-800 cursor-pointer"
+                />
+                <span className="text-[10px] font-mono text-slate-400">{editColor}</span>
+                <span className="ml-auto px-2.5 py-1 rounded-full text-[10px] font-extrabold border"
+                  style={{ backgroundColor: editColor + '25', color: editColor, borderColor: editColor + '60' }}>
+                  {editLabel || 'Preview'}
+                </span>
+              </div>
+              <div className="flex gap-2 mt-1">
+                <button
+                  type="button"
+                  disabled={editSaving || !editLabel.trim()}
+                  onClick={handleSaveCustomTag}
+                  className="flex-1 py-2.5 bg-blue-500 hover:bg-blue-600 disabled:bg-blue-500/40 text-white rounded-xl text-xs font-extrabold transition-all"
+                >
+                  {editSaving ? 'Saving…' : 'Save'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEditingTag(null)}
+                  className="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-400 rounded-xl text-xs font-bold transition-all"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── Add Stock Modal ────────────────────────────────────── */}
       {showAddModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => setShowAddModal(false)}>
           <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 w-full max-w-sm shadow-2xl" onClick={e => e.stopPropagation()}>
             <h2 className="text-sm font-extrabold text-white mb-1">Add Stock to Watchlist</h2>
-            <p className="text-[10px] text-slate-500 mb-4">Enter a Yahoo Finance ticker. Indian stocks auto-append .NS</p>
+            <p className="text-[10px] text-slate-500 mb-4">Type a company name or ticker to search</p>
             <form onSubmit={handleAddStock} className="flex flex-col gap-3">
-              <input
-                autoFocus
-                type="text"
-                placeholder="e.g. INFY, TATAMOTORS, HDFCBANK"
-                value={addSymbolInput}
-                onChange={e => { setAddSymbolInput(e.target.value); setAddModalError(''); }}
-                className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 focus:border-blue-500/50 rounded-xl text-xs font-bold uppercase text-slate-100 placeholder:text-slate-600 focus:outline-none transition-all"
-              />
+              <div className="relative">
+                <input
+                  autoFocus
+                  type="text"
+                  placeholder="e.g. Infosys, TATAMOTORS, HDFCBANK"
+                  value={addSymbolInput}
+                  onChange={e => {
+                    const val = e.target.value;
+                    setAddSymbolInput(val);
+                    setAddModalError('');
+                    if (suggestTimer.current) clearTimeout(suggestTimer.current);
+                    if (val.trim().length < 1) { setSuggestions([]); setShowSuggestions(false); return; }
+                    suggestTimer.current = setTimeout(async () => {
+                      setSuggestLoading(true);
+                      try {
+                        const r = await fetch(`/api/search?q=${encodeURIComponent(val.trim())}`);
+                        const data = await r.json();
+                        setSuggestions(data);
+                        setShowSuggestions(true);
+                      } catch { setSuggestions([]); }
+                      finally { setSuggestLoading(false); }
+                    }, 300);
+                  }}
+                  onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
+                  className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 focus:border-blue-500/50 rounded-xl text-xs font-semibold text-slate-100 placeholder:text-slate-600 focus:outline-none transition-all pr-8"
+                />
+                {suggestLoading && (
+                  <RefreshCw className="absolute right-3 top-1/2 -translate-y-1/2 w-3 h-3 text-blue-400 animate-spin" />
+                )}
+
+                {/* Suggestions dropdown */}
+                {showSuggestions && suggestions.length > 0 && (
+                  <ul className="absolute top-full left-0 right-0 mt-1 bg-slate-800 border border-slate-700 rounded-xl overflow-hidden z-10 shadow-xl max-h-52 overflow-y-auto">
+                    {suggestions.map(s => (
+                      <li
+                        key={s.symbol}
+                        onMouseDown={e => { e.preventDefault(); setAddSymbolInput(s.symbol); setSuggestions([]); setShowSuggestions(false); submitAddStock(s.symbol); }}
+                        className="flex items-center justify-between px-4 py-2.5 hover:bg-slate-700 cursor-pointer transition-colors group"
+                      >
+                        <div className="min-w-0">
+                          <span className="text-xs font-extrabold text-white block">{s.symbol}</span>
+                          <span className="text-[10px] text-slate-400 truncate block">{s.name}</span>
+                        </div>
+                        <span className="text-[9px] text-slate-600 font-bold shrink-0 ml-2">{s.exchange}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+
               {addModalError && (
                 <p className="text-[10px] text-red-400 font-bold">{addModalError}</p>
               )}
@@ -470,7 +638,7 @@ export default function TradingTerminalPage() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setShowAddModal(false)}
+                  onClick={() => { setShowAddModal(false); setSuggestions([]); }}
                   className="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-400 rounded-xl text-xs font-bold transition-all"
                 >
                   Cancel
@@ -865,30 +1033,54 @@ export default function TradingTerminalPage() {
               />
             </div>
 
-            {/* Filter Tabs (All vs Favourites) */}
-            <div className="flex gap-1 mt-3 p-0.5 bg-slate-900 border border-slate-800 rounded-xl">
+            {/* Tag filter bar */}
+            <div className="mt-3 flex flex-wrap gap-1">
               <button
                 type="button"
-                onClick={() => setShowFavouritesOnly(false)}
-                className={`flex-1 py-1 text-[9px] font-extrabold uppercase tracking-wider rounded-lg transition-all ${
-                  !showFavouritesOnly
-                    ? 'bg-slate-800 text-blue-400 border border-blue-500/10'
-                    : 'text-slate-500 hover:text-slate-400'
+                onClick={() => setActiveTagFilter('all')}
+                className={`px-2 py-0.5 rounded-full text-[9px] font-extrabold border transition-all ${
+                  activeTagFilter === 'all'
+                    ? 'bg-slate-700 text-white border-slate-600'
+                    : 'bg-transparent text-slate-500 border-slate-800 hover:border-slate-600'
                 }`}
               >
                 All ({watchlistStocks.length})
               </button>
-              <button
-                type="button"
-                onClick={() => setShowFavouritesOnly(true)}
-                className={`flex-1 py-1 text-[9px] font-extrabold uppercase tracking-wider rounded-lg transition-all flex items-center justify-center gap-1 ${
-                  showFavouritesOnly
-                    ? 'bg-slate-850 text-yellow-400 border border-yellow-500/10'
-                    : 'text-slate-500 hover:text-slate-400'
-                }`}
-              >
-                ⭐ Favs ({watchlistStocks.filter(s => s.isFavourite).length})
-              </button>
+              {allTags.map((tag: TagDef) => {
+                const count = watchlistStocks.filter(s => (s.tags ?? []).includes(tag.id)).length;
+                if (count === 0 && activeTagFilter !== tag.id) return null;
+                const isCustom = CUSTOM_TAG_IDS.includes(tag.id as typeof CUSTOM_TAG_IDS[number]);
+                const raw = isCustom ? customTagRaw.find(t => t.tagId === tag.id) : null;
+                return (
+                  <div key={tag.id} className="flex items-center gap-0.5">
+                    <button
+                      type="button"
+                      onClick={() => setActiveTagFilter(activeTagFilter === tag.id ? 'all' : tag.id)}
+                      className={`px-2 py-0.5 rounded-full text-[9px] font-extrabold border transition-all ${
+                        activeTagFilter === tag.id ? 'opacity-100' : 'opacity-60 hover:opacity-90'
+                      }`}
+                      style={raw ? {
+                        backgroundColor: raw.color + '25',
+                        color: raw.color,
+                        borderColor: raw.color + '60',
+                      } : {}}
+                      {...(!raw ? { className: `px-2 py-0.5 rounded-full text-[9px] font-extrabold border transition-all ${
+                        activeTagFilter === tag.id ? tag.color : 'bg-transparent text-slate-500 border-slate-800 hover:border-slate-600'
+                      }` } : {})}
+                    >
+                      {tag.label} {count > 0 && `(${count})`}
+                    </button>
+                    {isCustom && (
+                      <button
+                        type="button"
+                        onClick={e => { e.stopPropagation(); const r = customTagRaw.find(t => t.tagId === tag.id)!; setEditingTag(r); setEditLabel(r.label); setEditColor(r.color); }}
+                        className="text-slate-600 hover:text-slate-300 transition-colors text-[9px] leading-none"
+                        title="Edit tag name & color"
+                      >✎</button>
+                    )}
+                  </div>
+                );
+              })}
             </div>
 
             {apiFailed && (
@@ -923,13 +1115,29 @@ export default function TradingTerminalPage() {
                           {stock.symbol.split('.')[0]}
                         </span>
                         <span className="text-[9px] text-slate-600 font-bold">{stock.symbol.split('.')[1]}</span>
-                        {stock.isFavourite && (
-                          <span className="text-yellow-400 text-[10px] font-extrabold">★</span>
-                        )}
                       </div>
                       <p className="text-[10px] text-slate-500 truncate max-w-[130px] mt-0.5" title={stock.name}>
                         {stock.name}
                       </p>
+                      {/* Tag pills */}
+                      {(stock.tags ?? []).length > 0 && (
+                        <div className="flex flex-wrap gap-0.5 mt-1">
+                          {(stock.tags ?? []).map(tid => {
+                            const td = tagMap[tid];
+                            if (!td) return null;
+                            return td.custom ? (
+                              <span key={tid} className="px-1.5 py-0 rounded-full text-[8px] font-extrabold border"
+                                style={{ backgroundColor: td.dot + '25', color: td.dot, borderColor: td.dot + '60' }}>
+                                {td.label}
+                              </span>
+                            ) : (
+                              <span key={tid} className={`px-1.5 py-0 rounded-full text-[8px] font-extrabold border ${td.color}`}>
+                                {td.label}
+                              </span>
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
                       <div className="text-right">
@@ -941,21 +1149,18 @@ export default function TradingTerminalPage() {
                         </span>
                       </div>
                       
-                      {/* Action buttons (Star & Delete) - visible on hover or if favourite */}
-                      <div className="flex items-center gap-1 opacity-40 group-hover/item:opacity-100 transition-opacity">
+                      {/* Action buttons - visible on hover */}
+                      <div className="flex items-center gap-1 opacity-40 group-hover/item:opacity-100 transition-opacity relative">
+                        {/* Tag button */}
                         <button
                           type="button"
-                          onClick={(e) => handleToggleFavourite(stock.symbol, !!stock.isFavourite, e)}
-                          className={`p-1 rounded-lg border transition-all hover:scale-105 ${
-                            stock.isFavourite
-                              ? 'bg-yellow-500/10 border-yellow-500/35 text-yellow-400 hover:bg-yellow-500/20'
-                              : 'bg-slate-800 border-slate-700 text-slate-500 hover:text-slate-350 hover:bg-slate-750'
-                          }`}
-                          title={stock.isFavourite ? "Remove from Favourites" : "Mark as Favourite"}
+                          onClick={e => { e.stopPropagation(); setTagPopoverSym(tagPopoverSym === stock.symbol ? null : stock.symbol); }}
+                          className="p-1 rounded-lg border bg-slate-800 border-slate-700 text-slate-500 hover:text-blue-400 hover:bg-blue-500/10 hover:border-blue-500/20 transition-all hover:scale-105"
+                          title="Manage Tags"
                         >
-                          <Star className={`w-3 h-3 ${stock.isFavourite ? 'fill-yellow-400 text-yellow-400' : ''}`} />
+                          <Plus className="w-3 h-3" />
                         </button>
-                        
+
                         <button
                           type="button"
                           onClick={(e) => handleDeleteStock(stock.symbol, e)}
@@ -964,6 +1169,49 @@ export default function TradingTerminalPage() {
                         >
                           <Trash2 className="w-3 h-3" />
                         </button>
+
+                        {/* Tag popover */}
+                        {tagPopoverSym === stock.symbol && (
+                          <div
+                            className="absolute right-0 top-7 z-50 w-52 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl p-2"
+                            onClick={e => e.stopPropagation()}
+                          >
+                            <p className="text-[9px] font-extrabold text-slate-500 uppercase tracking-widest mb-2 px-1">Assign Tags</p>
+                            <div className="flex flex-col gap-0.5">
+                              {allTags.map((tag: TagDef) => {
+                                const isActive = (stock.tags ?? []).includes(tag.id);
+                                return tag.custom ? (
+                                  <button
+                                    key={tag.id}
+                                    type="button"
+                                    onClick={e => handleToggleTag(stock.symbol, tag.id, e)}
+                                    className={`flex items-center gap-2 px-2 py-1.5 rounded-lg text-[10px] font-bold transition-all text-left ${
+                                      isActive ? 'border' : 'text-slate-400 hover:bg-slate-800'
+                                    }`}
+                                    style={isActive ? { backgroundColor: tag.dot + '20', color: tag.dot, borderColor: tag.dot + '50' } : {}}
+                                  >
+                                    <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: isActive ? tag.dot : '#334155' }} />
+                                    {tag.label}
+                                    {isActive && <span className="ml-auto text-[8px]">✓</span>}
+                                  </button>
+                                ) : (
+                                  <button
+                                    key={tag.id}
+                                    type="button"
+                                    onClick={e => handleToggleTag(stock.symbol, tag.id, e)}
+                                    className={`flex items-center gap-2 px-2 py-1.5 rounded-lg text-[10px] font-bold transition-all text-left ${
+                                      isActive ? tag.color + ' border' : 'text-slate-400 hover:bg-slate-800'
+                                    }`}
+                                  >
+                                    <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: isActive ? tag.dot : '#334155' }} />
+                                    {tag.label}
+                                    {isActive && <span className="ml-auto text-[8px]">✓</span>}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
