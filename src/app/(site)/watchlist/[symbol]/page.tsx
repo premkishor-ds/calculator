@@ -378,6 +378,17 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
                 </span>
               </div>
               <p className="text-sm text-slate-500 mt-1 font-medium">{ratios.name}</p>
+              
+              {/* Wealth Projection Simulation Bridge */}
+              <div className="mt-4">
+                <Link
+                  href={`/?lumpsum=${Math.round(ratios.price)}&cagr=${Math.round(ratios.roe > 0 ? ratios.roe : 18)}&symbol=${ratios.symbol.replace('.NS', '')}`}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-2xl text-xs font-bold transition-all shadow-lg shadow-blue-500/20 hover:shadow-blue-500/35 active:scale-[0.98]"
+                >
+                  <TrendingUp className="w-3.5 h-3.5" />
+                  Simulate Compounding Wealth
+                </Link>
+              </div>
             </div>
 
             <div className="flex items-center gap-4 sm:gap-6 flex-wrap">
