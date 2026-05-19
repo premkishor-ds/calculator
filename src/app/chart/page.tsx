@@ -14,6 +14,7 @@ import {
   Sparkles,
   Star,
   Trash2,
+  Plus,
 } from 'lucide-react';
 import { DEFAULT_SYMBOLS } from '@/utils/symbols';
 
@@ -88,7 +89,11 @@ export default function TradingTerminalPage() {
   const [terminalSearching, setTerminalSearching] = useState(false);
   const [showFavouritesOnly, setShowFavouritesOnly] = useState(false);
   const [apiFailed,        setApiFailed]         = useState(false);
-  
+  const [showAddModal,     setShowAddModal]      = useState(false);
+  const [addSymbolInput,   setAddSymbolInput]    = useState('');
+  const [addModalError,    setAddModalError]     = useState('');
+  const [addModalLoading,  setAddModalLoading]   = useState(false);
+
   // Expanded dynamic technical & fundamental analysis panel state
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [deepData,         setDeepData]         = useState<any>(null);
@@ -181,6 +186,53 @@ export default function TradingTerminalPage() {
     })();
     return () => { active = false; };
   }, []);
+
+  /* ── Add Stock Modal ───────────────────────────────────────── */
+  const handleAddStock = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const raw = addSymbolInput.trim().toUpperCase();
+    if (!raw) return;
+    const sym = raw.includes('.') ? raw : `${raw}.NS`;
+
+    if (watchlistStocks.some(s => s.symbol.toUpperCase() === sym)) {
+      setAddModalError(`${sym} is already in your watchlist.`);
+      return;
+    }
+
+    try {
+      setAddModalLoading(true);
+      setAddModalError('');
+      const res = await fetch(`/api/watchlist?symbols=${encodeURIComponent(sym)}`);
+      if (!res.ok) throw new Error('Ticker not found.');
+      const data = await res.json();
+      if (!data?.length) throw new Error('No quote returned.');
+      const stock = data[0];
+
+      let savedStock = { ...stock, isFavourite: false };
+      if (!apiFailed) {
+        try {
+          const backendRes = await fetch(`${BACKEND_API_URL}/stocks`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ symbol: stock.symbol, name: stock.name, isFavourite: false })
+          });
+          if (backendRes.ok) {
+            const dbStock = await backendRes.json();
+            savedStock = { ...stock, name: dbStock.name, isFavourite: !!dbStock.isFavourite, _id: dbStock._id };
+          }
+        } catch { /* backend offline, continue locally */ }
+      }
+
+      setWatchlistStocks(prev => [savedStock, ...prev]);
+      setSelectedSymbol(savedStock.symbol);
+      setAddSymbolInput('');
+      setShowAddModal(false);
+    } catch (err: unknown) {
+      setAddModalError(err instanceof Error ? err.message : 'Search failed');
+    } finally {
+      setAddModalLoading(false);
+    }
+  };
 
   /* ── Terminal search ───────────────────────────────────────── */
   const handleSearch = async (e: React.FormEvent) => {
@@ -376,12 +428,58 @@ export default function TradingTerminalPage() {
         </form>
 
         <div className="hidden sm:flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => { setShowAddModal(true); setAddModalError(''); setAddSymbolInput(''); }}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[10px] font-extrabold rounded-full hover:bg-blue-500/20 transition-all"
+          >
+            <Plus className="w-3 h-3" /> Add Stock
+          </button>
           <span className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-extrabold rounded-full">
             <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-ping" />
             Live Markets
           </span>
         </div>
       </header>
+
+      {/* ── Add Stock Modal ────────────────────────────────────── */}
+      {showAddModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => setShowAddModal(false)}>
+          <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 w-full max-w-sm shadow-2xl" onClick={e => e.stopPropagation()}>
+            <h2 className="text-sm font-extrabold text-white mb-1">Add Stock to Watchlist</h2>
+            <p className="text-[10px] text-slate-500 mb-4">Enter a Yahoo Finance ticker. Indian stocks auto-append .NS</p>
+            <form onSubmit={handleAddStock} className="flex flex-col gap-3">
+              <input
+                autoFocus
+                type="text"
+                placeholder="e.g. INFY, TATAMOTORS, HDFCBANK"
+                value={addSymbolInput}
+                onChange={e => { setAddSymbolInput(e.target.value); setAddModalError(''); }}
+                className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 focus:border-blue-500/50 rounded-xl text-xs font-bold uppercase text-slate-100 placeholder:text-slate-600 focus:outline-none transition-all"
+              />
+              {addModalError && (
+                <p className="text-[10px] text-red-400 font-bold">{addModalError}</p>
+              )}
+              <div className="flex gap-2">
+                <button
+                  type="submit"
+                  disabled={addModalLoading || !addSymbolInput.trim()}
+                  className="flex-1 py-2.5 bg-blue-500 hover:bg-blue-600 disabled:bg-blue-500/40 text-white rounded-xl text-xs font-extrabold transition-all flex items-center justify-center gap-1.5"
+                >
+                  {addModalLoading ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <><Plus className="w-3.5 h-3.5" /> Add & Select</>}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowAddModal(false)}
+                  className="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-400 rounded-xl text-xs font-bold transition-all"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* ── Main Grid ─────────────────────────────────────────── */}
       <main className="flex-1 flex flex-col lg:grid lg:grid-cols-12 lg:overflow-hidden min-h-0">
@@ -748,6 +846,13 @@ export default function TradingTerminalPage() {
           <div className="p-4 border-b border-slate-800 shrink-0">
             <h2 className="text-[10px] font-extrabold text-slate-500 uppercase tracking-widest mb-3 flex items-center gap-2">
               <Layers className="w-3.5 h-3.5 text-blue-500" /> WATCHLIST
+              <button
+                type="button"
+                onClick={() => { setShowAddModal(true); setAddModalError(''); setAddSymbolInput(''); }}
+                className="ml-auto flex items-center gap-1 px-2 py-1 bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[9px] font-extrabold rounded-lg hover:bg-blue-500/20 transition-all"
+              >
+                <Plus className="w-2.5 h-2.5" /> ADD
+              </button>
             </h2>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500" />
