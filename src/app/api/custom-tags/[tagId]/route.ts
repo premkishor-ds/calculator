@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const BACKEND = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api';
+const BACKEND = process.env.NEXT_PUBLIC_API_URL || (process.env.NODE_ENV === 'production' ? 'https://calculatorbackend-ul8h.onrender.com/api' : 'http://localhost:5001/api');
 
 export async function PUT(
   request: NextRequest,
