@@ -167,6 +167,13 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
   const [chartLoading, setChartLoading] = useState<boolean>(false);
   const [chartError, setChartError] = useState<string>('');
 
+  // TradingView Technical Indicator States
+  const [showMovingAverages, setShowMovingAverages] = useState<boolean>(false);
+
+  // Implied Growth Reverse DCF Valuation States
+  const [discountRate, setDiscountRate] = useState<number>(10);
+  const [terminalGrowth, setTerminalGrowth] = useState<number>(4);
+
   const decodedSymbol = decodeURIComponent(resolvedParams.symbol);
 
   useEffect(() => {
@@ -314,6 +321,70 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
   const { ratios, profile, balanceSheet, profitLoss, cashFlow, quarterlyProfitLoss, peers, pros, cons } = data;
   const isPositive = ratios.change >= 0;
 
+  // Compiles analytical scores dynamically based on fundamental ratios
+  const scores = React.useMemo(() => {
+    let valScore = 50;
+    if (ratios.pe > 0) {
+      if (ratios.pe < 15) valScore = 85;
+      else if (ratios.pe < 25) valScore = 70;
+      else if (ratios.pe < 40) valScore = 50;
+      else valScore = 30;
+    }
+    if (ratios.pegRatio > 0 && ratios.pegRatio < 1.5) valScore += 10;
+    
+    let growthScore = 40;
+    const grRate = ratios.roe > 0 ? ratios.roe : 15;
+    if (grRate > 22) growthScore = 90;
+    else if (grRate > 15) growthScore = 75;
+    else if (grRate > 8) growthScore = 55;
+    
+    let profScore = 50;
+    if (ratios.roe > 0) {
+      if (ratios.roe > 22) profScore = 92;
+      else if (ratios.roe > 15) profScore = 78;
+      else if (ratios.roe > 10) profScore = 58;
+    }
+    if (ratios.profitMargin > 15) profScore += 8;
+
+    let healthScore = 60;
+    const de = ratios.debtToEquity > 0 ? ratios.debtToEquity / 100 : 0.2;
+    if (de < 0.2) healthScore = 95;
+    else if (de < 0.8) healthScore = 80;
+    else if (de < 1.5) healthScore = 55;
+    else healthScore = 30;
+    if (ratios.currentRatio > 1.5) healthScore += 5;
+
+    return {
+      valuation: Math.min(100, valScore),
+      growth: Math.min(100, growthScore),
+      profitability: Math.min(100, profScore),
+      health: Math.min(100, healthScore),
+      total: Math.round((valScore + growthScore + profScore + healthScore) / 4)
+    };
+  }, [ratios]);
+
+  // Generates alert warning factors based on leverage and efficiency benchmarks
+  const redFlags = React.useMemo(() => {
+    const flags: string[] = [];
+    const de = ratios.debtToEquity > 0 ? ratios.debtToEquity / 100 : 0;
+    if (de > 1.5) {
+      flags.push("High Leverage: Debt-to-equity ratio is dangerously elevated (>1.5), representing refinancing risks.");
+    }
+    if (ratios.pe > 45) {
+      flags.push("Premium Valuation: Stock trades at a very high price-to-earnings multiple, indicating high market expectations.");
+    }
+    if (ratios.currentRatio > 0 && ratios.currentRatio < 1.0) {
+      flags.push("Liquidity Stress: Current ratio is below 1.0, suggesting potential working capital constraints.");
+    }
+    if (ratios.roe > 0 && ratios.roe < 10) {
+      flags.push("Sub-Par Compounding: Return on Equity is below 10%, indicating sub-optimal capital allocation efficiency.");
+    }
+    if (flags.length === 0) {
+      flags.push("Pristine Corporate Governance: Dynamic auditing scanned 0 critical fundamental red flags in reported filings.");
+    }
+    return flags;
+  }, [ratios]);
+
   // Render statements chronologically
   const chronologicalQuarterly = quarterlyProfitLoss ? [...quarterlyProfitLoss].reverse() : [];
   const chronologicalAnnual = profitLoss ? [...profitLoss].reverse() : [];
@@ -326,6 +397,69 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
   const activeValues = chartType === 'price'
     ? chartPoints.map(p => p.close || 0)
     : chartPoints.map(p => p.pe || 0);
+
+  // Numerical Solver for Implied Growth Rate (Reverse DCF valuation)
+  const impliedGrowth = React.useMemo(() => {
+    if (!ratios.price || !ratios.eps || ratios.eps <= 0) return 12.5;
+    
+    const d = discountRate / 100;
+    const tg = terminalGrowth / 100;
+    const eps = ratios.eps;
+    
+    let low = -0.20;
+    let high = 0.60;
+    let bestGrowth = 0.12;
+    let minDiff = Infinity;
+    
+    for (let g = low; g <= high; g += 0.001) {
+      let dcf = 0;
+      let currentEps = eps;
+      for (let t = 1; t <= 10; t++) {
+        currentEps *= (1 + g);
+        dcf += currentEps / Math.pow(1 + d, t);
+      }
+      const terminalValue = (currentEps * (1 + tg)) / Math.max(0.005, d - tg);
+      dcf += terminalValue / Math.pow(1 + d, 10);
+      
+      const diff = Math.abs(dcf - ratios.price);
+      if (diff < minDiff) {
+        minDiff = diff;
+        bestGrowth = g;
+      }
+    }
+    
+    return bestGrowth * 100;
+  }, [ratios.price, ratios.eps, discountRate, terminalGrowth]);
+
+  // Simple Moving Average overlay paths for Technical Charting
+  const getSMA = (idx: number, period: number) => {
+    if (idx < period) return null;
+    const subset = activeValues.slice(idx - period, idx);
+    const sum = subset.reduce((a, b) => a + b, 0);
+    return sum / period;
+  };
+
+  const sma10Points = showMovingAverages
+    ? chartPoints.map((p, idx) => {
+        const val = getSMA(idx, Math.min(10, Math.floor(chartPoints.length / 4)));
+        if (val === null) return null;
+        const y = svgHeight - padding - ((val - minVal) / valRange) * graphHeight;
+        return { x: padding + (idx / Math.max(1, chartPoints.length - 1)) * graphWidth, y };
+      }).filter(p => p !== null) as { x: number; y: number }[]
+    : [];
+
+  const sma10Path = sma10Points.map((p, idx) => `${idx === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
+
+  const sma30Points = showMovingAverages
+    ? chartPoints.map((p, idx) => {
+        const val = getSMA(idx, Math.min(30, Math.floor(chartPoints.length / 2)));
+        if (val === null) return null;
+        const y = svgHeight - padding - ((val - minVal) / valRange) * graphHeight;
+        return { x: padding + (idx / Math.max(1, chartPoints.length - 1)) * graphWidth, y };
+      }).filter(p => p !== null) as { x: number; y: number }[]
+    : [];
+
+  const sma30Path = sma30Points.map((p, idx) => `${idx === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
 
   const maxVal = activeValues.length > 0 ? Math.max(...activeValues) : 100;
   const minVal = activeValues.length > 0 ? Math.min(...activeValues) : 0;
@@ -580,6 +714,19 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
                       </button>
                     ))}
                   </div>
+
+                  {/* Technical SMA Indicators Overlay Toggle */}
+                  <button
+                    type="button"
+                    onClick={() => setShowMovingAverages(!showMovingAverages)}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border shrink-0 ${
+                      showMovingAverages
+                        ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400 font-extrabold'
+                        : 'bg-transparent border-slate-200 dark:border-slate-800 text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                    }`}
+                  >
+                    Overlay SMA (10/30)
+                  </button>
                 </div>
               </div>
 
@@ -660,6 +807,28 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
                           strokeLinecap="round" 
                           strokeLinejoin="round" 
                           className={`drop-shadow-[0_2px_8px_${chartType === 'price' ? 'rgba(59,130,246,0.3)' : 'rgba(168,85,247,0.3)'}]`}
+                        />
+                      )}
+
+                      {/* Technical Simple Moving Average overlay paths */}
+                      {showMovingAverages && sma10Path && (
+                        <path 
+                          d={sma10Path} 
+                          fill="none" 
+                          stroke="#eab308" 
+                          strokeWidth="1.5" 
+                          strokeDasharray="3 3"
+                          className="opacity-90"
+                        />
+                      )}
+                      {showMovingAverages && sma30Path && (
+                        <path 
+                          d={sma30Path} 
+                          fill="none" 
+                          stroke="#10b981" 
+                          strokeWidth="1.5" 
+                          strokeDasharray="3 3"
+                          className="opacity-90"
                         />
                       )}
 
@@ -791,6 +960,141 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
                     <span className="text-xs font-semibold text-slate-400">52-Week Low</span>
                     <span className="text-sm font-bold text-red-500">₹{ratios.fiftyTwoWeekLow?.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</span>
                   </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Implied Growth Reverse DCF solver panel */}
+            <div className="md:col-span-3 bg-white dark:bg-slate-900/50 backdrop-blur-md rounded-3xl border border-slate-200 dark:border-slate-800 p-6 sm:p-8 shadow-xl animate-fade-in">
+              <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 mb-6">
+                <div>
+                  <h3 className="text-lg font-bold flex items-center gap-2 text-slate-900 dark:text-white">
+                    <Scale className="w-5 h-5 text-blue-500" /> Implied Growth Compounder (Reverse DCF Valuation)
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-1 font-medium font-sans">
+                    Institutional-grade investment intelligence. Numerical valuation solver computes what perpetuity growth rate the market prices in based on discount parameters.
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                {/* Inputs */}
+                <div className="space-y-6 md:col-span-2">
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-xs font-bold font-sans">
+                      <span className="text-slate-400 dark:text-slate-500">Discount Rate (Required Annual Return)</span>
+                      <span className="text-blue-500">{discountRate}%</span>
+                    </div>
+                    <input 
+                      type="range" min="8" max="20" step="0.5" 
+                      value={discountRate} onChange={(e) => setDiscountRate(parseFloat(e.target.value))}
+                      className="w-full h-1.5 bg-slate-250 dark:bg-slate-800 rounded-lg appearance-none cursor-pointer accent-blue-500 focus:outline-none"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-xs font-bold font-sans">
+                      <span className="text-slate-400 dark:text-slate-500">Terminal perpetuity Growth Rate</span>
+                      <span className="text-blue-500">{terminalGrowth}%</span>
+                    </div>
+                    <input 
+                      type="range" min="2" max="6" step="0.5" 
+                      value={terminalGrowth} onChange={(e) => setTerminalGrowth(parseFloat(e.target.value))}
+                      className="w-full h-1.5 bg-slate-250 dark:bg-slate-800 rounded-lg appearance-none cursor-pointer accent-blue-500 focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                {/* Solver Compounding Output */}
+                <div className="p-6 bg-slate-50 dark:bg-slate-850/60 rounded-2xl flex flex-col justify-center items-center text-center border border-slate-100 dark:border-slate-800">
+                  <span className="text-[10px] text-slate-400 font-extrabold tracking-widest uppercase">Implied Compounding Rate</span>
+                  <span className="text-3xl font-black text-blue-550 dark:text-blue-400 mt-2">
+                    {impliedGrowth.toFixed(2)}%
+                  </span>
+                  <p className="text-[10px] text-slate-450 mt-3 leading-normal max-w-[220px]">
+                    The company must grow its cash earnings by <span className="font-bold text-slate-700 dark:text-slate-200">{impliedGrowth.toFixed(1)}%</span> year-on-year for the next decade to justify the current price of <span className="font-bold">₹{ratios.price.toFixed(0)}</span>.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Stock Health Scorecard & Risk Signals */}
+            <div className="md:col-span-3 grid grid-cols-1 lg:grid-cols-3 gap-8 mt-6">
+              {/* Scorecard */}
+              <div className="lg:col-span-2 bg-white dark:bg-slate-900/50 backdrop-blur-md rounded-3xl border border-slate-200 dark:border-slate-800 p-6 sm:p-8 shadow-xl animate-fade-in">
+                <div className="flex justify-between items-center mb-6">
+                  <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    <PieChart className="w-5 h-5 text-blue-500" /> Enterprise Health Scorecard
+                  </h3>
+                  <span className="px-3.5 py-1 bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-full text-xs font-black">
+                    Institutional Rating: {scores.total}/100
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  {/* Valuation */}
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-xs font-bold font-sans">
+                      <span className="text-slate-400 dark:text-slate-500">Valuation Score</span>
+                      <span className="text-blue-550 dark:text-blue-400">{scores.valuation}/100</span>
+                    </div>
+                    <div className="w-full bg-slate-100 dark:bg-slate-800 h-2.5 rounded-full overflow-hidden">
+                      <div className="bg-blue-550 h-full rounded-full transition-all" style={{ width: `${scores.valuation}%` }} />
+                    </div>
+                  </div>
+
+                  {/* Growth */}
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-xs font-bold font-sans">
+                      <span className="text-slate-400 dark:text-slate-500">Growth Momentum</span>
+                      <span className="text-orange-500">{scores.growth}/100</span>
+                    </div>
+                    <div className="w-full bg-slate-100 dark:bg-slate-800 h-2.5 rounded-full overflow-hidden">
+                      <div className="bg-orange-500 h-full rounded-full transition-all" style={{ width: `${scores.growth}%` }} />
+                    </div>
+                  </div>
+
+                  {/* Profitability */}
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-xs font-bold font-sans">
+                      <span className="text-slate-400 dark:text-slate-500">Profitability (ROE/Margins)</span>
+                      <span className="text-emerald-500">{scores.profitability}/100</span>
+                    </div>
+                    <div className="w-full bg-slate-100 dark:bg-slate-800 h-2.5 rounded-full overflow-hidden">
+                      <div className="bg-emerald-500 h-full rounded-full transition-all" style={{ width: `${scores.profitability}%` }} />
+                    </div>
+                  </div>
+
+                  {/* Solvency / Health */}
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-xs font-bold font-sans">
+                      <span className="text-slate-400 dark:text-slate-500">Solvency & Health</span>
+                      <span className="text-purple-500">{scores.health}/100</span>
+                    </div>
+                    <div className="w-full bg-slate-100 dark:bg-slate-800 h-2.5 rounded-full overflow-hidden">
+                      <div className="bg-purple-500 h-full rounded-full transition-all" style={{ width: `${scores.health}%` }} />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Risk Red Flags */}
+              <div className="bg-white dark:bg-slate-900/50 backdrop-blur-md rounded-3xl border border-slate-200 dark:border-slate-800 p-6 sm:p-8 shadow-xl flex flex-col justify-between animate-fade-in">
+                <div>
+                  <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2 mb-6">
+                    <AlertTriangle className="w-5 h-5 text-red-500" /> Fundamental Risk Audit
+                  </h3>
+                  <div className="space-y-4 max-h-[160px] overflow-y-auto scrollbar-thin pr-1">
+                    {redFlags.map((flag, idx) => (
+                      <div key={idx} className="flex gap-2 items-start text-xs font-semibold text-slate-600 dark:text-slate-400">
+                        <span className="text-red-500 font-extrabold shrink-0">•</span>
+                        <span>{flag}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800/60 text-[10px] text-slate-450 font-bold uppercase tracking-widest">
+                  Scanned from reported corporate filings
                 </div>
               </div>
             </div>

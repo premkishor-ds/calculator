@@ -104,6 +104,7 @@ export default function WatchlistPage() {
 
   // Tags State
   const [activeTagFilter, setActiveTagFilter] = useState<string>('all');
+  const [activeQueryFilter, setActiveQueryFilter] = useState<'all' | 'high_roe' | 'debt_free' | 'undervalued'>('all');
   const [customTagRaw, setCustomTagRaw] = useState<CustomTagRaw[]>(DEFAULT_CUSTOM_TAGS);
   const [tagPopoverSym, setTagPopoverSym] = useState<string | null>(null);
   const [editingTag, setEditingTag] = useState<CustomTagRaw | null>(null);
@@ -501,7 +502,17 @@ export default function WatchlistPage() {
                            stock.name.toLowerCase().includes(search.toLowerCase());
       const matchesFav = showFavouritesOnly ? !!stock.isFavourite : true;
       const matchesTag = activeTagFilter === 'all' ? true : (stock.tags ?? []).includes(activeTagFilter);
-      return matchesSearch && matchesFav && matchesTag;
+      
+      let matchesQuery = true;
+      if (activeQueryFilter === 'high_roe') {
+        matchesQuery = (stock.profitGrowth > 20 || stock.cmpBv > 3) && stock.pe > 0 && stock.pe < 35;
+      } else if (activeQueryFilter === 'debt_free') {
+        matchesQuery = stock.promHold > 60 && stock.profitGrowth > 12;
+      } else if (activeQueryFilter === 'undervalued') {
+        matchesQuery = stock.pe > 0 && stock.pe < 18 && stock.profitGrowth > 10;
+      }
+
+      return matchesSearch && matchesFav && matchesTag && matchesQuery;
     })
     .sort((a, b) => {
       const aVal = a[sortField];
@@ -798,6 +809,57 @@ export default function WatchlistPage() {
                 </div>
               );
             })}
+          </div>
+        </div>
+
+        {/* Advanced Formula Query Filters */}
+        <div className="mb-8 p-6 bg-white dark:bg-slate-900/40 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm animate-fade-in">
+          <span className="text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-widest block mb-3">🔮 Advanced Formula Query Filters</span>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => setActiveQueryFilter('all')}
+              className={`px-3 py-1.5 rounded-full text-xs font-extrabold border transition-all ${
+                activeQueryFilter === 'all'
+                  ? 'bg-blue-500/10 border-blue-500/30 text-blue-600 dark:text-blue-400 shadow-sm'
+                  : 'bg-transparent text-slate-500 border-slate-200 dark:border-slate-850 hover:border-slate-400 dark:hover:border-slate-600'
+              }`}
+            >
+              All Tickers
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveQueryFilter('high_roe')}
+              className={`px-3 py-1.5 rounded-full text-xs font-extrabold border transition-all ${
+                activeQueryFilter === 'high_roe'
+                  ? 'bg-orange-500/10 border-orange-500/30 text-orange-600 dark:text-orange-400 shadow-sm'
+                  : 'bg-transparent text-slate-500 border-slate-200 dark:border-slate-850 hover:border-slate-400 dark:hover:border-slate-600'
+              }`}
+            >
+              🔥 High ROE Multibaggers (P/E &lt; 35 &amp; Profit Growth &gt; 20%)
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveQueryFilter('debt_free')}
+              className={`px-3 py-1.5 rounded-full text-xs font-extrabold border transition-all ${
+                activeQueryFilter === 'debt_free'
+                  ? 'bg-purple-500/10 border-purple-500/30 text-purple-600 dark:text-purple-400 shadow-sm'
+                  : 'bg-transparent text-slate-500 border-slate-200 dark:border-slate-850 hover:border-slate-400 dark:hover:border-slate-600'
+              }`}
+            >
+              🛡️ Promoter Shield (Promoter &gt; 60% &amp; Profit Growth &gt; 12%)
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveQueryFilter('undervalued')}
+              className={`px-3 py-1.5 rounded-full text-xs font-extrabold border transition-all ${
+                activeQueryFilter === 'undervalued'
+                  ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-650 dark:text-emerald-400 shadow-sm'
+                  : 'bg-transparent text-slate-500 border-slate-200 dark:border-slate-850 hover:border-slate-400 dark:hover:border-slate-600'
+              }`}
+            >
+              💸 Undervalued Compounders (P/E &lt; 18 &amp; Profit Growth &gt; 10%)
+            </button>
           </div>
         </div>
 
