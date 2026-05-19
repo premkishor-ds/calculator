@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import {
@@ -83,7 +84,7 @@ const BACKEND_API_URL = typeof window !== 'undefined' && window.location.hostnam
   ? 'https://calculatorbackend-ul8h.onrender.com/api'
   : (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api');
 
-export default function TradingTerminalPage() {
+function TradingTerminalInner() {
   /* ── State ─────────────────────────────────────────────────── */
   const [theme, setTheme] = useState<'dark' | 'light'>('light');
   const [watchlistStocks,  setWatchlistStocks]  = useState<StockQuote[]>([]);
@@ -116,7 +117,14 @@ export default function TradingTerminalPage() {
     isDefault?: boolean;
   }
 
-  const [selectedSymbol,   setSelectedSymbol]   = useState<string>(DEFAULT_SYMBOLS[0] || 'VOLTAMP.NS');
+  const searchParams = useSearchParams();
+  const [selectedSymbol,   setSelectedSymbol]   = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      const paramSym = new URLSearchParams(window.location.search).get('symbol');
+      if (paramSym) return paramSym;
+    }
+    return DEFAULT_SYMBOLS[0] || 'VOLTAMP.NS';
+  });
   const [searchQuery,      setSearchQuery]       = useState('');
   const [watchlistLoading, setWatchlistLoading] = useState(true);
   const [chartRange,       setChartRange]        = useState('1Y');
@@ -162,8 +170,14 @@ export default function TradingTerminalPage() {
   /* Derived */
   const selectedStock = watchlistStocks.find(s => s.symbol === selectedSymbol) || null;
 
+  /* ── Sync URL ?symbol= param on navigation from stock detail ── */
+  useEffect(() => {
+    const sym = searchParams?.get('symbol');
+    if (sym) setSelectedSymbol(sym);
+  }, [searchParams]);
+
   /* ── Load watchlists and stocks from Backend API ────────────────────────── */
-  const fetchWatchlists = React.useCallback(async () => {
+  const fetchWatchlists = useCallback(async () => {
     try {
       const res = await fetch(`${BACKEND_API_URL}/watchlists`);
       if (res.ok) {
@@ -1408,5 +1422,20 @@ export default function TradingTerminalPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function TradingTerminalPage() {
+  return (
+    <React.Suspense fallback={
+      <div className="min-h-dvh bg-slate-950 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+          <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Initialising Terminal…</span>
+        </div>
+      </div>
+    }>
+      <TradingTerminalInner />
+    </React.Suspense>
   );
 }

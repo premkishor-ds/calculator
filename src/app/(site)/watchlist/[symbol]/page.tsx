@@ -21,6 +21,7 @@ import {
   Globe,
   Briefcase,
   LineChart,
+  BarChart2,
   Newspaper
 } from 'lucide-react';
 
@@ -513,14 +514,21 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
               </div>
               <p className="text-sm text-slate-500 mt-1 font-medium">{ratios.name}</p>
               
-              {/* Wealth Projection Simulation Bridge */}
-              <div className="mt-4">
+              {/* Wealth Projection Simulation Bridge + Trading Terminal Link */}
+              <div className="mt-4 flex flex-wrap items-center gap-3">
                 <Link
                   href={`/?lumpsum=${Math.round(ratios.price)}&cagr=${Math.round(ratios.roe > 0 ? ratios.roe : 18)}&symbol=${ratios.symbol.replace('.NS', '')}`}
                   className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-2xl text-xs font-bold transition-all shadow-lg shadow-blue-500/20 hover:shadow-blue-500/35 active:scale-[0.98]"
                 >
                   <TrendingUp className="w-3.5 h-3.5" />
                   Simulate Compounding Wealth
+                </Link>
+                <Link
+                  href={`/chart?symbol=${encodeURIComponent(ratios.symbol)}`}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-violet-600 to-purple-700 hover:from-violet-700 hover:to-purple-800 text-white rounded-2xl text-xs font-bold transition-all shadow-lg shadow-purple-500/20 hover:shadow-purple-500/35 active:scale-[0.98]"
+                >
+                  <LineChart className="w-3.5 h-3.5" />
+                  Open in Trading Terminal
                 </Link>
               </div>
             </div>
@@ -932,6 +940,141 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
                     <span className="text-xs text-slate-400 font-semibold uppercase">Quick Ratio</span>
                     <p className="text-lg font-bold text-slate-800 dark:text-white mt-1">{ratios.quickRatio > 0 ? ratios.quickRatio.toFixed(2) : '--'}</p>
                   </div>
+                </div>
+              </div>
+            </div>
+
+            {/* QoQ & YoY Revenue + Profit Growth Bar Charts */}
+            <div className="md:col-span-3 grid grid-cols-1 lg:grid-cols-2 gap-8">
+              {/* QoQ - Quarterly Revenue & Profit */}
+              <div className="bg-white dark:bg-slate-900/50 backdrop-blur-md rounded-3xl border border-slate-200 dark:border-slate-800 p-6 shadow-xl">
+                <h3 className="text-base font-bold mb-1 flex items-center gap-2 text-slate-900 dark:text-white">
+                  <BarChart2 className="w-4 h-4 text-blue-500" /> Quarterly Growth (QoQ)
+                </h3>
+                <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-widest mb-5">Revenue vs Net Profit · Last 8 Quarters</p>
+                {chronologicalQuarterly.length < 2 ? (
+                  <p className="text-slate-400 text-xs py-6 text-center">Not enough quarterly data available.</p>
+                ) : (() => {
+                  const quarters = chronologicalQuarterly.slice(-8);
+                  const maxRev = Math.max(...quarters.map(q => Math.abs(q.revenue)));
+                  const maxProfit = Math.max(...quarters.map(q => Math.abs(q.netIncome)));
+                  const scale = Math.max(maxRev, maxProfit) || 1;
+                  return (
+                    <div className="flex items-end gap-2 h-40 w-full">
+                      {quarters.map((q, i) => {
+                        const prevQ = i > 0 ? quarters[i - 1] : null;
+                        const revGrowth = prevQ && prevQ.revenue > 0 ? ((q.revenue - prevQ.revenue) / prevQ.revenue) * 100 : null;
+                        const profGrowth = prevQ && prevQ.netIncome > 0 ? ((q.netIncome - prevQ.netIncome) / prevQ.netIncome) * 100 : null;
+                        const revH = Math.max(4, (Math.abs(q.revenue) / scale) * 100);
+                        const profH = Math.max(4, (Math.abs(q.netIncome) / scale) * 100);
+                        const isRevPos = !prevQ || q.revenue >= prevQ.revenue;
+                        const isProfPos = !prevQ || q.netIncome >= prevQ.netIncome;
+                        return (
+                          <div key={i} className="flex-1 flex flex-col items-center gap-0.5 group relative">
+                            {/* Tooltip */}
+                            <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-slate-900 dark:bg-slate-800 border border-slate-700 text-white rounded-xl p-2.5 text-[9px] font-bold whitespace-nowrap z-20 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-xl">
+                              <div className="text-slate-300 mb-1">{q.date}</div>
+                              <div className="text-blue-400">Rev: ₹{(q.revenue / 10000000).toFixed(1)}Cr</div>
+                              <div className={isProfPos ? 'text-emerald-400' : 'text-red-400'}>
+                                Profit: ₹{(q.netIncome / 10000000).toFixed(1)}Cr
+                              </div>
+                              {revGrowth !== null && <div className={revGrowth >= 0 ? 'text-emerald-300' : 'text-red-300'}>Rev Δ: {revGrowth >= 0 ? '+' : ''}{revGrowth.toFixed(1)}%</div>}
+                              {profGrowth !== null && <div className={profGrowth >= 0 ? 'text-emerald-300' : 'text-red-300'}>Profit Δ: {profGrowth >= 0 ? '+' : ''}{profGrowth.toFixed(1)}%</div>}
+                            </div>
+                            {/* Bars side-by-side */}
+                            <div className="w-full flex gap-0.5 items-end" style={{ height: '100%' }}>
+                              <div
+                                className={`flex-1 rounded-t-md transition-all ${isRevPos ? 'bg-blue-500/70 hover:bg-blue-500' : 'bg-blue-300/50 hover:bg-blue-300/80'}`}
+                                style={{ height: `${revH}%` }}
+                                title={`Revenue: ₹${(q.revenue / 10000000).toFixed(1)}Cr`}
+                              />
+                              <div
+                                className={`flex-1 rounded-t-md transition-all ${isProfPos ? 'bg-emerald-500/70 hover:bg-emerald-500' : 'bg-red-400/70 hover:bg-red-400'}`}
+                                style={{ height: `${profH}%` }}
+                                title={`Net Profit: ₹${(q.netIncome / 10000000).toFixed(1)}Cr`}
+                              />
+                            </div>
+                            <span className="text-[8px] text-slate-400 font-bold mt-1 truncate w-full text-center leading-tight">
+                              {q.date.slice(0, 7)}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
+                <div className="flex items-center gap-4 mt-4 pt-3 border-t border-slate-100 dark:border-slate-800">
+                  <span className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500"><span className="w-3 h-2 bg-blue-500/70 rounded" /> Revenue</span>
+                  <span className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500"><span className="w-3 h-2 bg-emerald-500/70 rounded" /> Net Profit</span>
+                  <span className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500"><span className="w-3 h-2 bg-red-400/70 rounded" /> Decline</span>
+                </div>
+              </div>
+
+              {/* YoY - Annual Revenue & Profit */}
+              <div className="bg-white dark:bg-slate-900/50 backdrop-blur-md rounded-3xl border border-slate-200 dark:border-slate-800 p-6 shadow-xl">
+                <h3 className="text-base font-bold mb-1 flex items-center gap-2 text-slate-900 dark:text-white">
+                  <BarChart2 className="w-4 h-4 text-purple-500" /> Annual Growth (YoY)
+                </h3>
+                <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-widest mb-5">Revenue vs Net Profit · Last 5 Years</p>
+                {chronologicalAnnual.length < 2 ? (
+                  <p className="text-slate-400 text-xs py-6 text-center">Not enough annual data available.</p>
+                ) : (() => {
+                  const years = chronologicalAnnual.slice(-5);
+                  const maxRev = Math.max(...years.map(y => Math.abs(y.revenue)));
+                  const maxProfit = Math.max(...years.map(y => Math.abs(y.netIncome)));
+                  const scale = Math.max(maxRev, maxProfit) || 1;
+                  return (
+                    <div className="flex items-end gap-3 h-40 w-full">
+                      {years.map((y, i) => {
+                        const prevY = i > 0 ? years[i - 1] : null;
+                        const revGrowth = prevY && prevY.revenue > 0 ? ((y.revenue - prevY.revenue) / prevY.revenue) * 100 : null;
+                        const profGrowth = prevY && prevY.netIncome > 0 ? ((y.netIncome - prevY.netIncome) / prevY.netIncome) * 100 : null;
+                        const revH = Math.max(4, (Math.abs(y.revenue) / scale) * 100);
+                        const profH = Math.max(4, (Math.abs(y.netIncome) / scale) * 100);
+                        const isRevPos = !prevY || y.revenue >= prevY.revenue;
+                        const isProfPos = !prevY || y.netIncome >= prevY.netIncome;
+                        return (
+                          <div key={i} className="flex-1 flex flex-col items-center gap-0.5 group relative">
+                            {/* Tooltip */}
+                            <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-slate-900 dark:bg-slate-800 border border-slate-700 text-white rounded-xl p-2.5 text-[9px] font-bold whitespace-nowrap z-20 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-xl">
+                              <div className="text-slate-300 mb-1">{y.date}</div>
+                              <div className="text-purple-400">Rev: ₹{(y.revenue / 10000000).toFixed(1)}Cr</div>
+                              <div className={isProfPos ? 'text-emerald-400' : 'text-red-400'}>
+                                Profit: ₹{(y.netIncome / 10000000).toFixed(1)}Cr
+                              </div>
+                              {revGrowth !== null && <div className={revGrowth >= 0 ? 'text-emerald-300' : 'text-red-300'}>Rev Δ: {revGrowth >= 0 ? '+' : ''}{revGrowth.toFixed(1)}%</div>}
+                              {profGrowth !== null && <div className={profGrowth >= 0 ? 'text-emerald-300' : 'text-red-300'}>Profit Δ: {profGrowth >= 0 ? '+' : ''}{profGrowth.toFixed(1)}%</div>}
+                            </div>
+                            {/* Bars */}
+                            <div className="w-full flex gap-1 items-end" style={{ height: '100%' }}>
+                              <div
+                                className={`flex-1 rounded-t-lg transition-all ${isRevPos ? 'bg-purple-500/70 hover:bg-purple-500' : 'bg-purple-300/50 hover:bg-purple-300/80'}`}
+                                style={{ height: `${revH}%` }}
+                              />
+                              <div
+                                className={`flex-1 rounded-t-lg transition-all ${isProfPos ? 'bg-emerald-500/70 hover:bg-emerald-500' : 'bg-red-400/70 hover:bg-red-400'}`}
+                                style={{ height: `${profH}%` }}
+                              />
+                            </div>
+                            {/* Growth badge */}
+                            {profGrowth !== null && (
+                              <span className={`text-[8px] font-black mt-0.5 ${profGrowth >= 0 ? 'text-emerald-500' : 'text-red-400'}`}>
+                                {profGrowth >= 0 ? '+' : ''}{profGrowth.toFixed(0)}%
+                              </span>
+                            )}
+                            <span className="text-[8px] text-slate-400 font-bold truncate w-full text-center">
+                              {y.date.slice(0, 4)}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
+                <div className="flex items-center gap-4 mt-4 pt-3 border-t border-slate-100 dark:border-slate-800">
+                  <span className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500"><span className="w-3 h-2 bg-purple-500/70 rounded" /> Revenue</span>
+                  <span className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500"><span className="w-3 h-2 bg-emerald-500/70 rounded" /> Net Profit</span>
+                  <span className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500"><span className="w-3 h-2 bg-red-400/70 rounded" /> Decline · % = Profit YoY</span>
                 </div>
               </div>
             </div>
