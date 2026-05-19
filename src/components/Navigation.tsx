@@ -41,10 +41,10 @@ export const Navigation = () => {
               key={href}
               href={href}
               onClick={closeMenu}
-              className={`text-xs font-medium transition-colors ${
+              className={`text-xs font-semibold transition-colors ${
                 pathname === href || pathname.startsWith(`${href}/`)
-                  ? 'text-blue-500'
-                  : 'hover:text-blue-500'
+                  ? 'text-blue-600 dark:text-blue-400 font-black'
+                  : 'text-slate-550 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400'
               }`}
             >
               {label}
@@ -77,10 +77,10 @@ export const Navigation = () => {
                 key={href}
                 href={href}
                 onClick={closeMenu}
-                className={`block px-5 py-4 text-sm font-semibold border-b border-slate-100 dark:border-slate-800 last:border-0 transition-colors ${
+                className={`block px-5 py-4 text-sm font-bold border-b border-slate-100 dark:border-slate-800 last:border-0 transition-colors ${
                   pathname === href || pathname.startsWith(`${href}/`)
-                    ? 'text-blue-500 bg-blue-500/5'
-                    : 'hover:bg-slate-50 dark:hover:bg-slate-800/50'
+                    ? 'text-blue-600 dark:text-blue-400 bg-blue-500/5 font-black'
+                    : 'text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-blue-600 dark:hover:text-blue-400'
                 }`}
               >
                 {label}
