@@ -758,17 +758,17 @@ export default function WatchlistPage() {
         {/* Real-time Sector & Strategy Tag Filter Strip */}
         <div className="mb-8 p-6 bg-white dark:bg-slate-900/40 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm">
           <span className="text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-widest block mb-3">Filter Institutional Sectors & Strategy Tags</span>
-          <div className="flex flex-wrap gap-1.5">
+          <div className="flex flex-wrap gap-2">
             <button
               type="button"
               onClick={() => { setActiveTagFilter('all'); setShowFavouritesOnly(false); }}
-              className={`px-3 py-1.5 rounded-full text-xs font-extrabold border transition-all ${
+              className={`px-3 py-2 rounded-full text-xs font-semibold border transition-all ${
                 activeTagFilter === 'all' && !showFavouritesOnly
                   ? 'bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-white border-slate-350 dark:border-slate-600 shadow-sm'
-                  : 'bg-transparent text-slate-500 border-slate-200 dark:border-slate-850 hover:border-slate-400 dark:hover:border-slate-600'
+                  : 'bg-transparent text-slate-500 border-slate-200 dark:border-slate-850 hover:border-slate-400 dark:hover:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-850/30'
               }`}
             >
-              All Symbols ({stocks.length})
+              No Filter ({stocks.length})
             </button>
             {allTags.map((tag: TagDef) => {
               const count = stocks.filter(s => (s.tags ?? []).includes(tag.id)).length;
@@ -780,23 +780,23 @@ export default function WatchlistPage() {
                   <button
                     type="button"
                     onClick={() => { setActiveTagFilter(activeTagFilter === tag.id ? 'all' : tag.id); setShowFavouritesOnly(false); }}
-                    className={`px-3 py-1.5 rounded-full text-xs font-extrabold border transition-all ${
-                      activeTagFilter === tag.id ? 'opacity-100 shadow-md' : 'opacity-60 hover:opacity-90'
+                    className={`px-3 py-2 rounded-full text-xs font-semibold border transition-all ${
+                      activeTagFilter === tag.id ? 'opacity-100 shadow-md' : 'opacity-70 hover:opacity-100'
                     } ${
                       !raw
                         ? (activeTagFilter === tag.id
                             ? tag.color
-                            : 'bg-transparent text-slate-500 border-slate-200 dark:border-slate-850 hover:border-slate-400 dark:hover:border-slate-600')
+                            : 'bg-transparent text-slate-500 border-slate-200 dark:border-slate-850 hover:border-slate-400 dark:hover:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-850/30')
                         : ''
                     }`}
                     style={raw ? {
-                      backgroundColor: raw.color + '25',
+                      backgroundColor: activeTagFilter === tag.id ? raw.color + '30' : raw.color + '15',
                       color: raw.color,
-                      borderColor: raw.color + '60',
+                      borderColor: raw.color + (activeTagFilter === tag.id ? '80' : '40'),
                     } : {}}
                   >
                     <span className="w-1.5 h-1.5 rounded-full shrink-0 mr-1.5 inline-block" style={{ backgroundColor: tag.dot }} />
-                    {tag.label} {count > 0 && `(${count})`}
+                    {tag.label} ({count})
                   </button>
                   {isCustom && (
                     <button
@@ -1037,42 +1037,69 @@ export default function WatchlistPage() {
                               {/* Tag popover dropdown */}
                               {tagPopoverSym === stock.symbol && (
                                 <div
-                                  className="absolute left-0 top-8 z-50 w-52 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl p-2 animate-fade-in"
+                                  className="absolute left-0 top-8 z-50 w-64 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl p-0 animate-fade-in max-h-96 flex flex-col"
                                   onClick={e => e.stopPropagation()}
                                 >
-                                  <p className="text-[9px] font-extrabold text-slate-400 dark:text-slate-550 uppercase tracking-widest mb-2 px-1">Assign Tags</p>
-                                  <div className="flex flex-col gap-0.5 max-h-60 overflow-y-auto scrollbar-thin">
-                                    {allTags.map((tag: TagDef) => {
-                                      const isActive = (stock.tags ?? []).includes(tag.id);
-                                      return tag.custom ? (
-                                        <button
-                                          key={tag.id}
-                                          type="button"
-                                          onClick={e => handleToggleTag(stock.symbol, tag.id, e)}
-                                          className={`flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs font-bold transition-all text-left ${
-                                            isActive ? 'border shadow-sm' : 'text-slate-600 dark:text-slate-450 hover:bg-slate-50 dark:hover:bg-slate-800'
-                                          }`}
-                                          style={isActive ? { backgroundColor: tag.dot + '20', color: tag.dot, borderColor: tag.dot + '50' } : {}}
-                                        >
-                                          <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: isActive ? tag.dot : '#64748b' }} />
-                                          {tag.label}
-                                          {isActive && <span className="ml-auto text-xs text-blue-500">✓</span>}
-                                        </button>
-                                      ) : (
-                                        <button
-                                          key={tag.id}
-                                          type="button"
-                                          onClick={e => handleToggleTag(stock.symbol, tag.id, e)}
-                                          className={`flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs font-bold transition-all text-left ${
-                                            isActive ? tag.color + ' border shadow-sm' : 'text-slate-655 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
-                                          }`}
-                                        >
-                                          <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: isActive ? tag.dot : '#64748b' }} />
-                                          {tag.label}
-                                          {isActive && <span className="ml-auto text-xs">✓</span>}
-                                        </button>
-                                      );
-                                    })}
+                                  <div className="flex items-center justify-between px-3 py-2 border-b border-slate-200 dark:border-slate-700">
+                                    <p className="text-[9px] font-extrabold text-slate-400 dark:text-slate-550 uppercase tracking-widest">Assign Tags</p>
+                                    <button
+                                      type="button"
+                                      onClick={e => { e.stopPropagation(); setTagPopoverSym(null); }}
+                                      className="text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300 transition-colors"
+                                      title="Close"
+                                    >×</button>
+                                  </div>
+                                  <div className="flex flex-col overflow-y-auto scrollbar-thin p-2">
+                                    {/* Strategic Tags Section */}
+                                    {allTags.some(t => !t.custom) && (
+                                      <>
+                                        <p className="text-[8px] font-bold text-slate-500 dark:text-slate-600 uppercase tracking-widest px-2 py-1 mt-1 mb-1">Strategic Tags</p>
+                                        {allTags.map((tag: TagDef) => {
+                                          if (tag.custom) return null;
+                                          const isActive = (stock.tags ?? []).includes(tag.id);
+                                          return (
+                                            <button
+                                              key={tag.id}
+                                              type="button"
+                                              onClick={e => { e.stopPropagation(); handleToggleTag(stock.symbol, tag.id, e); }}
+                                              className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs font-bold transition-all text-left ${
+                                                isActive ? tag.color + ' border shadow-sm' : 'text-slate-655 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
+                                              }`}
+                                            >
+                                              <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: isActive ? tag.dot : '#64748b' }} />
+                                              <span className="flex-1">{tag.label}</span>
+                                              {isActive && <span className="text-xs">✓</span>}
+                                            </button>
+                                          );
+                                        })}
+                                      </>
+                                    )}
+                                    
+                                    {/* Watchlist Tags Section */}
+                                    {allTags.some(t => t.custom) && (
+                                      <>
+                                        <p className="text-[8px] font-bold text-slate-500 dark:text-slate-600 uppercase tracking-widest px-2 py-1 mt-2 mb-1">Watchlist Tags</p>
+                                        {allTags.map((tag: TagDef) => {
+                                          if (!tag.custom) return null;
+                                          const isActive = (stock.tags ?? []).includes(tag.id);
+                                          return (
+                                            <button
+                                              key={tag.id}
+                                              type="button"
+                                              onClick={e => { e.stopPropagation(); handleToggleTag(stock.symbol, tag.id, e); }}
+                                              className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs font-bold transition-all text-left ${
+                                                isActive ? 'border shadow-sm' : 'text-slate-600 dark:text-slate-450 hover:bg-slate-50 dark:hover:bg-slate-800'
+                                              }`}
+                                              style={isActive ? { backgroundColor: tag.dot + '20', color: tag.dot, borderColor: tag.dot + '50' } : {}}
+                                            >
+                                              <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: isActive ? tag.dot : '#64748b' }} />
+                                              <span className="flex-1">{tag.label}</span>
+                                              {isActive && <span className="text-xs text-blue-500">✓</span>}
+                                            </button>
+                                          );
+                                        })}
+                                      </>
+                                    )}
                                   </div>
                                 </div>
                               )}
