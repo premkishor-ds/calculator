@@ -182,7 +182,7 @@ export async function GET(
         };
       })
       // Deduplicate by timestamp (keep last occurrence), then sort ascending
-      .filter((p: any, idx: number, arr: any[]) => arr.findIndex((x: any) => x.time === p.time) === idx)
+      .filter((p: any, idx: number, arr: any[]) => arr.findLastIndex((x: any) => x.time === p.time) === idx)
       .sort((a: any, b: any) => a.time - b.time);
 
     return NextResponse.json({
