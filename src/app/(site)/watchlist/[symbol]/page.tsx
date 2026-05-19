@@ -236,9 +236,63 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col justify-center items-center gap-4">
-        <RefreshCw className="w-8 h-8 text-blue-500 animate-spin" />
-        <p className="text-slate-500 font-medium text-sm">Compiling complete financial intelligence for {decodedSymbol.replace('.NS', '')}...</p>
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors duration-300 font-sans pb-20">
+        <div className="w-full px-4 sm:px-6 lg:px-8 py-8 max-w-7xl mx-auto animate-pulse">
+          {/* Back button skeleton */}
+          <div className="h-4 bg-slate-200 dark:bg-slate-800 rounded-md w-32 mb-6" />
+
+          {/* Header Card skeleton */}
+          <div className="bg-white dark:bg-slate-900/50 backdrop-blur-md rounded-3xl border border-slate-200 dark:border-slate-800 p-6 sm:p-8 shadow-xl mb-8">
+            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
+              <div>
+                <div className="h-8 bg-slate-350 dark:bg-slate-700 rounded-lg w-48 mb-2" />
+                <div className="h-4 bg-slate-200 dark:bg-slate-800 rounded-lg w-32" />
+              </div>
+              <div className="flex items-center gap-4 sm:gap-6 flex-wrap">
+                <div className="w-32"><div className="h-8 bg-slate-300 dark:bg-slate-700 rounded-lg mb-1" /><div className="h-3 bg-slate-200 dark:bg-slate-800 rounded-md w-16" /></div>
+                <div className="w-24"><div className="h-6 bg-slate-200 dark:bg-slate-800 rounded-md mb-1" /><div className="h-3 bg-slate-100 dark:bg-slate-900 rounded-md w-12" /></div>
+                <div className="w-24"><div className="h-6 bg-slate-200 dark:bg-slate-800 rounded-md mb-1" /><div className="h-3 bg-slate-100 dark:bg-slate-900 rounded-md w-12" /></div>
+              </div>
+            </div>
+          </div>
+
+          {/* Tabs skeleton */}
+          <div className="flex border-b border-slate-200 dark:border-slate-800 mb-8 overflow-x-auto gap-4 scrollbar-none py-1">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="h-6 bg-slate-200 dark:bg-slate-800 rounded-md w-24 shrink-0" />
+            ))}
+          </div>
+
+          {/* Grid skeleton */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {/* Chart box shimmer */}
+            <div className="md:col-span-3 bg-white dark:bg-slate-900/50 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 shadow-xl h-[340px] flex flex-col justify-between">
+              <div className="flex justify-between items-center"><div className="h-5 bg-slate-250 dark:bg-slate-750 rounded-md w-48" /><div className="h-8 bg-slate-200 dark:bg-slate-800 rounded-md w-32" /></div>
+              <div className="flex-1 my-4 bg-slate-100 dark:bg-slate-950 rounded-2xl animate-pulse" />
+              <div className="h-4 bg-slate-200 dark:bg-slate-850 rounded-md w-64" />
+            </div>
+
+            {/* Ratios box shimmer */}
+            <div className="md:col-span-2 bg-white dark:bg-slate-900/50 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 shadow-xl">
+              <div className="h-5 bg-slate-250 dark:bg-slate-750 rounded-md w-40 mb-6" />
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-6">
+                {[...Array(6)].map((_, i) => (
+                  <div key={i} className="p-4 bg-slate-50 dark:bg-slate-800/40 rounded-2xl"><div className="h-3 bg-slate-200 dark:bg-slate-850 rounded-md w-16 mb-2" /><div className="h-5 bg-slate-350 dark:bg-slate-700 rounded-md w-12" /></div>
+                ))}
+              </div>
+            </div>
+
+            {/* Technical analysis indicators shimmer */}
+            <div className="bg-white dark:bg-slate-900/50 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 shadow-xl h-fit">
+              <div className="h-5 bg-slate-250 dark:bg-slate-750 rounded-md w-36 mb-6" />
+              <div className="space-y-4">
+                {[...Array(4)].map((_, i) => (
+                  <div key={i} className="flex justify-between items-center py-2.5 border-b border-slate-100 dark:border-slate-800/60"><div className="h-3 bg-slate-200 dark:bg-slate-800 rounded-md w-24" /><div className="h-4 bg-slate-300 dark:bg-slate-700 rounded-md w-16" /></div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }

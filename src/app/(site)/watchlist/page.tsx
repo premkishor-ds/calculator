@@ -92,6 +92,14 @@ export default function WatchlistPage() {
   const [creatingWatchlist, setCreatingWatchlist] = useState<boolean>(false);
   const [wlError, setWlError] = useState<string>('');
 
+  // Toast notifications state
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
+  const showToast = useCallback((message: string, type: 'success' | 'error' | 'info' = 'success') => {
+    setToast({ message, type });
+    const timer = setTimeout(() => setToast(null), 3000);
+    return () => clearTimeout(timer);
+  }, []);
+
   // Tags State
   const [activeTagFilter, setActiveTagFilter] = useState<string>('all');
   const [customTagRaw, setCustomTagRaw] = useState<CustomTagRaw[]>(DEFAULT_CUSTOM_TAGS);
@@ -223,9 +231,11 @@ export default function WatchlistPage() {
         setWatchlists(prev => [...prev, data]);
         setSelectedWatchlist(data.name);
         setNewWatchlistName('');
+        showToast(`Workspace "${data.name}" created successfully`, 'success');
       } else {
         const errData = await res.json();
         setWlError(errData.error || 'Failed to create watchlist');
+        showToast(errData.error || 'Failed to create watchlist', 'error');
       }
     } catch {
       setWlError('Network error while creating watchlist');
@@ -248,12 +258,13 @@ export default function WatchlistPage() {
         if (selectedWatchlist === nameToDelete) {
           setSelectedWatchlist('default');
         }
+        showToast(`Workspace "${nameToDelete}" deleted permanently`, 'info');
       } else {
         const errData = await res.json();
-        alert(errData.error || 'Failed to delete watchlist');
+        showToast(errData.error || 'Failed to delete watchlist', 'error');
       }
     } catch {
-      alert('Network error while deleting watchlist');
+      showToast('Network error while deleting watchlist', 'error');
     }
   };
 
@@ -295,6 +306,7 @@ export default function WatchlistPage() {
       if (res.ok) {
         const updated: CustomTagRaw = await res.json();
         setCustomTagRaw(prev => prev.map(t => t.tagId === updated.tagId ? updated : t));
+        showToast('Tag updated successfully', 'success');
       }
     } finally {
       setEditSaving(false);
@@ -372,12 +384,14 @@ export default function WatchlistPage() {
         ...validatedStock,
         name: dbStock.name,
         isFavourite: !!dbStock.isFavourite,
-        tags: dbStock.tags || []
+      tags: dbStock.tags || []
       };
       setStocks(prev => [nextStock, ...prev]);
       setNewSymbol('');
+      showToast(`${cleanSym.toUpperCase()} added to active screener`, 'success');
     } catch {
       setAddError(`Failed to fetch validation stats for ${cleanSym}.`);
+      showToast(`Ticker validation failed for ${cleanSym}`, 'error');
     } finally {
       setAddLoading(false);
     }
@@ -416,7 +430,7 @@ export default function WatchlistPage() {
         }
         return s;
       }));
-      alert(err instanceof Error ? err.message : 'Failed to update favorite status');
+      showToast(err instanceof Error ? err.message : 'Failed to update favorite status', 'error');
     }
   };
 
@@ -437,9 +451,10 @@ export default function WatchlistPage() {
 
       // 2. Update local state
       setStocks(prev => prev.filter(s => s.symbol.toLowerCase() !== symToDelete.toLowerCase()));
+      showToast(`${symToDelete.split('.')[0]} deleted from active workspace`, 'info');
     } catch (err) {
       console.error('Delete stock error:', err);
-      alert(err instanceof Error ? err.message : 'Failed to delete stock');
+      showToast(err instanceof Error ? err.message : 'Failed to delete stock', 'error');
     }
   };
 
@@ -469,8 +484,10 @@ export default function WatchlistPage() {
         );
       }
       await fetchStocksFromAPI();
+      showToast('Watchlist restored to institutional defaults', 'success');
     } catch (err) {
       console.error('Reset watchlist error:', err);
+      showToast('Failed to restore default watchlist', 'error');
     } finally {
       setLoading(false);
     }
@@ -844,9 +861,45 @@ export default function WatchlistPage() {
         {/* Live table list */}
         <div className="bg-white dark:bg-slate-900/50 backdrop-blur-md rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden">
           {loading && stocks.length === 0 ? (
-            <div className="p-20 text-center flex flex-col items-center justify-center gap-4">
-              <RefreshCw className="w-8 h-8 text-blue-500 animate-spin" />
-              <p className="text-slate-500 text-sm font-semibold">Compiling live database portfolio valuations...</p>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse min-w-[1200px]">
+                <thead>
+                  <tr className="bg-slate-50 dark:bg-slate-800/40 border-b border-slate-200 dark:border-slate-800">
+                    <th className="p-4 font-bold text-xs uppercase tracking-wider text-slate-400">Ticker Symbol</th>
+                    <th className="p-4 font-bold text-xs uppercase tracking-wider text-slate-400">Company Name</th>
+                    <th className="p-4 font-bold text-xs uppercase tracking-wider text-slate-400 text-right">Price (INR)</th>
+                    <th className="p-4 font-bold text-xs uppercase tracking-wider text-slate-400 text-right">Change (%)</th>
+                    <th className="p-4 font-bold text-xs uppercase tracking-wider text-slate-400 text-right">Mkt Cap (Cr)</th>
+                    <th className="p-4 font-bold text-xs uppercase tracking-wider text-slate-400 text-right">P/E</th>
+                    <th className="p-4 font-bold text-xs uppercase tracking-wider text-slate-400 text-right">EPS</th>
+                    <th className="p-4 font-bold text-xs uppercase tracking-wider text-slate-400 text-right">CMP/BV</th>
+                    <th className="p-4 font-bold text-xs uppercase tracking-wider text-slate-400 text-right">Div Yield</th>
+                    <th className="p-4 font-bold text-xs uppercase tracking-wider text-slate-400 text-right">Promoter</th>
+                    <th className="p-4 font-bold text-xs uppercase tracking-wider text-slate-400 text-right">Profit Gr.</th>
+                    <th className="p-4 font-bold text-xs uppercase tracking-wider text-slate-400 text-right">Sales Gr.</th>
+                    <th className="p-4 font-bold text-xs uppercase tracking-wider text-slate-400 text-center">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-150 dark:divide-slate-800">
+                  {[...Array(6)].map((_, idx) => (
+                    <tr key={idx} className="animate-pulse">
+                      <td className="p-4"><div className="h-4 bg-slate-200 dark:bg-slate-850 rounded-md w-16" /></td>
+                      <td className="p-4"><div className="h-4 bg-slate-200 dark:bg-slate-850 rounded-md w-48 mb-1" /><div className="h-3 bg-slate-100 dark:bg-slate-900 rounded-md w-32" /></td>
+                      <td className="p-4"><div className="h-4 bg-slate-200 dark:bg-slate-850 rounded-md w-12 ml-auto" /></td>
+                      <td className="p-4"><div className="h-4 bg-slate-200 dark:bg-slate-850 rounded-md w-10 ml-auto" /></td>
+                      <td className="p-4"><div className="h-4 bg-slate-200 dark:bg-slate-850 rounded-md w-20 ml-auto" /></td>
+                      <td className="p-4"><div className="h-4 bg-slate-200 dark:bg-slate-850 rounded-md w-8 ml-auto" /></td>
+                      <td className="p-4"><div className="h-4 bg-slate-200 dark:bg-slate-850 rounded-md w-8 ml-auto" /></td>
+                      <td className="p-4"><div className="h-4 bg-slate-200 dark:bg-slate-850 rounded-md w-10 ml-auto" /></td>
+                      <td className="p-4"><div className="h-4 bg-slate-200 dark:bg-slate-850 rounded-md w-8 ml-auto" /></td>
+                      <td className="p-4"><div className="h-4 bg-slate-200 dark:bg-slate-850 rounded-md w-12 ml-auto" /></td>
+                      <td className="p-4"><div className="h-4 bg-slate-200 dark:bg-slate-850 rounded-md w-12 ml-auto" /></td>
+                      <td className="p-4"><div className="h-4 bg-slate-200 dark:bg-slate-850 rounded-md w-12 ml-auto" /></td>
+                      <td className="p-4 text-center"><div className="h-6 bg-slate-200 dark:bg-slate-850 rounded-md w-16 mx-auto" /></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           ) : error && stocks.length === 0 ? (
             <div className="p-20 text-center text-red-500 font-semibold">{error}</div>
@@ -1043,6 +1096,16 @@ export default function WatchlistPage() {
         </div>
 
       </div>
+      
+      {/* Floating dynamic glassmorphic toast notification */}
+      {toast && (
+        <div className="fixed bottom-6 right-6 z-[100] flex items-center gap-3 px-4 py-3 bg-slate-900/90 dark:bg-white/95 text-white dark:text-slate-950 rounded-2xl shadow-2xl backdrop-blur-xl border border-white/10 dark:border-slate-200/80 animate-slide-up">
+          {toast.type === 'success' && <div className="w-2 h-2 bg-emerald-400 dark:bg-emerald-500 rounded-full animate-ping" />}
+          {toast.type === 'error' && <div className="w-2 h-2 bg-rose-500 rounded-full animate-pulse" />}
+          {toast.type === 'info' && <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />}
+          <span className="text-xs font-bold uppercase tracking-wider leading-none">{toast.message}</span>
+        </div>
+      )}
     </div>
   );
 }

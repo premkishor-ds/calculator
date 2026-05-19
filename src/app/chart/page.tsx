@@ -86,6 +86,13 @@ export default function TradingTerminalPage() {
   const [theme, setTheme] = useState<'dark' | 'light'>('light');
   const [watchlistStocks,  setWatchlistStocks]  = useState<StockQuote[]>([]);
 
+  // Floating toast notification system state
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
+  const showToast = (message: string, type: 'success' | 'error' | 'info' = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3000);
+  };
+
   // Load theme after mount
   useEffect(() => {
     const savedTheme = localStorage.getItem('theme') as 'dark' | 'light' | null;
@@ -448,7 +455,7 @@ export default function TradingTerminalPage() {
       }));
     } catch (err) {
       console.error('Toggle favorite error:', err);
-      alert(err instanceof Error ? err.message : 'Failed to update favorite status');
+      showToast(err instanceof Error ? err.message : 'Failed to update favorite status', 'error');
     }
   };
 
@@ -477,9 +484,10 @@ export default function TradingTerminalPage() {
           setSelectedSymbol('');
         }
       }
+      showToast(`${symbolToDelete.split('.')[0]} deleted from active workspace`, 'info');
     } catch (err) {
       console.error('Delete stock error:', err);
-      alert(err instanceof Error ? err.message : 'Failed to delete stock');
+      showToast(err instanceof Error ? err.message : 'Failed to delete stock', 'error');
     }
   };
 
@@ -1242,9 +1250,19 @@ export default function TradingTerminalPage() {
 
           <div className="flex-1 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-900/60">
             {watchlistLoading ? (
-              <div className="p-8 text-center flex flex-col items-center gap-3">
-                <RefreshCw className="w-5 h-5 text-blue-500 animate-spin" />
-                <span className="text-xs text-slate-400 dark:text-slate-500 font-semibold">Loading quotes…</span>
+              <div className="flex flex-col divide-y divide-slate-100 dark:divide-slate-900/60 animate-pulse">
+                {[...Array(6)].map((_, idx) => (
+                  <div key={idx} className="px-4 py-3 flex items-center justify-between gap-3 border-l-4 border-transparent">
+                    <div className="flex-1">
+                      <div className="h-3.5 bg-slate-200 dark:bg-slate-800 rounded-md w-16 mb-1.5" />
+                      <div className="h-2.5 bg-slate-100 dark:bg-slate-900 rounded-md w-24" />
+                    </div>
+                    <div className="text-right">
+                      <div className="h-3.5 bg-slate-200 dark:bg-slate-800 rounded-md w-12 ml-auto mb-1.5" />
+                      <div className="h-2.5 bg-slate-100 dark:bg-slate-900 rounded-md w-10 ml-auto" />
+                    </div>
+                  </div>
+                ))}
               </div>
             ) : filteredWatchlist.length > 0 ? (
               filteredWatchlist.map(stock => {
@@ -1377,6 +1395,16 @@ export default function TradingTerminalPage() {
           </div>
         </section>
       </main>
+      
+      {/* Dynamic glassmorphic floating toast notification */}
+      {toast && (
+        <div className="fixed bottom-6 right-6 z-[100] flex items-center gap-3 px-4 py-3 bg-slate-900/90 dark:bg-white/95 text-white dark:text-slate-950 rounded-2xl shadow-2xl backdrop-blur-xl border border-white/10 dark:border-slate-200/80 animate-slide-up">
+          {toast.type === 'success' && <div className="w-2 h-2 bg-emerald-400 dark:bg-emerald-500 rounded-full animate-ping" />}
+          {toast.type === 'error' && <div className="w-2 h-2 bg-rose-500 rounded-full animate-pulse" />}
+          {toast.type === 'info' && <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />}
+          <span className="text-xs font-bold uppercase tracking-wider leading-none">{toast.message}</span>
+        </div>
+      )}
     </div>
   );
 }
