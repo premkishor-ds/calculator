@@ -34,11 +34,12 @@ interface Props {
   onRangeChange: (r: string) => void;
   chartMode: 'price' | 'pe';
   onModeChange: (m: 'price' | 'pe') => void;
+  theme: 'dark' | 'light';
 }
 
 /* ─── Constants ──────────────────────────────────────────────── */
 const MA_LIST = [
-  { period: 9,   color: '#ffffff', label: 'MA9'   },
+  { period: 9,   color: '#6366f1', label: 'MA9'   },
   { period: 20,  color: '#f97316', label: 'MA20'  },
   { period: 50,  color: '#22c55e', label: 'MA50'  },
   { period: 100, color: '#ef4444', label: 'MA100' },
@@ -60,7 +61,7 @@ function calcSMA(data: ChartPoint[], period: number): LineData<Time>[] {
 
 /* ─── Component ──────────────────────────────────────────────── */
 export default function AdvancedChart({
-  symbol, chartRange, onRangeChange, chartMode, onModeChange,
+  symbol, chartRange, onRangeChange, chartMode, onModeChange, theme,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef     = useRef<IChartApi | null>(null);
@@ -79,27 +80,29 @@ export default function AdvancedChart({
   useEffect(() => {
     if (!containerRef.current) return;
 
+    const isDark = theme === 'dark';
+
     const chart = createChart(containerRef.current, {
       layout: {
-        background: { type: ColorType.Solid, color: '#020617' },
-        textColor: '#94a3b8',
+        background: { type: ColorType.Solid, color: isDark ? '#020617' : '#ffffff' },
+        textColor: isDark ? '#94a3b8' : '#475569',
         fontSize: 11,
       },
       grid: {
-        vertLines: { color: '#0f172a' },
-        horzLines: { color: '#0f172a' },
+        vertLines: { color: isDark ? '#0f172a' : '#f1f5f9' },
+        horzLines: { color: isDark ? '#0f172a' : '#f1f5f9' },
       },
       crosshair: {
         mode: CrosshairMode.Normal,
-        vertLine: { color: '#475569', width: 1, style: 3, labelBackgroundColor: '#1e293b' },
-        horzLine: { color: '#475569', width: 1, style: 3, labelBackgroundColor: '#1e293b' },
+        vertLine: { color: isDark ? '#475569' : '#cbd5e1', width: 1, style: 3, labelBackgroundColor: isDark ? '#1e293b' : '#f1f5f9' },
+        horzLine: { color: isDark ? '#475569' : '#cbd5e1', width: 1, style: 3, labelBackgroundColor: isDark ? '#1e293b' : '#f1f5f9' },
       },
       rightPriceScale: {
-        borderColor: '#1e293b',
+        borderColor: isDark ? '#1e293b' : '#e2e8f0',
         scaleMargins: { top: 0.08, bottom: 0.28 },
       },
       timeScale: {
-        borderColor: '#1e293b',
+        borderColor: isDark ? '#1e293b' : '#e2e8f0',
         timeVisible: true,
         secondsVisible: false,
         rightOffset: 5,
@@ -142,7 +145,6 @@ export default function AdvancedChart({
     });
     ro.observe(containerRef.current);
 
-    // Self-correcting layout timeout to fix potential dynamic flexbox race conditions
     const timer = setTimeout(() => {
       if (containerRef.current && chartRef.current) {
         chartRef.current.applyOptions({
@@ -152,7 +154,6 @@ export default function AdvancedChart({
       }
     }, 100);
 
-    // Capture ref value so cleanup uses the same Map instance
     const maRefsMap = maRefs.current;
     return () => {
       clearTimeout(timer);
@@ -171,7 +172,6 @@ export default function AdvancedChart({
     if (!symbol) return;
     let cancelled = false;
 
-    // All setState calls are inside async callbacks — not synchronous in the effect body
     fetch(`/api/watchlist/${encodeURIComponent(symbol)}/chart?range=${chartRange.toLowerCase()}`)
       .then(r => {
         if (!cancelled) setLoading(true);
@@ -249,8 +249,7 @@ export default function AdvancedChart({
 
     syncMAs(data, activeMA);
     chart.timeScale().fitContent();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data]);   // activeMA intentionally excluded — handled by effect below
+  }, [data]);
 
   /* ── 4. Update MA visibility when toggles change ─────────── */
   useEffect(() => {
@@ -265,6 +264,34 @@ export default function AdvancedChart({
     peLineRef.current?.applyOptions({ visible: !isPrice });
     maRefs.current.forEach(s => s.applyOptions({ visible: isPrice }));
   }, [chartMode]);
+
+  /* ── 6. Dynamically apply Theme Options to Chart ─────────── */
+  useEffect(() => {
+    const chart = chartRef.current;
+    if (!chart) return;
+
+    const isDark = theme === 'dark';
+    chart.applyOptions({
+      layout: {
+        background: { type: ColorType.Solid, color: isDark ? '#020617' : '#ffffff' },
+        textColor: isDark ? '#94a3b8' : '#475569',
+      },
+      grid: {
+        vertLines: { color: isDark ? '#0f172a' : '#f1f5f9' },
+        horzLines: { color: isDark ? '#0f172a' : '#f1f5f9' },
+      },
+      rightPriceScale: {
+        borderColor: isDark ? '#1e293b' : '#e2e8f0',
+      },
+      timeScale: {
+        borderColor: isDark ? '#1e293b' : '#e2e8f0',
+      },
+      crosshair: {
+        vertLine: { color: isDark ? '#475569' : '#cbd5e1', labelBackgroundColor: isDark ? '#1e293b' : '#f1f5f9' },
+        horzLine: { color: isDark ? '#475569' : '#cbd5e1', labelBackgroundColor: isDark ? '#1e293b' : '#f1f5f9' },
+      },
+    });
+  }, [theme]);
 
   /* ── UI helpers ──────────────────────────────────────────── */
   const toggleMA = (period: number) =>
@@ -282,13 +309,13 @@ export default function AdvancedChart({
 
   /* ── Render ──────────────────────────────────────────────── */
   return (
-    <div className="flex flex-col h-full bg-slate-950 select-none">
+    <div className="flex flex-col h-full bg-white dark:bg-slate-950 select-none">
 
       {/* Toolbar */}
-      <div className="flex flex-wrap items-center justify-between gap-2 px-3 sm:px-4 py-2 border-b border-slate-800/80 shrink-0">
+      <div className="flex flex-wrap items-center justify-between gap-2 px-3 sm:px-4 py-2 border-b border-slate-200 dark:border-slate-800/80 shrink-0 bg-slate-50 dark:bg-slate-950">
 
         {/* Chart-type toggle */}
-        <div className="flex items-center gap-1 bg-slate-900 border border-slate-800 p-1 rounded-xl">
+        <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-1 rounded-xl">
           {(['price', 'pe'] as const).map(m => (
             <button
               key={m}
@@ -296,9 +323,9 @@ export default function AdvancedChart({
               className={`px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all ${
                 chartMode === m
                   ? m === 'price'
-                    ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
-                    : 'bg-purple-500/20 text-purple-400 border border-purple-500/30'
-                  : 'text-slate-400 hover:text-white'
+                    ? 'bg-blue-500/15 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400 border border-blue-200 dark:border-blue-500/30 shadow-sm'
+                    : 'bg-purple-500/15 text-purple-600 dark:bg-purple-500/20 dark:text-purple-400 border border-purple-200 dark:border-purple-500/30 shadow-sm'
+                  : 'text-slate-500 hover:text-slate-850 dark:text-slate-400 dark:hover:text-white'
               }`}
             >
               {m === 'price' ? '🕯 Candles' : '📊 P/E Ratio'}
@@ -309,14 +336,14 @@ export default function AdvancedChart({
         {/* MA toggles (price mode only) */}
         {chartMode === 'price' && (
           <div className="flex items-center gap-1 overflow-x-auto scrollbar-none max-w-full pb-1">
-            <span className="text-[10px] font-bold text-slate-600 uppercase tracking-widest mr-1 shrink-0">MA</span>
+            <span className="text-[10px] font-bold text-slate-400 dark:text-slate-600 uppercase tracking-widest mr-1 shrink-0">MA</span>
             {MA_LIST.map(({ period, color, label }) => (
               <button
                 key={period}
                 onClick={() => toggleMA(period)}
                 style={activeMA.has(period) ? { backgroundColor: color + '25', borderColor: color, color } : {}}
                 className={`px-2.5 py-1.5 rounded-md text-[10px] font-bold border transition-all shrink-0 touch-manipulation ${
-                  activeMA.has(period) ? '' : 'border-slate-700 text-slate-500 hover:text-slate-300'
+                  activeMA.has(period) ? '' : 'border-slate-200 dark:border-slate-700 text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
                 }`}
               >
                 {label}
@@ -326,13 +353,13 @@ export default function AdvancedChart({
         )}
 
         {/* Range buttons */}
-        <div className="flex items-center bg-slate-900 border border-slate-800 p-1 rounded-xl gap-0.5 overflow-x-auto scrollbar-none max-w-full">
+        <div className="flex items-center bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-1 rounded-xl gap-0.5 overflow-x-auto scrollbar-none max-w-full">
           {RANGES.map(rng => (
             <button
               key={rng}
               onClick={() => onRangeChange(rng)}
               className={`px-2.5 sm:px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all shrink-0 touch-manipulation ${
-                chartRange === rng ? 'bg-slate-700 text-white shadow-sm' : 'text-slate-400 hover:text-white'
+                chartRange === rng ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-white shadow-sm font-extrabold border border-slate-200 dark:border-slate-600' : 'text-slate-500 hover:text-slate-850 dark:text-slate-400 dark:hover:text-white'
               }`}
             >
               {rng}
@@ -343,32 +370,32 @@ export default function AdvancedChart({
 
       {/* Price bar */}
       {last && (
-        <div className="flex flex-wrap items-center gap-3 px-4 py-1.5 border-b border-slate-800/40 shrink-0">
-          <span className="text-sm font-black text-white">₹{last.close.toLocaleString('en-IN')}</span>
-          <span className={`text-xs font-bold ${up ? 'text-emerald-400' : 'text-red-400'}`}>
+        <div className="flex flex-wrap items-center gap-3 px-4 py-1.5 border-b border-slate-100 dark:border-slate-800/40 shrink-0 bg-white dark:bg-slate-950">
+          <span className="text-sm font-black text-slate-900 dark:text-white">₹{last.close.toLocaleString('en-IN')}</span>
+          <span className={`text-xs font-bold ${up ? 'text-emerald-550 dark:text-emerald-400' : 'text-red-550 dark:text-red-400'}`}>
             {up ? '+' : ''}{delta.toFixed(2)}&nbsp;({up ? '+' : ''}{pct.toFixed(2)}%)
           </span>
-          <span className="text-[10px] text-slate-500">{chartRange} change</span>
-          <span className="ml-auto text-[10px] text-slate-600 font-mono hidden sm:block">
-            O&nbsp;<span className="text-slate-400">{last.open}</span>
-            &nbsp;H&nbsp;<span className="text-emerald-500">{last.high}</span>
-            &nbsp;L&nbsp;<span className="text-red-500">{last.low}</span>
-            &nbsp;C&nbsp;<span className="text-white font-bold">{last.close}</span>
+          <span className="text-[10px] text-slate-400 dark:text-slate-500">{chartRange} change</span>
+          <span className="ml-auto text-[10px] text-slate-450 dark:text-slate-600 font-mono hidden sm:block">
+            O&nbsp;<span className="text-slate-650 dark:text-slate-400">{last.open}</span>
+            &nbsp;H&nbsp;<span className="text-emerald-550 dark:text-emerald-500">{last.high}</span>
+            &nbsp;L&nbsp;<span className="text-red-550 dark:text-red-500">{last.low}</span>
+            &nbsp;C&nbsp;<span className="text-slate-900 dark:text-white font-bold">{last.close}</span>
           </span>
         </div>
       )}
 
       {/* Chart canvas */}
-      <div className="relative flex-1 min-h-0">
+      <div className="relative flex-1 min-h-0 bg-white dark:bg-slate-950">
         {loading && (
-          <div className="absolute inset-0 z-20 bg-slate-950/80 backdrop-blur-[2px] flex flex-col items-center justify-center gap-3">
+          <div className="absolute inset-0 z-20 bg-white/80 dark:bg-slate-950/80 backdrop-blur-[2px] flex flex-col items-center justify-center gap-3">
             <div className="w-7 h-7 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Loading Market Data…</span>
+            <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest animate-pulse">Loading Market Data…</span>
           </div>
         )}
         {error && !loading && (
           <div className="absolute inset-0 z-20 flex items-center justify-center">
-            <div className="text-xs text-red-400 font-bold bg-red-500/10 border border-red-500/20 px-5 py-3 rounded-xl">
+            <div className="text-xs text-red-500 dark:text-red-400 font-bold bg-red-500/10 border border-red-500/20 px-5 py-3 rounded-xl">
               ⚠ {error}
             </div>
           </div>
@@ -378,14 +405,14 @@ export default function AdvancedChart({
 
       {/* MA legend */}
       {chartMode === 'price' && (
-        <div className="flex flex-wrap items-center gap-5 px-4 py-2 border-t border-slate-800/60 shrink-0">
+        <div className="flex flex-wrap items-center gap-5 px-4 py-2 border-t border-slate-100 dark:border-slate-800/60 shrink-0 bg-slate-50 dark:bg-slate-950">
           {MA_LIST.filter(m => activeMA.has(m.period) && data.length >= m.period).map(({ period, color, label }) => {
             const maData = calcSMA(data, period);
             const val    = maData[maData.length - 1]?.value;
             return (
               <div key={period} className="flex items-center gap-1.5">
                 <span className="w-4 h-0.5 rounded inline-block" style={{ backgroundColor: color }} />
-                <span className="text-[10px] font-bold text-slate-500">{label}</span>
+                <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500">{label}</span>
                 {val !== undefined && (
                   <span className="text-[10px] font-black" style={{ color }}>₹{val.toFixed(0)}</span>
                 )}

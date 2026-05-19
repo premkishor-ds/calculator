@@ -15,6 +15,8 @@ import {
   Trash2,
   Plus,
   Star,
+  Sun,
+  Moon,
 } from 'lucide-react';
 import { DEFAULT_SYMBOLS } from '@/utils/symbols';
 import { buildAllTags, DEFAULT_CUSTOM_TAGS, CUSTOM_TAG_IDS, type TagDef, type CustomTagRaw } from '@/utils/tags';
@@ -81,7 +83,24 @@ const BACKEND_API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:500
 
 export default function TradingTerminalPage() {
   /* ── State ─────────────────────────────────────────────────── */
+  const [theme, setTheme] = useState<'dark' | 'light'>('light');
   const [watchlistStocks,  setWatchlistStocks]  = useState<StockQuote[]>([]);
+
+  // Load theme after mount
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('theme') as 'dark' | 'light' | null;
+    const isSystemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const currentTheme = savedTheme || (isSystemDark ? 'dark' : 'light');
+    setTheme(currentTheme);
+    document.documentElement.classList.toggle('dark', currentTheme === 'dark');
+  }, []);
+
+  const toggleTheme = () => {
+    const newTheme = theme === 'dark' ? 'light' : 'dark';
+    setTheme(newTheme);
+    localStorage.setItem('theme', newTheme);
+    document.documentElement.classList.toggle('dark', newTheme === 'dark');
+  };
   const [selectedSymbol,   setSelectedSymbol]   = useState<string>('CGPOWER.NS');
   const [searchQuery,      setSearchQuery]       = useState('');
   const [watchlistLoading, setWatchlistLoading] = useState(true);
@@ -463,18 +482,18 @@ export default function TradingTerminalPage() {
 
   /* ── Render ────────────────────────────────────────────────── */
   return (
-    <div className="min-h-dvh lg:h-dvh lg:overflow-hidden bg-slate-900 text-slate-100 flex flex-col font-sans" onClick={() => setTagPopoverSym(null)}>
+    <div className="min-h-dvh lg:h-dvh lg:overflow-hidden bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans" onClick={() => setTagPopoverSym(null)}>
       {/* ── Header ────────────────────────────────────────────── */}
-      <header className="flex flex-wrap items-center justify-between gap-3 px-4 sm:px-6 py-3 bg-slate-950 border-b border-slate-800 shadow-md shrink-0 safe-top">
+      <header className="flex flex-wrap items-center justify-between gap-3 px-4 sm:px-6 py-3 bg-white dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 shadow-sm shrink-0 safe-top">
         <div className="flex items-center gap-3 sm:gap-4 min-w-0">
-          <Link href="/watchlist" className="p-2 hover:bg-slate-800 rounded-xl transition-all text-slate-400 hover:text-white touch-manipulation shrink-0">
+          <Link href="/watchlist" className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-all text-slate-400 hover:text-slate-900 dark:hover:text-white touch-manipulation shrink-0">
             <ArrowLeft className="w-5 h-5" />
           </Link>
           <div className="flex items-center gap-2 min-w-0">
-            <span className="bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-500 bg-clip-text text-transparent font-extrabold text-lg sm:text-xl tracking-tight truncate">
+            <span className="bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-600 bg-clip-text text-transparent font-extrabold text-lg sm:text-xl tracking-tight truncate">
               VISION TERMINAL
             </span>
-            <span className="hidden md:inline-block px-2 py-0.5 bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[10px] font-extrabold rounded-full tracking-wide shrink-0">
+            <span className="hidden md:inline-block px-2 py-0.5 bg-blue-500/10 border border-blue-500/20 text-blue-500 dark:text-blue-400 text-[10px] font-extrabold rounded-full tracking-wide shrink-0">
               PRO
             </span>
           </div>
@@ -482,14 +501,14 @@ export default function TradingTerminalPage() {
 
         {/* Symbol search */}
         <form onSubmit={handleSearch} className="relative w-full sm:w-auto sm:flex-1 sm:max-w-xs order-last sm:order-none basis-full sm:basis-auto">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500" />
           <input
             type="text"
             placeholder="Search ticker (e.g. INFY, TATAMOTORS)…"
             value={terminalSearch}
             onChange={e => setTerminalSearch(e.target.value)}
             disabled={terminalSearching}
-            className="w-full pl-10 pr-4 py-2 bg-slate-900 border border-slate-800 focus:border-blue-500/50 rounded-xl text-xs font-semibold placeholder:text-slate-600 text-slate-100 focus:outline-none transition-all"
+            className="w-full pl-10 pr-4 py-2 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-blue-500/50 rounded-xl text-xs font-semibold placeholder:text-slate-400 dark:placeholder:text-slate-600 text-slate-900 dark:text-slate-100 focus:outline-none transition-all"
           />
           {terminalSearching && (
             <RefreshCw className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-blue-500 animate-spin" />
@@ -501,18 +520,31 @@ export default function TradingTerminalPage() {
           )}
         </form>
 
-        <div className="hidden sm:flex items-center gap-2">
+        <div className="flex items-center gap-1 sm:gap-2">
+          {/* Always visible theme toggle */}
           <button
             type="button"
-            onClick={() => { setShowAddModal(true); setAddModalError(''); setAddSymbolInput(''); }}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[10px] font-extrabold rounded-full hover:bg-blue-500/20 transition-all"
+            onClick={toggleTheme}
+            className="p-1.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 transition-all flex items-center justify-center shrink-0"
+            aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+            title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
           >
-            <Plus className="w-3 h-3" /> Add Stock
+            {theme === 'dark' ? <Sun className="w-4 h-4 text-yellow-500" /> : <Moon className="w-4 h-4 text-indigo-500" />}
           </button>
-          <span className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-extrabold rounded-full">
-            <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-ping" />
-            Live Markets
-          </span>
+          
+          <div className="hidden sm:flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => { setShowAddModal(true); setAddModalError(''); setAddSymbolInput(''); }}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-500/10 border border-blue-500/20 text-blue-500 dark:text-blue-400 text-[10px] font-extrabold rounded-full hover:bg-blue-500/20 transition-all"
+            >
+              <Plus className="w-3 h-3" /> Add Stock
+            </button>
+            <span className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 dark:text-emerald-400 text-[10px] font-extrabold rounded-full">
+              <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-ping" />
+              Live Markets
+            </span>
+          </div>
         </div>
       </header>
 
@@ -653,19 +685,19 @@ export default function TradingTerminalPage() {
       <main className="flex-1 flex flex-col lg:grid lg:grid-cols-12 lg:overflow-hidden min-h-0">
 
         {/* LEFT: Advanced Chart + Stock Info */}
-        <section className="lg:col-span-9 flex flex-col min-h-[52dvh] lg:min-h-0 lg:overflow-hidden border-b lg:border-b-0 lg:border-r border-slate-800 bg-slate-950">
+        <section className="lg:col-span-9 flex flex-col min-h-[52dvh] lg:min-h-0 lg:overflow-hidden border-b lg:border-b-0 lg:border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950">
 
           {/* Stock header strip */}
           {selectedStock ? (
-            <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3 bg-slate-950 border-b border-slate-800 shrink-0">
+            <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3 bg-white dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 shrink-0">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center font-black text-white text-sm shadow-lg">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-650 flex items-center justify-center font-black text-white text-sm shadow-md">
                   {selectedStock.symbol.split('.')[0].slice(0, 2)}
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <h1 className="font-extrabold text-base text-white">{selectedStock.name}</h1>
-                    <span className="px-2 py-0.5 bg-slate-850 text-slate-400 text-[10px] font-bold rounded border border-slate-800 flex items-center gap-1.5">
+                    <h1 className="font-extrabold text-base text-slate-900 dark:text-white">{selectedStock.name}</h1>
+                    <span className="px-2 py-0.5 bg-slate-100 dark:bg-slate-850 text-slate-600 dark:text-slate-400 text-[10px] font-bold rounded border border-slate-200 dark:border-slate-800 flex items-center gap-1.5 animate-fade-in">
                       {selectedStock.symbol}
                       {/* Favourite Star Toggle */}
                       <button
@@ -673,23 +705,23 @@ export default function TradingTerminalPage() {
                         onClick={() => handleToggleFavourite(selectedStock.symbol, !!selectedStock.isFavourite)}
                         className={`p-0.5 rounded transition-all hover:scale-105 ${
                           selectedStock.isFavourite
-                            ? 'text-yellow-400'
-                            : 'text-slate-600 hover:text-slate-400'
+                            ? 'text-yellow-500'
+                            : 'text-slate-400 hover:text-slate-600 dark:text-slate-655 dark:hover:text-slate-400'
                         }`}
                         title={selectedStock.isFavourite ? "Remove from Favourites" : "Mark as Favourite"}
                       >
-                        <Star className={`w-3 h-3 ${selectedStock.isFavourite ? 'fill-yellow-400' : ''}`} />
+                        <Star className={`w-3 h-3 ${selectedStock.isFavourite ? 'fill-yellow-500 text-yellow-500' : ''}`} />
                       </button>
                     </span>
                   </div>
-                  <p className="text-[11px] text-slate-500 mt-0.5">NSE • INR</p>
+                  <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5 font-bold uppercase tracking-wide">NSE • INR</p>
                 </div>
               </div>
 
               <div className="flex items-center gap-6">
                 <div className="text-right">
-                  <div className="text-xl font-black text-white">₹{selectedStock.price.toLocaleString('en-IN')}</div>
-                  <div className={`flex items-center gap-1 text-xs font-bold mt-0.5 justify-end ${selectedStock.change >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                  <div className="text-xl font-black text-slate-900 dark:text-white">₹{selectedStock.price.toLocaleString('en-IN')}</div>
+                  <div className={`flex items-center gap-1 text-xs font-bold mt-0.5 justify-end ${selectedStock.change >= 0 ? 'text-emerald-550 dark:text-emerald-400' : 'text-red-550 dark:text-red-400'}`}>
                     {selectedStock.change >= 0 ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
                     {selectedStock.change >= 0 ? '+' : ''}{selectedStock.change.toFixed(2)}
                     <span>({selectedStock.changePercent >= 0 ? '+' : ''}{selectedStock.changePercent.toFixed(2)}%)</span>
@@ -704,13 +736,13 @@ export default function TradingTerminalPage() {
               </div>
             </div>
           ) : (
-            <div className="px-5 py-3 border-b border-slate-800 shrink-0">
-              <div className="h-10 w-48 bg-slate-800 rounded-xl animate-pulse" />
+            <div className="px-5 py-3 border-b border-slate-200 dark:border-slate-800 shrink-0 bg-white dark:bg-slate-950">
+              <div className="h-10 w-48 bg-slate-100 dark:bg-slate-800 rounded-xl animate-pulse" />
             </div>
           )}
 
           {/* ── Advanced Chart (flex-1 fills remaining height) ── */}
-          <div className="flex-1 min-h-[320px] lg:min-h-0 relative w-full h-full">
+          <div className="flex-1 min-h-[320px] lg:min-h-0 relative w-full h-full bg-white dark:bg-slate-950">
             {selectedSymbol && (
               <AdvancedChart
                 symbol={selectedSymbol}
@@ -718,16 +750,17 @@ export default function TradingTerminalPage() {
                 onRangeChange={setChartRange}
                 chartMode={chartMode}
                 onModeChange={setChartMode}
+                theme={theme}
               />
             )}
           </div>
 
           {/* Detailed Intelligence Dashboard Strip */}
           {selectedStock && (
-            <div className="flex flex-col bg-slate-950 border-t border-slate-800 shrink-0 select-none">
+            <div className="flex flex-col bg-white dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 shrink-0 select-none">
               
               {/* Tab selector bar */}
-              <div className="flex items-center justify-between border-b border-slate-900 bg-slate-950/80 px-4 py-1 shrink-0 overflow-x-auto scrollbar-none">
+              <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-900 bg-slate-50 dark:bg-slate-950/80 px-4 py-1 shrink-0 overflow-x-auto scrollbar-none">
                 <div className="flex items-center gap-1.5 min-w-0">
                   {[
                     { id: 'technicals', label: '📈 Technicals' },
@@ -741,8 +774,8 @@ export default function TradingTerminalPage() {
                       onClick={() => setActiveTab(tab.id as 'technicals' | 'fundamentals' | 'profile' | 'proscons' | 'strategy')}
                       className={`px-3 py-2 text-[10px] font-extrabold uppercase tracking-wider rounded-lg transition-all shrink-0 ${
                         activeTab === tab.id
-                          ? 'bg-slate-900 text-blue-400 border border-blue-500/20'
-                          : 'text-slate-500 hover:text-slate-350'
+                          ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 border border-slate-200 dark:border-blue-500/20 shadow-sm'
+                          : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-350'
                       }`}
                     >
                       {tab.label}
@@ -751,19 +784,19 @@ export default function TradingTerminalPage() {
                 </div>
 
                 {/* Micro quote details */}
-                <div className="hidden sm:flex items-center gap-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest shrink-0">
-                  <div>Mkt Cap: <span className="text-white">₹{(selectedStock.marketCap / 10000000).toFixed(0)}Cr</span></div>
-                  <div>P/E: <span className="text-purple-400">{selectedStock.pe > 0 ? selectedStock.pe.toFixed(1) : '—'}</span></div>
-                  <div>P/BV: <span className="text-white">{selectedStock.cmpBv > 0 ? `${selectedStock.cmpBv}x` : '—'}</span></div>
+                <div className="hidden sm:flex items-center gap-4 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest shrink-0">
+                  <div>Mkt Cap: <span className="text-slate-700 dark:text-white">₹{(selectedStock.marketCap / 10000000).toFixed(0)}Cr</span></div>
+                  <div>P/E: <span className="text-purple-650 dark:text-purple-400">{selectedStock.pe > 0 ? selectedStock.pe.toFixed(1) : '—'}</span></div>
+                  <div>P/BV: <span className="text-slate-700 dark:text-white">{selectedStock.cmpBv > 0 ? `${selectedStock.cmpBv}x` : '—'}</span></div>
                 </div>
               </div>
 
               {/* Tab contents panel (Fixed height with scroll safety) */}
-              <div className="h-[120px] overflow-y-auto p-4 bg-slate-950/40 text-slate-100 scrollbar-none">
+              <div className="h-[120px] overflow-y-auto p-4 bg-slate-50/50 dark:bg-slate-950/40 text-slate-800 dark:text-slate-100 scrollbar-none border-t border-slate-200/50 dark:border-slate-900">
                 {deepLoading ? (
                   <div className="h-full flex items-center justify-center gap-2">
                     <RefreshCw className="w-3.5 h-3.5 text-blue-500 animate-spin" />
-                    <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-500">
+                    <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400 dark:text-slate-500">
                       Querying complete corporate intelligence...
                     </span>
                   </div>
@@ -772,38 +805,38 @@ export default function TradingTerminalPage() {
                     {/* TECHNICALS TAB */}
                     {activeTab === 'technicals' && (
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
-                        <div className="bg-slate-900/40 border border-slate-900 p-2.5 rounded-xl">
-                          <span className="text-[9px] text-slate-500 font-extrabold uppercase tracking-widest block">50-Day SMA</span>
-                          <p className="font-extrabold text-slate-100 mt-1">
+                        <div className="bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-900 p-2.5 rounded-xl shadow-sm">
+                          <span className="text-[9px] text-slate-400 dark:text-slate-500 font-extrabold uppercase tracking-widest block">50-Day SMA</span>
+                          <p className="font-extrabold text-slate-800 dark:text-slate-100 mt-1">
                             {deepData?.ratios?.fiftyDayAverage ? `₹${deepData.ratios.fiftyDayAverage.toFixed(1)}` : '—'}
                           </p>
                           {deepData?.ratios?.fiftyDayAverage && (
                             <span className={`text-[9px] font-extrabold block mt-0.5 ${
-                              selectedStock.price >= deepData.ratios.fiftyDayAverage ? 'text-emerald-400' : 'text-red-400'
+                              selectedStock.price >= deepData.ratios.fiftyDayAverage ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-555 dark:text-red-400'
                             }`}>
                               {((selectedStock.price - deepData.ratios.fiftyDayAverage) / deepData.ratios.fiftyDayAverage * 100).toFixed(1)}% vs Avg
                             </span>
                           )}
                         </div>
 
-                        <div className="bg-slate-900/40 border border-slate-900 p-2.5 rounded-xl">
-                          <span className="text-[9px] text-slate-500 font-extrabold uppercase tracking-widest block">200-Day SMA</span>
-                          <p className="font-extrabold text-slate-100 mt-1">
+                        <div className="bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-900 p-2.5 rounded-xl shadow-sm">
+                          <span className="text-[9px] text-slate-400 dark:text-slate-500 font-extrabold uppercase tracking-widest block">200-Day SMA</span>
+                          <p className="font-extrabold text-slate-800 dark:text-slate-100 mt-1">
                             {deepData?.ratios?.twoHundredDayAverage ? `₹${deepData.ratios.twoHundredDayAverage.toFixed(1)}` : '—'}
                           </p>
                           {deepData?.ratios?.twoHundredDayAverage && (
                             <span className={`text-[9px] font-extrabold block mt-0.5 ${
-                              selectedStock.price >= deepData.ratios.twoHundredDayAverage ? 'text-emerald-400' : 'text-red-400'
+                              selectedStock.price >= deepData.ratios.twoHundredDayAverage ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-555 dark:text-red-400'
                             }`}>
                               {((selectedStock.price - deepData.ratios.twoHundredDayAverage) / deepData.ratios.twoHundredDayAverage * 100).toFixed(1)}% vs Avg
                             </span>
                           )}
                         </div>
 
-                        <div className="bg-slate-900/40 border border-slate-900 p-2.5 rounded-xl col-span-2">
-                          <div className="flex justify-between items-center text-[9px] text-slate-500 font-extrabold uppercase tracking-widest">
+                        <div className="bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-900 p-2.5 rounded-xl col-span-2 shadow-sm">
+                          <div className="flex justify-between items-center text-[9px] text-slate-400 dark:text-slate-500 font-extrabold uppercase tracking-widest">
                             <span>52-Week High/Low</span>
-                            <span className="text-slate-400 font-bold">
+                            <span className="text-slate-600 dark:text-slate-400 font-bold">
                               H: ₹{deepData?.ratios?.fiftyTwoWeekHigh?.toFixed(0)} | L: ₹{deepData?.ratios?.fiftyTwoWeekLow?.toFixed(0)}
                             </span>
                           </div>
@@ -811,7 +844,7 @@ export default function TradingTerminalPage() {
                           {/* Visual high to low progress bar */}
                           {deepData?.ratios?.fiftyTwoWeekHigh && deepData?.ratios?.fiftyTwoWeekLow && (
                             <div className="mt-2.5">
-                              <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden relative">
+                              <div className="w-full bg-slate-200 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden relative">
                                 <div 
                                   className="absolute bg-gradient-to-r from-blue-500 to-indigo-500 h-full rounded-full"
                                   style={{
@@ -823,7 +856,7 @@ export default function TradingTerminalPage() {
                                   }}
                                 />
                               </div>
-                              <div className="flex justify-between items-center text-[8px] text-slate-500 font-extrabold mt-1">
+                              <div className="flex justify-between items-center text-[8px] text-slate-400 dark:text-slate-500 font-extrabold mt-1">
                                 <span>Low ({((selectedStock.price - deepData.ratios.fiftyTwoWeekLow) / deepData.ratios.fiftyTwoWeekLow * 100).toFixed(0)}% Up)</span>
                                 <span>High ({((deepData.ratios.fiftyTwoWeekHigh - selectedStock.price) / selectedStock.price * 100).toFixed(0)}% Down)</span>
                               </div>
@@ -836,44 +869,44 @@ export default function TradingTerminalPage() {
                     {/* FUNDAMENTALS TAB */}
                     {activeTab === 'fundamentals' && (
                       <div className="grid grid-cols-3 sm:grid-cols-6 gap-3 text-xs">
-                        <div className="bg-slate-900/40 border border-slate-900 p-2 text-center rounded-xl">
-                          <span className="text-[8px] text-slate-500 font-extrabold uppercase tracking-widest block">ROE</span>
-                          <span className="font-extrabold text-white mt-0.5 block">
+                        <div className="bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-900 p-2 text-center rounded-xl shadow-sm">
+                          <span className="text-[8px] text-slate-400 dark:text-slate-500 font-extrabold uppercase tracking-widest block">ROE</span>
+                          <span className="font-extrabold text-slate-800 dark:text-white mt-0.5 block">
                             {deepData?.ratios?.roe ? `${deepData.ratios.roe.toFixed(1)}%` : '—'}
                           </span>
                         </div>
-                        <div className="bg-slate-900/40 border border-slate-900 p-2 text-center rounded-xl">
-                          <span className="text-[8px] text-slate-500 font-extrabold uppercase tracking-widest block">ROA</span>
-                          <span className="font-extrabold text-white mt-0.5 block">
+                        <div className="bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-900 p-2 text-center rounded-xl shadow-sm">
+                          <span className="text-[8px] text-slate-400 dark:text-slate-500 font-extrabold uppercase tracking-widest block">ROA</span>
+                          <span className="font-extrabold text-slate-800 dark:text-white mt-0.5 block">
                             {deepData?.ratios?.roa ? `${deepData.ratios.roa.toFixed(1)}%` : '—'}
                           </span>
                         </div>
-                        <div className="bg-slate-900/40 border border-slate-900 p-2 text-center rounded-xl">
-                          <span className="text-[8px] text-slate-500 font-extrabold uppercase tracking-widest block">Debt/Eq</span>
+                        <div className="bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-900 p-2 text-center rounded-xl shadow-sm">
+                          <span className="text-[8px] text-slate-400 dark:text-slate-500 font-extrabold uppercase tracking-widest block">Debt/Eq</span>
                           <span className={`font-extrabold mt-0.5 block ${
-                            (deepData?.ratios?.debtToEquity / 100) > 1.5 ? 'text-red-400' : 'text-emerald-400'
+                            (deepData?.ratios?.debtToEquity / 100) > 1.5 ? 'text-red-555 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400'
                           }`}>
                             {deepData?.ratios?.debtToEquity !== undefined ? (deepData.ratios.debtToEquity / 100).toFixed(2) : '—'}
                           </span>
                         </div>
-                        <div className="bg-slate-900/40 border border-slate-900 p-2 text-center rounded-xl">
-                          <span className="text-[8px] text-slate-500 font-extrabold uppercase tracking-widest block">Profit Margin</span>
-                          <span className="font-extrabold text-emerald-400 mt-0.5 block">
+                        <div className="bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-900 p-2 text-center rounded-xl shadow-sm">
+                          <span className="text-[8px] text-slate-400 dark:text-slate-500 font-extrabold uppercase tracking-widest block">Profit Margin</span>
+                          <span className="font-extrabold text-emerald-600 dark:text-emerald-400 mt-0.5 block">
                             {deepData?.ratios?.profitMargin ? `${deepData.ratios.profitMargin.toFixed(1)}%` : '—'}
                           </span>
                         </div>
-                        <div className="bg-slate-900/40 border border-slate-900 p-2 text-center rounded-xl">
-                          <span className="text-[8px] text-slate-500 font-extrabold uppercase tracking-widest block">Profit Growth</span>
+                        <div className="bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-900 p-2 text-center rounded-xl shadow-sm">
+                          <span className="text-[8px] text-slate-400 dark:text-slate-500 font-extrabold uppercase tracking-widest block">Profit Growth</span>
                           <span className={`font-extrabold mt-0.5 block ${
-                            selectedStock.profitGrowth >= 0 ? 'text-emerald-400' : 'text-red-400'
+                            selectedStock.profitGrowth >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-555 dark:text-red-400'
                           }`}>
                             {selectedStock.profitGrowth !== 0 ? `${selectedStock.profitGrowth}%` : '—'}
                           </span>
                         </div>
-                        <div className="bg-slate-900/40 border border-slate-900 p-2 text-center rounded-xl">
-                          <span className="text-[8px] text-slate-500 font-extrabold uppercase tracking-widest block">Sales Growth</span>
+                        <div className="bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-900 p-2 text-center rounded-xl shadow-sm">
+                          <span className="text-[8px] text-slate-400 dark:text-slate-500 font-extrabold uppercase tracking-widest block">Sales Growth</span>
                           <span className={`font-extrabold mt-0.5 block ${
-                            selectedStock.salesGrowth >= 0 ? 'text-emerald-400' : 'text-red-400'
+                            selectedStock.salesGrowth >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-555 dark:text-red-400'
                           }`}>
                             {selectedStock.salesGrowth !== 0 ? `${selectedStock.salesGrowth}%` : '—'}
                           </span>
@@ -884,15 +917,15 @@ export default function TradingTerminalPage() {
                     {/* PROFILE TAB */}
                     {activeTab === 'profile' && (
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs leading-relaxed">
-                        <div className="space-y-1 bg-slate-900/40 border border-slate-900 p-2.5 rounded-xl">
-                          <div>Sector: <span className="text-white font-extrabold">{deepData?.profile?.sector || '—'}</span></div>
-                          <div>Industry: <span className="text-white font-extrabold">{deepData?.profile?.industry || '—'}</span></div>
+                        <div className="space-y-1 bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-900 p-2.5 rounded-xl shadow-sm">
+                          <div className="text-slate-600 dark:text-slate-300">Sector: <span className="text-slate-900 dark:text-white font-extrabold">{deepData?.profile?.sector || '—'}</span></div>
+                          <div className="text-slate-600 dark:text-slate-300">Industry: <span className="text-slate-900 dark:text-white font-extrabold">{deepData?.profile?.industry || '—'}</span></div>
                           {deepData?.profile?.employees > 0 && (
-                            <div>Employees: <span className="text-white font-extrabold">{deepData.profile.employees.toLocaleString()}</span></div>
+                            <div className="text-slate-600 dark:text-slate-300">Employees: <span className="text-slate-900 dark:text-white font-extrabold">{deepData.profile.employees.toLocaleString()}</span></div>
                           )}
                         </div>
-                        <div className="md:col-span-2 text-[10px] text-slate-400 bg-slate-900/20 border border-slate-900/50 p-2.5 rounded-xl max-h-[90px] overflow-y-auto scrollbar-none font-medium">
-                          <span className="font-extrabold text-slate-350 block mb-1">Company Summary:</span>
+                        <div className="md:col-span-2 text-[10px] text-slate-500 dark:text-slate-400 bg-white/50 dark:bg-slate-900/20 border border-slate-200 dark:border-slate-900/50 p-2.5 rounded-xl max-h-[90px] overflow-y-auto scrollbar-none font-medium shadow-sm">
+                          <span className="font-extrabold text-slate-700 dark:text-slate-350 block mb-1">Company Summary:</span>
                           {deepData?.profile?.summary || 'No description available for this ticker.'}
                         </div>
                       </div>
@@ -901,9 +934,9 @@ export default function TradingTerminalPage() {
                     {/* PROS & CONS TAB */}
                     {activeTab === 'proscons' && (
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-[10px] leading-relaxed">
-                        <div className="bg-slate-900/30 border border-slate-900/50 p-2.5 rounded-xl">
-                          <span className="text-emerald-400 font-extrabold uppercase block mb-1">Strengths / Advantages</span>
-                          <ul className="space-y-1 text-slate-400 font-medium list-disc list-inside">
+                        <div className="bg-white/80 dark:bg-slate-900/30 border border-slate-200 dark:border-slate-900/50 p-2.5 rounded-xl shadow-sm">
+                          <span className="text-emerald-600 dark:text-emerald-400 font-extrabold uppercase block mb-1">Strengths / Advantages</span>
+                          <ul className="space-y-1 text-slate-500 dark:text-slate-400 font-medium list-disc list-inside">
                             {deepData?.pros?.length ? (
                               deepData.pros.slice(0, 3).map((p: string, idx: number) => (
                                 <li key={idx} className="truncate">{p}</li>
@@ -913,9 +946,9 @@ export default function TradingTerminalPage() {
                             )}
                           </ul>
                         </div>
-                        <div className="bg-slate-900/30 border border-slate-900/50 p-2.5 rounded-xl">
-                          <span className="text-red-400 font-extrabold uppercase block mb-1">Risks / Limitations</span>
-                          <ul className="space-y-1 text-slate-400 font-medium list-disc list-inside">
+                        <div className="bg-white/80 dark:bg-slate-900/30 border border-slate-200 dark:border-slate-900/50 p-2.5 rounded-xl shadow-sm">
+                          <span className="text-red-550 dark:text-red-400 font-extrabold uppercase block mb-1">Risks / Limitations</span>
+                          <ul className="space-y-1 text-slate-500 dark:text-slate-400 font-medium list-disc list-inside">
                             {deepData?.cons?.length ? (
                               deepData.cons.slice(0, 3).map((c: string, idx: number) => (
                                 <li key={idx} className="truncate">{c}</li>
@@ -958,38 +991,38 @@ export default function TradingTerminalPage() {
                       }
 
                       let rating = "HOLD (NEUTRAL)";
-                      let badgeColor = "bg-amber-500/10 text-amber-400 border-amber-500/20";
-                      let textColor = "text-amber-400";
+                      let badgeColor = "bg-amber-500/10 text-amber-500 dark:text-amber-400 border-amber-500/20";
+                      let textColor = "text-amber-550 dark:text-amber-400";
                       let stance = " Sideways consolidation or premium valuation suggests waiting for a better price entry. Strong fundamentals hold, but short-term upside is capped.";
 
                       if (score >= 65) {
                         rating = "ACCUMULATE (BUY)";
-                        badgeColor = "bg-emerald-500/10 text-emerald-400 border-emerald-500/20";
-                        textColor = "text-emerald-400";
+                        badgeColor = "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20";
+                        textColor = "text-emerald-650 dark:text-emerald-400";
                         stance = " Dynamic technical support combined with solid Return on Equity (ROE) makes this a high-conviction buy. Favorable long-term wealth compounding candidate.";
                       } else if (score < 45) {
                         rating = "REDUCE / SELL";
-                        badgeColor = "bg-rose-500/10 text-rose-400 border-rose-500/20";
-                        textColor = "text-rose-400";
+                        badgeColor = "bg-rose-500/10 text-rose-555 dark:text-rose-400 border-rose-500/20";
+                        textColor = "text-rose-555 dark:text-rose-400";
                         stance = " Elevated multiples (high P/E), significant leverage, or pricing below key moving averages (200 SMA) warrants technical caution. Risk profile is high.";
                       }
 
                       return (
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs leading-relaxed">
-                          <div className="flex flex-col justify-center items-center bg-slate-900/40 border border-slate-900 p-3 rounded-xl text-center shrink-0">
-                            <span className="text-[8px] text-slate-500 font-extrabold uppercase tracking-widest block">Vision Stance</span>
+                          <div className="flex flex-col justify-center items-center bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-900 p-3 rounded-xl text-center shrink-0 shadow-sm">
+                            <span className="text-[8px] text-slate-400 dark:text-slate-500 font-extrabold uppercase tracking-widest block">Vision Stance</span>
                             <div className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase border mt-2 ${badgeColor}`}>
                               {rating}
                             </div>
-                            <span className="text-[8px] text-slate-500 font-bold mt-2">Score: {score}/100</span>
+                            <span className="text-[8px] text-slate-400 dark:text-slate-500 font-bold mt-2">Score: {score}/100</span>
                           </div>
 
-                          <div className="md:col-span-2 bg-slate-900/20 border border-slate-900/50 p-2.5 rounded-xl max-h-[90px] overflow-y-auto scrollbar-none font-medium text-[10px] text-slate-400">
-                            <span className="font-extrabold text-slate-300 block mb-1">Detailed Analyst Rationale:</span>
+                          <div className="md:col-span-2 bg-white/50 dark:bg-slate-900/20 border border-slate-200 dark:border-slate-900/50 p-2.5 rounded-xl max-h-[90px] overflow-y-auto scrollbar-none font-medium text-[10px] text-slate-500 dark:text-slate-400 shadow-sm">
+                            <span className="font-extrabold text-slate-755 dark:text-slate-300 block mb-1">Detailed Analyst Rationale:</span>
                             <span className={`font-extrabold ${textColor}`}>{rating}:</span>{stance}
                             
                             {/* Detailed dynamic bullet-points based on score parameters */}
-                            <ul className="mt-2 space-y-1 list-disc list-inside text-slate-500 font-semibold">
+                            <ul className="mt-2 space-y-1 list-disc list-inside text-slate-450 dark:text-slate-500 font-semibold">
                               {roe > 15 && <li>Robust Return on Equity ({roe.toFixed(1)}%) indicates excellent capital efficiency.</li>}
                               {debt > 0 && debt < 1.0 && <li>Healthy balance sheet with low gearing (D/E ratio at {debt.toFixed(2)}x).</li>}
                               {pe > 0 && pe < 35 && <li>Attractive valuation multiple (P/E at {pe.toFixed(1)}x) relative to growth indices.</li>}
@@ -1009,27 +1042,27 @@ export default function TradingTerminalPage() {
         </section>
 
         {/* RIGHT: Watchlist Sidebar */}
-        <section className="lg:col-span-3 bg-slate-950 flex flex-col overflow-hidden max-h-[42dvh] lg:max-h-none lg:min-h-0 safe-bottom">
+        <section className="lg:col-span-3 bg-white dark:bg-slate-950 flex flex-col overflow-hidden max-h-[42dvh] lg:max-h-none lg:min-h-0 safe-bottom border-t lg:border-t-0 lg:border-l border-slate-200 dark:border-slate-800 shadow-lg">
 
-          <div className="p-4 border-b border-slate-800 shrink-0">
-            <h2 className="text-[10px] font-extrabold text-slate-500 uppercase tracking-widest mb-3 flex items-center gap-2">
-              <Layers className="w-3.5 h-3.5 text-blue-500" /> WATCHLIST
+          <div className="p-4 border-b border-slate-100 dark:border-slate-800 shrink-0">
+            <h2 className="text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-3 flex items-center gap-2">
+              <Layers className="w-3.5 h-3.5 text-blue-550 dark:text-blue-500" /> WATCHLIST
               <button
                 type="button"
                 onClick={() => { setShowAddModal(true); setAddModalError(''); setAddSymbolInput(''); }}
-                className="ml-auto flex items-center gap-1 px-2 py-1 bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[9px] font-extrabold rounded-lg hover:bg-blue-500/20 transition-all"
+                className="ml-auto flex items-center gap-1 px-2 py-1 bg-blue-500/10 border border-blue-500/20 text-blue-600 dark:text-blue-455 text-[9px] font-extrabold rounded-lg hover:bg-blue-500/20 transition-all"
               >
                 <Plus className="w-2.5 h-2.5" /> ADD
               </button>
             </h2>
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 dark:text-slate-500" />
               <input
                 type="text"
                 placeholder="Filter stocks…"
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                className="w-full pl-9 pr-4 py-2 bg-slate-900 border border-slate-800 focus:border-blue-500/50 rounded-xl text-xs font-bold text-slate-200 placeholder:text-slate-600 focus:outline-none transition-all"
+                className="w-full pl-9 pr-4 py-2 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-blue-500/50 rounded-xl text-xs font-bold text-slate-800 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-655 focus:outline-none transition-all"
               />
             </div>
 
@@ -1040,8 +1073,8 @@ export default function TradingTerminalPage() {
                 onClick={() => setActiveTagFilter('all')}
                 className={`px-2 py-0.5 rounded-full text-[9px] font-extrabold border transition-all ${
                   activeTagFilter === 'all'
-                    ? 'bg-slate-700 text-white border-slate-600'
-                    : 'bg-transparent text-slate-500 border-slate-800 hover:border-slate-600'
+                    ? 'bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-white border-slate-300 dark:border-slate-600 shadow-sm'
+                    : 'bg-transparent text-slate-500 border-slate-200 dark:border-slate-850 hover:border-slate-400 dark:hover:border-slate-600'
                 }`}
               >
                 All ({watchlistStocks.length})
@@ -1058,15 +1091,18 @@ export default function TradingTerminalPage() {
                       onClick={() => setActiveTagFilter(activeTagFilter === tag.id ? 'all' : tag.id)}
                       className={`px-2 py-0.5 rounded-full text-[9px] font-extrabold border transition-all ${
                         activeTagFilter === tag.id ? 'opacity-100' : 'opacity-60 hover:opacity-90'
+                      } ${
+                        !raw
+                          ? (activeTagFilter === tag.id
+                              ? tag.color
+                              : 'bg-transparent text-slate-500 border-slate-200 dark:border-slate-850 hover:border-slate-400 dark:hover:border-slate-600')
+                          : ''
                       }`}
                       style={raw ? {
                         backgroundColor: raw.color + '25',
                         color: raw.color,
                         borderColor: raw.color + '60',
                       } : {}}
-                      {...(!raw ? { className: `px-2 py-0.5 rounded-full text-[9px] font-extrabold border transition-all ${
-                        activeTagFilter === tag.id ? tag.color : 'bg-transparent text-slate-500 border-slate-800 hover:border-slate-600'
-                      }` } : {})}
                     >
                       {tag.label} {count > 0 && `(${count})`}
                     </button>
@@ -1074,7 +1110,7 @@ export default function TradingTerminalPage() {
                       <button
                         type="button"
                         onClick={e => { e.stopPropagation(); const r = customTagRaw.find(t => t.tagId === tag.id)!; setEditingTag(r); setEditLabel(r.label); setEditColor(r.color); }}
-                        className="text-slate-600 hover:text-slate-300 transition-colors text-[9px] leading-none"
+                        className="text-slate-400 hover:text-slate-600 dark:text-slate-600 dark:hover:text-slate-300 transition-colors text-[9px] leading-none"
                         title="Edit tag name & color"
                       >✎</button>
                     )}
@@ -1084,18 +1120,18 @@ export default function TradingTerminalPage() {
             </div>
 
             {apiFailed && (
-              <div className="mt-2.5 px-2.5 py-1.5 bg-red-500/10 border border-red-500/20 text-red-400 text-[9px] font-extrabold rounded-lg flex items-center justify-between animate-pulse">
+              <div className="mt-2.5 px-2.5 py-1.5 bg-red-500/10 border border-red-500/20 text-red-500 dark:text-red-400 text-[9px] font-extrabold rounded-lg flex items-center justify-between animate-pulse">
                 <span>⚠️ Backend API Offline</span>
                 <span className="text-[8px] bg-red-500/25 px-1 py-0.2 rounded uppercase">Local Mode</span>
               </div>
             )}
           </div>
 
-          <div className="flex-1 overflow-y-auto divide-y divide-slate-900/60">
+          <div className="flex-1 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-900/60">
             {watchlistLoading ? (
               <div className="p-8 text-center flex flex-col items-center gap-3">
                 <RefreshCw className="w-5 h-5 text-blue-500 animate-spin" />
-                <span className="text-xs text-slate-500 font-semibold">Loading quotes…</span>
+                <span className="text-xs text-slate-400 dark:text-slate-500 font-semibold">Loading quotes…</span>
               </div>
             ) : filteredWatchlist.length > 0 ? (
               filteredWatchlist.map(stock => {
@@ -1106,15 +1142,15 @@ export default function TradingTerminalPage() {
                     key={stock.symbol}
                     onClick={() => setSelectedSymbol(stock.symbol)}
                     className={`w-full text-left px-4 py-3 flex items-center justify-between gap-3 transition-all border-l-4 touch-manipulation cursor-pointer group/item ${
-                      active ? 'bg-slate-900 border-blue-500' : 'hover:bg-slate-900/50 border-transparent'
+                      active ? 'bg-slate-50 dark:bg-slate-900 border-blue-550 dark:border-blue-500 shadow-sm' : 'hover:bg-slate-100/50 dark:hover:bg-slate-900/50 border-transparent'
                     }`}
                   >
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-1.5">
-                        <span className={`text-xs font-black ${active ? 'text-blue-400' : 'text-slate-100'}`}>
+                        <span className={`text-xs font-black ${active ? 'text-blue-600 dark:text-blue-400' : 'text-slate-800 dark:text-slate-100'}`}>
                           {stock.symbol.split('.')[0]}
                         </span>
-                        <span className="text-[9px] text-slate-600 font-bold">{stock.symbol.split('.')[1]}</span>
+                        <span className="text-[9px] text-slate-400 dark:text-slate-600 font-bold">{stock.symbol.split('.')[1]}</span>
                       </div>
                       <p className="text-[10px] text-slate-500 truncate max-w-[130px] mt-0.5" title={stock.name}>
                         {stock.name}
@@ -1141,9 +1177,9 @@ export default function TradingTerminalPage() {
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
                       <div className="text-right">
-                        <div className="text-xs font-black text-white">₹{stock.price.toFixed(0)}</div>
+                        <div className="text-xs font-black text-slate-900 dark:text-white">₹{stock.price.toFixed(0)}</div>
                         <span className={`inline-block text-[9px] font-extrabold px-1.5 py-0.5 rounded mt-0.5 ${
-                          positive ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'
+                          positive ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-red-500/10 text-red-500 dark:text-red-400'
                         }`}>
                           {positive ? '+' : ''}{stock.changePercent.toFixed(1)}%
                         </span>
@@ -1155,7 +1191,7 @@ export default function TradingTerminalPage() {
                         <button
                           type="button"
                           onClick={e => { e.stopPropagation(); setTagPopoverSym(tagPopoverSym === stock.symbol ? null : stock.symbol); }}
-                          className="p-1 rounded-lg border bg-slate-800 border-slate-700 text-slate-500 hover:text-blue-400 hover:bg-blue-500/10 hover:border-blue-500/20 transition-all hover:scale-105"
+                          className="p-1 rounded-lg border bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-400 dark:text-slate-500 hover:text-blue-600 dark:hover:text-blue-455 hover:bg-blue-50 dark:hover:bg-blue-500/10 hover:border-blue-200 dark:hover:border-blue-500/20 transition-all hover:scale-105"
                           title="Manage Tags"
                         >
                           <Plus className="w-3 h-3" />
@@ -1164,7 +1200,7 @@ export default function TradingTerminalPage() {
                         <button
                           type="button"
                           onClick={(e) => handleDeleteStock(stock.symbol, e)}
-                          className="p-1 rounded-lg border bg-slate-800 border-slate-700 text-slate-500 hover:text-red-400 hover:bg-red-500/10 hover:border-red-500/20 transition-all hover:scale-105"
+                          className="p-1 rounded-lg border bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-400 dark:text-slate-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 hover:border-red-200 dark:hover:border-red-500/20 transition-all hover:scale-105"
                           title="Delete from Terminal"
                         >
                           <Trash2 className="w-3 h-3" />
@@ -1173,10 +1209,10 @@ export default function TradingTerminalPage() {
                         {/* Tag popover */}
                         {tagPopoverSym === stock.symbol && (
                           <div
-                            className="absolute right-0 top-7 z-50 w-52 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl p-2"
+                            className="absolute right-0 top-7 z-50 w-52 bg-white dark:bg-slate-900 border border-slate-205 dark:border-slate-700 rounded-xl shadow-2xl p-2"
                             onClick={e => e.stopPropagation()}
                           >
-                            <p className="text-[9px] font-extrabold text-slate-500 uppercase tracking-widest mb-2 px-1">Assign Tags</p>
+                            <p className="text-[9px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2 px-1">Assign Tags</p>
                             <div className="flex flex-col gap-0.5">
                               {allTags.map((tag: TagDef) => {
                                 const isActive = (stock.tags ?? []).includes(tag.id);
@@ -1186,11 +1222,11 @@ export default function TradingTerminalPage() {
                                     type="button"
                                     onClick={e => handleToggleTag(stock.symbol, tag.id, e)}
                                     className={`flex items-center gap-2 px-2 py-1.5 rounded-lg text-[10px] font-bold transition-all text-left ${
-                                      isActive ? 'border' : 'text-slate-400 hover:bg-slate-800'
+                                      isActive ? 'border shadow-sm' : 'text-slate-655 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
                                     }`}
                                     style={isActive ? { backgroundColor: tag.dot + '20', color: tag.dot, borderColor: tag.dot + '50' } : {}}
                                   >
-                                    <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: isActive ? tag.dot : '#334155' }} />
+                                    <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: isActive ? tag.dot : '#64748b' }} />
                                     {tag.label}
                                     {isActive && <span className="ml-auto text-[8px]">✓</span>}
                                   </button>
@@ -1200,10 +1236,10 @@ export default function TradingTerminalPage() {
                                     type="button"
                                     onClick={e => handleToggleTag(stock.symbol, tag.id, e)}
                                     className={`flex items-center gap-2 px-2 py-1.5 rounded-lg text-[10px] font-bold transition-all text-left ${
-                                      isActive ? tag.color + ' border' : 'text-slate-400 hover:bg-slate-800'
+                                      isActive ? tag.color + ' border shadow-sm' : 'text-slate-655 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
                                     }`}
                                   >
-                                    <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: isActive ? tag.dot : '#334155' }} />
+                                    <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: isActive ? tag.dot : '#64748b' }} />
                                     {tag.label}
                                     {isActive && <span className="ml-auto text-[8px]">✓</span>}
                                   </button>
@@ -1218,12 +1254,12 @@ export default function TradingTerminalPage() {
                 );
               })
             ) : (
-              <div className="p-8 text-center text-slate-600 text-xs font-semibold">No matching stocks.</div>
+              <div className="p-8 text-center text-slate-500 text-xs font-semibold">No matching stocks.</div>
             )}
           </div>
 
-          <div className="p-3 border-t border-slate-900 text-center text-[10px] text-slate-700 flex items-center gap-2 justify-center shrink-0">
-            <Sparkles className="w-3 h-3 text-yellow-600" />
+          <div className="p-3 border-t border-slate-100 dark:border-slate-900 text-center text-[10px] text-slate-450 dark:text-slate-700 flex items-center gap-2 justify-center shrink-0">
+            <Sparkles className="w-3 h-3 text-yellow-600 animate-pulse" />
             Click any stock to load its chart instantly
           </div>
         </section>
