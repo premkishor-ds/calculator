@@ -169,6 +169,181 @@ interface StockDetails {
   news?: NewsItem[];
 }
 
+interface OrderBookLevel {
+  price: number;
+  size: number;
+  count: number;
+}
+
+const WS_URL = typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1'
+  ? 'wss://calculatorbackend-ul8h.onrender.com'
+  : 'ws://localhost:5001';
+
+function LiveOrderBook({ 
+  bids, 
+  asks, 
+  currentPrice, 
+  priceFlash 
+}: { 
+  bids: OrderBookLevel[]; 
+  asks: OrderBookLevel[]; 
+  currentPrice: number; 
+  priceFlash: 'up' | 'down' | null;
+}) {
+  // Compute cumulative depths
+  const asksCumulative: number[] = [];
+  let askSum = 0;
+  for (let i = 0; i < asks.length; i++) {
+    askSum += asks[i].size;
+    asksCumulative.push(askSum);
+  }
+
+  const bidsCumulative: number[] = [];
+  let bidSum = 0;
+  for (let i = 0; i < bids.length; i++) {
+    bidSum += bids[i].size;
+    bidsCumulative.push(bidSum);
+  }
+
+  const totalAskDepth = askSum || 1;
+  const totalBidDepth = bidSum || 1;
+  const maxDepth = Math.max(totalAskDepth, totalBidDepth);
+
+  // Spread calculation
+  const highestBid = bids[0]?.price || 0;
+  const lowestAsk = asks[0]?.price || 0;
+  const spreadValue = lowestAsk - highestBid > 0 ? lowestAsk - highestBid : 0.05;
+  const midPrice = (highestBid + lowestAsk) / 2 || currentPrice || 1;
+  const spreadPercent = (spreadValue / midPrice) * 100;
+
+  // Function to copy price to clipboard
+  const handlePriceClick = (price: number) => {
+    navigator.clipboard.writeText(price.toString());
+  };
+
+  // Render asks in descending order (highest ask at top, lowest ask at bottom).
+  const renderedAsks = [...asks].reverse();
+  const renderedAsksCumulative = [...asksCumulative].reverse();
+
+  return (
+    <div className="md:col-span-1 bg-white dark:bg-slate-900/50 backdrop-blur-md rounded-3xl border border-slate-200 dark:border-slate-800 p-5 shadow-xl flex flex-col justify-between h-full min-h-[420px] transition-colors duration-300">
+      <div>
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <Layers className="w-5 h-5 text-blue-500 animate-pulse" />
+            <h3 className="text-sm font-extrabold text-slate-900 dark:text-white uppercase tracking-wider">
+              Order Book (DOM)
+            </h3>
+          </div>
+          <span className="inline-flex items-center gap-1 text-[10px] font-bold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-805 px-2.5 py-0.5 rounded-full">
+            <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-ping" />
+            Live WS
+          </span>
+        </div>
+
+        {/* DOM Headers */}
+        <div className="grid grid-cols-3 text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-widest pb-2 border-b border-slate-100 dark:border-slate-800/60 mb-2">
+          <span>Price (₹)</span>
+          <span className="text-right">Size (Qty)</span>
+          <span className="text-right">Orders</span>
+        </div>
+
+        {/* Asks (Sells) */}
+        <div className="space-y-1">
+          {renderedAsks.map((ask, idx) => {
+            const cumDepth = renderedAsksCumulative[idx];
+            const depthPercent = (cumDepth / maxDepth) * 100;
+            return (
+              <div
+                key={`ask-${idx}`}
+                onClick={() => handlePriceClick(ask.price)}
+                className="group relative grid grid-cols-3 items-center py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-350 cursor-pointer hover:bg-slate-55/40 dark:hover:bg-slate-800/40 rounded-lg transition-all px-1"
+              >
+                {/* Translucent cumulative depth progress bar overlay in background */}
+                <div 
+                  className="absolute right-0 top-0 bottom-0 bg-red-500/10 dark:bg-red-500/15 rounded-r-md transition-all duration-300"
+                  style={{ width: `${depthPercent}%`, zIndex: 0 }}
+                />
+                
+                <span className="text-red-500 dark:text-red-400 font-extrabold z-10 transition-transform group-hover:scale-105 origin-left">
+                  {ask.price.toFixed(2)}
+                </span>
+                <span className="text-right font-mono text-slate-800 dark:text-slate-200 z-10">
+                  {ask.size.toLocaleString()}
+                </span>
+                <span className="text-right font-mono text-slate-500 dark:text-slate-400 z-10">
+                  {ask.count}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Spread / Mid-spot Indicator Banner */}
+        <div className="my-3 py-2 px-3 bg-slate-50 dark:bg-slate-850/80 rounded-2xl border border-slate-150 dark:border-slate-800/80 flex items-center justify-between transition-all duration-300">
+          <div className="flex flex-col">
+            <span className="text-[9px] text-slate-400 dark:text-slate-500 font-extrabold uppercase tracking-wider">Spread</span>
+            <span className="text-xs font-black text-slate-700 dark:text-slate-200 mt-0.5">
+              ₹{spreadValue.toFixed(2)} <span className="text-[10px] text-slate-400 dark:text-slate-500 font-bold">({spreadPercent.toFixed(2)}%)</span>
+            </span>
+          </div>
+          
+          {/* Last Traded Price Blinker */}
+          <div className="text-right flex flex-col items-end">
+            <span className="text-[9px] text-slate-400 dark:text-slate-500 font-extrabold uppercase tracking-wider">LTP</span>
+            <div className={`flex items-center gap-1 text-xs font-black transition-all duration-300 ${
+              priceFlash === 'up' 
+                ? 'text-emerald-500 scale-105' 
+                : priceFlash === 'down' 
+                ? 'text-red-500 scale-95' 
+                : 'text-slate-850 dark:text-white'
+            }`}>
+              {priceFlash === 'up' && <TrendingUp className="w-3.5 h-3.5 text-emerald-500 animate-bounce" />}
+              {priceFlash === 'down' && <TrendingDown className="w-3.5 h-3.5 text-red-500 animate-bounce" />}
+              <span>₹{currentPrice.toFixed(2)}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Bids (Buys) */}
+        <div className="space-y-1">
+          {bids.map((bid, idx) => {
+            const cumDepth = bidsCumulative[idx];
+            const depthPercent = (cumDepth / maxDepth) * 100;
+            return (
+              <div
+                key={`bid-${idx}`}
+                onClick={() => handlePriceClick(bid.price)}
+                className="group relative grid grid-cols-3 items-center py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-350 cursor-pointer hover:bg-slate-55/40 dark:hover:bg-slate-800/40 rounded-lg transition-all px-1"
+              >
+                {/* Translucent cumulative depth progress bar overlay in background */}
+                <div 
+                  className="absolute right-0 top-0 bottom-0 bg-emerald-500/10 dark:bg-emerald-500/15 rounded-r-md transition-all duration-300"
+                  style={{ width: `${depthPercent}%`, zIndex: 0 }}
+                />
+                
+                <span className="text-emerald-500 dark:text-emerald-400 font-extrabold z-10 transition-transform group-hover:scale-105 origin-left">
+                  {bid.price.toFixed(2)}
+                </span>
+                <span className="text-right font-mono text-slate-800 dark:text-slate-200 z-10">
+                  {bid.size.toLocaleString()}
+                </span>
+                <span className="text-right font-mono text-slate-500 dark:text-slate-400 z-10">
+                  {bid.count}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+      
+      <p className="text-[10px] text-slate-400 dark:text-slate-500 text-center font-medium mt-3 pt-3 border-t border-slate-100 dark:border-slate-800/60 leading-normal">
+        Click any price to copy for order execution or terminal synchronization.
+      </p>
+    </div>
+  );
+}
+
 export default function StockDetailPage({ params }: { params: Promise<{ symbol: string }> }) {
   const resolvedParams = use(params);
   const [data, setData] = useState<StockDetails | null>(null);
@@ -194,6 +369,16 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
   // Implied Growth Reverse DCF Valuation States
   const [discountRate, setDiscountRate] = useState<number>(10);
   const [terminalGrowth, setTerminalGrowth] = useState<number>(4);
+
+  // Real-Time WebSocket DOM & Price Ticker States
+  const [livePrice, setLivePrice] = useState<number>(0);
+  const [liveChange, setLiveChange] = useState<number>(0);
+  const [liveChangePercent, setLiveChangePercent] = useState<number>(0);
+  const [liveOrderBook, setLiveOrderBook] = useState<{
+    bids: OrderBookLevel[];
+    asks: OrderBookLevel[];
+  }>({ bids: [], asks: [] });
+  const [priceFlash, setPriceFlash] = useState<'up' | 'down' | null>(null);
 
   const decodedSymbol = decodeURIComponent(resolvedParams.symbol);
 
@@ -235,6 +420,28 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
         const details = await res.json();
         if (active) {
           setData(details);
+          const price = details.ratios.price;
+          setLivePrice(price);
+          setLiveChange(details.ratios.change);
+          setLiveChangePercent(details.ratios.changePercent);
+
+          // Seed realistic mock order book levels centered around ratios.price
+          const bids = [];
+          const asks = [];
+          const spreadSteps = [0.05, 0.10, 0.15, 0.20, 0.25];
+          for (let i = 0; i < 5; i++) {
+            bids.push({
+              price: parseFloat((price - spreadSteps[i]).toFixed(2)),
+              size: Math.floor(Math.random() * 800) + 100,
+              count: Math.floor(Math.random() * 15) + 1
+            });
+            asks.push({
+              price: parseFloat((price + spreadSteps[i]).toFixed(2)),
+              size: Math.floor(Math.random() * 800) + 100,
+              count: Math.floor(Math.random() * 15) + 1
+            });
+          }
+          setLiveOrderBook({ bids, asks });
         }
       } catch (err: unknown) {
         if (active) {
@@ -252,6 +459,60 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
       active = false;
     };
   }, [decodedSymbol]);
+
+  // WebSocket subscription for simulated ticks
+  useEffect(() => {
+    if (!decodedSymbol || loading) return;
+
+    let socket: WebSocket | null = null;
+    let reconnectTimer: NodeJS.Timeout;
+
+    function connect() {
+      socket = new WebSocket(WS_URL);
+      socket.onopen = () => {
+        console.log(`DetailPage connected to WebSocket stream subscribing to ${decodedSymbol}`);
+      };
+
+      socket.onmessage = (event) => {
+        try {
+          const tick = JSON.parse(event.data);
+          if (tick.type === 'tick' && tick.symbol.toUpperCase() === decodedSymbol.toUpperCase()) {
+            setLivePrice((prev) => {
+              if (prev !== 0) {
+                if (tick.price > prev) {
+                  setPriceFlash('up');
+                } else if (tick.price < prev) {
+                  setPriceFlash('down');
+                }
+                setTimeout(() => setPriceFlash(null), 400);
+              }
+              return tick.price;
+            });
+            setLiveChange(tick.change);
+            setLiveChangePercent(tick.changePercent);
+            
+            if (tick.bids && tick.asks) {
+              setLiveOrderBook({ bids: tick.bids, asks: tick.asks });
+            }
+          }
+        } catch (err) {
+          console.error('Error handling WS tick:', err);
+        }
+      };
+
+      socket.onclose = () => {
+        console.log('DetailPage WebSocket stream closed. Reconnecting...');
+        reconnectTimer = setTimeout(connect, 3000);
+      };
+    }
+
+    connect();
+
+    return () => {
+      if (socket) socket.close();
+      clearTimeout(reconnectTimer);
+    };
+  }, [decodedSymbol, loading]);
 
   // Synchronize dynamic chart data when selected range or preloaded details changes
   useEffect(() => {
@@ -359,7 +620,8 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
 
   // Numerical Solver for Implied Growth Rate (Reverse DCF valuation)
   const impliedGrowth = React.useMemo(() => {
-    if (!data || !data.ratios.price || !data.ratios.eps || data.ratios.eps <= 0) return 12.5;
+    const currentPrice = livePrice || data?.ratios.price;
+    if (!data || !currentPrice || !data.ratios.eps || data.ratios.eps <= 0) return 12.5;
     const { ratios } = data;
     const d = discountRate / 100;
     const tg = terminalGrowth / 100;
@@ -380,7 +642,7 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
       const terminalValue = (currentEps * (1 + tg)) / Math.max(0.005, d - tg);
       dcf += terminalValue / Math.pow(1 + d, 10);
       
-      const diff = Math.abs(dcf - ratios.price);
+      const diff = Math.abs(dcf - currentPrice);
       if (diff < minDiff) {
         minDiff = diff;
         bestGrowth = g;
@@ -388,7 +650,7 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
     }
     
     return bestGrowth * 100;
-  }, [data, discountRate, terminalGrowth]);
+  }, [data, livePrice, discountRate, terminalGrowth]);
 
   if (loading) {
     return (
@@ -468,7 +730,11 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
   }
 
   const { ratios, profile, balanceSheet, profitLoss, cashFlow, quarterlyProfitLoss, peers, pros, cons } = data;
-  const isPositive = ratios.change >= 0;
+  
+  const displayPrice = livePrice || ratios.price;
+  const displayChange = liveChange !== 0 ? liveChange : ratios.change;
+  const displayChangePercent = liveChangePercent !== 0 ? liveChangePercent : ratios.changePercent;
+  const isPositive = displayChange >= 0;
 
   // Render statements chronologically
   const chronologicalQuarterly = quarterlyProfitLoss ? [...quarterlyProfitLoss].reverse() : [];
@@ -579,7 +845,7 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
               {/* Wealth Projection Simulation Bridge + Trading Terminal Link */}
               <div className="mt-4 flex flex-wrap items-center gap-3">
                 <Link
-                  href={`/?lumpsum=${Math.round(ratios.price)}&cagr=${Math.round(ratios.roe > 0 ? ratios.roe : 18)}&symbol=${ratios.symbol.replace('.NS', '')}`}
+                  href={`/?lumpsum=${Math.round(displayPrice)}&cagr=${Math.round(ratios.roe > 0 ? ratios.roe : 18)}&symbol=${ratios.symbol.replace('.NS', '')}`}
                   className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-2xl text-xs font-bold transition-all shadow-lg shadow-blue-500/20 hover:shadow-blue-500/35 active:scale-[0.98]"
                 >
                   <TrendingUp className="w-3.5 h-3.5" />
@@ -597,12 +863,18 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
 
             <div className="flex items-center gap-4 sm:gap-6 flex-wrap">
               <div className="text-right lg:text-left">
-                <div className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white">
-                  ₹{ratios.price.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                <div className={`text-2xl sm:text-3xl font-extrabold transition-all duration-300 ${
+                  priceFlash === 'up'
+                    ? 'text-emerald-500 scale-[1.02] drop-shadow-[0_0_10px_rgba(16,185,129,0.4)]'
+                    : priceFlash === 'down'
+                    ? 'text-red-500 scale-[0.98] drop-shadow-[0_0_10px_rgba(239,68,68,0.4)]'
+                    : 'text-slate-900 dark:text-white'
+                }`}>
+                  ₹{displayPrice.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                 </div>
-                <div className={`flex items-center justify-end lg:justify-start gap-1 font-semibold text-sm mt-1 ${isPositive ? 'text-emerald-500' : 'text-red-500'}`}>
+                <div className={`flex items-center justify-end lg:justify-start gap-1 font-semibold text-sm mt-1 transition-colors duration-300 ${isPositive ? 'text-emerald-500' : 'text-red-500'}`}>
                   {isPositive ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
-                  <span>{isPositive ? '+' : ''}{ratios.change.toFixed(2)} ({isPositive ? '+' : ''}{ratios.changePercent.toFixed(2)}%)</span>
+                  <span>{isPositive ? '+' : ''}{displayChange.toFixed(2)} ({isPositive ? '+' : ''}{displayChangePercent.toFixed(2)}%)</span>
                 </div>
               </div>
 
@@ -1046,6 +1318,15 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
               </div>
             </div>
 
+            {/* Live Order Book Widget */}
+            <LiveOrderBook 
+              bids={liveOrderBook.bids} 
+              asks={liveOrderBook.asks} 
+              currentPrice={displayPrice} 
+              priceFlash={priceFlash} 
+            />
+
+
             {/* QoQ & YoY Revenue + Profit Growth Bar Charts */}
             <div className="md:col-span-3 grid grid-cols-1 lg:grid-cols-2 gap-8">
               {/* QoQ - Quarterly Revenue & Profit */}
@@ -1257,7 +1538,7 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
                     {impliedGrowth.toFixed(2)}%
                   </span>
                   <p className="text-[10px] text-slate-450 mt-3 leading-normal max-w-[220px]">
-                    The company must grow its cash earnings by <span className="font-bold text-slate-700 dark:text-slate-200">{impliedGrowth.toFixed(1)}%</span> year-on-year for the next decade to justify the current price of <span className="font-bold">₹{ratios.price.toFixed(0)}</span>.
+                    The company must grow its cash earnings by <span className="font-bold text-slate-700 dark:text-slate-200">{impliedGrowth.toFixed(1)}%</span> year-on-year for the next decade to justify the current price of <span className="font-bold">₹{displayPrice.toFixed(0)}</span>.
                   </p>
                 </div>
               </div>
