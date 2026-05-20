@@ -23,6 +23,7 @@ import {
   BarSeries,
   AreaSeries,
   BaselineSeries,
+  createSeriesMarkers,
 } from 'lightweight-charts';
 
 /* ─── Types & Drawings Structures ────────────────────────────── */
@@ -327,6 +328,7 @@ export default function AdvancedChart({
   const mainSeriesRef = useRef<ISeriesApi<any> | null>(null);
   const volRef       = useRef<ISeriesApi<'Histogram'> | null>(null);
   const dataRef      = useRef<ChartPoint[]>([]); // always-current raw history
+  const markersPluginRef = useRef<any>(null);
 
   const [data,     setData]     = useState<ChartPoint[]>([]);
   const [loading,  setLoading]  = useState(false);
@@ -763,6 +765,7 @@ export default function AdvancedChart({
       chartRef.current = null;
       mainSeriesRef.current = null;
       volRef.current = null;
+      markersPluginRef.current = null;
     };
   }, []);
 
@@ -824,6 +827,28 @@ export default function AdvancedChart({
   const feedReplayData = (index: number) => {
     const subset = dataRef.current.slice(0, index);
     applyChartConfigurations(subset);
+  };
+
+  const applyMarkers = (series: any, markerList: any[]) => {
+    if (!series) return;
+    if (markerList && markerList.length > 0) {
+      const mapped = markerList.map(m => ({
+        time: m.time as Time,
+        position: m.position,
+        color: m.color,
+        shape: m.shape,
+        text: m.text,
+      }));
+      if (!markersPluginRef.current) {
+        markersPluginRef.current = createSeriesMarkers(series, mapped);
+      } else {
+        markersPluginRef.current.setMarkers(mapped);
+      }
+    } else {
+      if (markersPluginRef.current) {
+        markersPluginRef.current.setMarkers([]);
+      }
+    }
   };
 
   const applyChartConfigurations = (rawPoints: ChartPoint[]) => {
@@ -896,17 +921,7 @@ export default function AdvancedChart({
     renderCustomPlots(processed);
 
     // Apply Strategy Backtester Trade markers
-    if (markers && markers.length > 0) {
-      main.setMarkers(markers.map(m => ({
-        time: m.time as Time,
-        position: m.position,
-        color: m.color,
-        shape: m.shape,
-        text: m.text,
-      })));
-    } else {
-      main.setMarkers([]);
-    }
+    applyMarkers(main, markers || []);
 
     chart.timeScale().fitContent();
   };
@@ -915,17 +930,7 @@ export default function AdvancedChart({
   useEffect(() => {
     const main = mainSeriesRef.current as any;
     if (!main) return;
-    if (markers && markers.length > 0) {
-      main.setMarkers(markers.map(m => ({
-        time: m.time as Time,
-        position: m.position,
-        color: m.color,
-        shape: m.shape,
-        text: m.text,
-      })));
-    } else {
-      main.setMarkers([]);
-    }
+    applyMarkers(main, markers || []);
   }, [markers]);
 
   const recreateMainSeries = (style: string) => {
@@ -935,6 +940,7 @@ export default function AdvancedChart({
     if (mainSeriesRef.current) {
       chart.removeSeries(mainSeriesRef.current);
       mainSeriesRef.current = null;
+      markersPluginRef.current = null;
     }
 
     const isDark = theme === 'dark';
