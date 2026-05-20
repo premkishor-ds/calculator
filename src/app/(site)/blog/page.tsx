@@ -62,7 +62,7 @@ export default function BlogPage() {
   return (
     <main className="max-w-7xl mx-auto px-6 py-24">
       <header className="mb-20">
-        <h1 className="text-5xl md:text-7xl font-bold mb-6 bg-gradient-to-r from-orange-400 to-red-600 bg-clip-text text-transparent">
+        <h1 className="text-5xl md:text-7xl font-bold mb-6 bg-gradient-to-r from-cyan-400 to-blue-600 bg-clip-text text-transparent tracking-tight">
           Wealth Intelligence Library.
         </h1>
         <p className="text-xl text-slate-500 max-w-2xl">

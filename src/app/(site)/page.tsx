@@ -64,11 +64,22 @@ function WealthDashboardContent() {
     document.documentElement.classList.toggle('dark', currentTheme === 'dark');
   }, []);
 
+  // Synchronize when the theme changes externally
+  useEffect(() => {
+    const handleThemeChange = (e: Event) => {
+      const customEvent = e as CustomEvent<'dark' | 'light'>;
+      setTheme(customEvent.detail);
+    };
+    window.addEventListener('themeChanged', handleThemeChange);
+    return () => window.removeEventListener('themeChanged', handleThemeChange);
+  }, []);
+
   const toggleTheme = () => {
     const newTheme = theme === 'dark' ? 'light' : 'dark';
     setTheme(newTheme);
     localStorage.setItem('theme', newTheme);
     document.documentElement.classList.toggle('dark', newTheme === 'dark');
+    window.dispatchEvent(new CustomEvent('themeChanged', { detail: newTheme }));
   };
 
   // Logic

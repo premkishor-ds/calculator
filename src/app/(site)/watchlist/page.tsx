@@ -590,7 +590,7 @@ export default function WatchlistPage() {
               <StockIcon className="w-6 h-6 text-blue-500 animate-pulse" />
               <span className="text-xs font-bold text-blue-500 uppercase tracking-widest">Active Stock Research Cockpit</span>
             </div>
-            <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+            <h1 className="text-3xl sm:text-4xl font-extrabold bg-gradient-to-r from-cyan-400 to-blue-600 bg-clip-text text-transparent tracking-tight">
               Institutional Screener
             </h1>
             <p className="text-sm text-slate-500 dark:text-slate-400 mt-2 max-w-xl font-medium leading-relaxed">

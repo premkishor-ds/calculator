@@ -372,14 +372,14 @@ export default function AdvancedChart({
       {last && (
         <div className="flex flex-wrap items-center gap-3 px-4 py-1.5 border-b border-slate-100 dark:border-slate-800/40 shrink-0 bg-white dark:bg-slate-950">
           <span className="text-sm font-black text-slate-900 dark:text-white">₹{last.close.toLocaleString('en-IN')}</span>
-          <span className={`text-xs font-bold ${up ? 'text-emerald-550 dark:text-emerald-400' : 'text-red-550 dark:text-red-400'}`}>
+          <span className={`text-xs font-bold ${up ? 'text-emerald-500 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}`}>
             {up ? '+' : ''}{delta.toFixed(2)}&nbsp;({up ? '+' : ''}{pct.toFixed(2)}%)
           </span>
           <span className="text-[10px] text-slate-400 dark:text-slate-500">{chartRange} change</span>
-          <span className="ml-auto text-[10px] text-slate-450 dark:text-slate-600 font-mono hidden sm:block">
-            O&nbsp;<span className="text-slate-650 dark:text-slate-400">{last.open}</span>
-            &nbsp;H&nbsp;<span className="text-emerald-550 dark:text-emerald-500">{last.high}</span>
-            &nbsp;L&nbsp;<span className="text-red-550 dark:text-red-500">{last.low}</span>
+          <span className="ml-auto text-[10px] text-slate-400 dark:text-slate-600 font-mono hidden sm:block">
+            O&nbsp;<span className="text-slate-600 dark:text-slate-400">{last.open}</span>
+            &nbsp;H&nbsp;<span className="text-emerald-500 dark:text-emerald-500">{last.high}</span>
+            &nbsp;L&nbsp;<span className="text-red-500 dark:text-red-500">{last.low}</span>
             &nbsp;C&nbsp;<span className="text-slate-900 dark:text-white font-bold">{last.close}</span>
           </span>
         </div>

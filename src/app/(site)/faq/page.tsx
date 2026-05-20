@@ -69,7 +69,9 @@ export default function FAQPage() {
         <div className="inline-flex p-3 rounded-2xl bg-blue-500/10 text-blue-500 mb-6">
           <HelpCircle className="w-10 h-10" />
         </div>
-        <h1 className="text-4xl md:text-6xl font-bold mb-6">Wealth Intelligence FAQ</h1>
+        <h1 className="text-4xl md:text-6xl font-extrabold mb-6 bg-gradient-to-r from-cyan-400 to-blue-600 bg-clip-text text-transparent tracking-tight">
+          Wealth Intelligence FAQ
+        </h1>
         <p className="text-lg text-slate-500">Every question you have about compounding, taxes, and the Indian market—answered by data.</p>
       </header>
 

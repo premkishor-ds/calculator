@@ -105,11 +105,22 @@ function TradingTerminalInner() {
     document.documentElement.classList.toggle('dark', currentTheme === 'dark');
   }, []);
 
+  // Synchronize when the theme changes externally
+  useEffect(() => {
+    const handleThemeChange = (e: Event) => {
+      const customEvent = e as CustomEvent<'dark' | 'light'>;
+      setTheme(customEvent.detail);
+    };
+    window.addEventListener('themeChanged', handleThemeChange);
+    return () => window.removeEventListener('themeChanged', handleThemeChange);
+  }, []);
+
   const toggleTheme = () => {
     const newTheme = theme === 'dark' ? 'light' : 'dark';
     setTheme(newTheme);
     localStorage.setItem('theme', newTheme);
     document.documentElement.classList.toggle('dark', newTheme === 'dark');
+    window.dispatchEvent(new CustomEvent('themeChanged', { detail: newTheme }));
   };
   interface WatchlistObj {
     _id?: string;
@@ -542,13 +553,15 @@ function TradingTerminalInner() {
       {/* ── Header ────────────────────────────────────────────── */}
       <header className="flex flex-wrap items-center justify-between gap-3 px-4 sm:px-6 py-3 bg-white dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 shadow-sm shrink-0 safe-top">
         <div className="flex items-center gap-3 sm:gap-4 min-w-0">
-          <Link href="/watchlist" className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-all text-slate-400 hover:text-slate-900 dark:hover:text-white touch-manipulation shrink-0">
-            <ArrowLeft className="w-5 h-5" />
+          <Link href="/watchlist" className="group p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-all text-slate-400 hover:text-slate-900 dark:hover:text-white touch-manipulation shrink-0">
+            <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
           </Link>
           <div className="flex items-center gap-2 min-w-0">
-            <span className="bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-600 bg-clip-text text-transparent font-extrabold text-lg sm:text-xl tracking-tight truncate">
-              VISION TERMINAL
-            </span>
+            <Link href="/" className="flex items-center gap-2 min-w-0 group/logo">
+              <span className="bg-gradient-to-r from-cyan-400 to-blue-600 bg-clip-text text-transparent font-extrabold text-lg sm:text-xl tracking-tight truncate group-hover/logo:opacity-90 transition-opacity">
+                VISION TERMINAL
+              </span>
+            </Link>
             <span className="hidden md:inline-block px-2 py-0.5 bg-blue-500/10 border border-blue-500/20 text-blue-500 dark:text-blue-400 text-[10px] font-extrabold rounded-full tracking-wide shrink-0">
               PRO
             </span>
