@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, use } from 'react';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import { 
   ArrowLeft, 
   TrendingUp, 
@@ -22,8 +23,23 @@ import {
   Briefcase,
   LineChart,
   BarChart2,
-  Newspaper
+  Newspaper,
+  Sun,
+  Moon
 } from 'lucide-react';
+
+/* Dynamically import AdvancedChart so it's client-only (no SSR) */
+const AdvancedChart = dynamic(() => import('@/components/AdvancedChart'), {
+  ssr: false,
+  loading: () => (
+    <div className="flex-1 flex items-center justify-center bg-slate-900 rounded-3xl min-h-[450px]">
+      <div className="flex flex-col items-center gap-3">
+        <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+        <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Initialising Chart Engine…</span>
+      </div>
+    </div>
+  ),
+});
 
 interface Ratios {
   price: number;
@@ -168,6 +184,10 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
   const [chartLoading, setChartLoading] = useState<boolean>(false);
   const [chartError, setChartError] = useState<string>('');
 
+  // Professional drawing terminal state vs. static SVG chart
+  const [chartEngine, setChartEngine] = useState<'svg' | 'pro'>('svg');
+  const [theme, setTheme] = useState<'dark' | 'light'>('light');
+
   // TradingView Technical Indicator States
   const [showMovingAverages, setShowMovingAverages] = useState<boolean>(false);
 
@@ -176,6 +196,33 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
   const [terminalGrowth, setTerminalGrowth] = useState<number>(4);
 
   const decodedSymbol = decodeURIComponent(resolvedParams.symbol);
+
+  // Load theme after mount
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('theme') as 'dark' | 'light' | null;
+    const isSystemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const currentTheme = savedTheme || (isSystemDark ? 'dark' : 'light');
+    setTheme(currentTheme);
+    document.documentElement.classList.toggle('dark', currentTheme === 'dark');
+  }, []);
+
+  // Synchronize when the theme changes externally
+  useEffect(() => {
+    const handleThemeChange = (e: Event) => {
+      const customEvent = e as CustomEvent<'dark' | 'light'>;
+      setTheme(customEvent.detail);
+    };
+    window.addEventListener('themeChanged', handleThemeChange);
+    return () => window.removeEventListener('themeChanged', handleThemeChange);
+  }, []);
+
+  const toggleTheme = () => {
+    const newTheme = theme === 'dark' ? 'light' : 'dark';
+    setTheme(newTheme);
+    localStorage.setItem('theme', newTheme);
+    document.documentElement.classList.toggle('dark', newTheme === 'dark');
+    window.dispatchEvent(new CustomEvent('themeChanged', { detail: newTheme }));
+  };
 
   useEffect(() => {
     let active = true;
@@ -499,10 +546,21 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors duration-300 font-sans pb-20">
       <div className="w-full px-4 sm:px-6 lg:px-8 py-8 max-w-7xl mx-auto">
         
-        {/* Navigation back */}
-        <Link href="/watchlist" className="inline-flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-blue-500 dark:hover:text-blue-400 transition-colors mb-6 group">
-          <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" /> Back to Watchlist
-        </Link>
+        {/* Navigation back and Theme Toggle */}
+        <div className="flex justify-between items-center mb-6">
+          <Link href="/watchlist" className="inline-flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-blue-500 dark:hover:text-blue-400 transition-colors group">
+            <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" /> Back to Watchlist
+          </Link>
+          
+          <button
+            onClick={toggleTheme}
+            className="p-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 rounded-2xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-all flex items-center justify-center shrink-0 shadow-sm"
+            aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+            title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+          >
+            {theme === 'dark' ? <Sun className="w-4.5 h-4.5 text-yellow-500 animate-fade-in" /> : <Moon className="w-4.5 h-4.5 text-indigo-500 animate-fade-in" />}
+          </button>
+        </div>
 
         {/* Dashboard Header */}
         <div className="bg-white dark:bg-slate-900/50 backdrop-blur-md rounded-3xl border border-slate-200 dark:border-slate-800 p-6 sm:p-8 shadow-xl mb-8">
@@ -678,21 +736,45 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
                     </h3>
                   </div>
                   <p className="text-xs text-slate-400 mt-1 font-medium">
-                    {chartType === 'price' 
-                      ? 'Interactive Chartink/TradingView styled line graph with volume spike overlays.'
-                      : 'Dynamic price-to-earnings multiple trend calculated using chronological reported filings.'}
+                    {chartEngine === 'pro'
+                      ? 'Professional-grade interactive charting terminal with diagonal trendlines, horizontal lines, custom coloring, and MongoDB persistence.'
+                      : 'Interactive Chartink/TradingView styled line graph with volume spike overlays and SMA crossovers.'}
                   </p>
                 </div>
 
                 {/* Price vs PE toggle & Interval selectors */}
                 <div className="flex flex-wrap items-center gap-4 w-full lg:w-auto">
+                  {/* Chart Engine Selector (Pro vs Standard SVG) */}
+                  <div className="flex bg-slate-105 dark:bg-slate-800 p-1 rounded-xl border border-slate-200/50 dark:border-slate-700/50">
+                    <button
+                      onClick={() => setChartEngine('svg')}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                        chartEngine === 'svg'
+                          ? 'bg-blue-500 text-white shadow-md'
+                          : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                      }`}
+                    >
+                      📊 Standard Chart
+                    </button>
+                    <button
+                      onClick={() => setChartEngine('pro')}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                        chartEngine === 'pro'
+                          ? 'bg-purple-600 text-white shadow-md'
+                          : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                      }`}
+                    >
+                      📈 Pro Terminal
+                    </button>
+                  </div>
+
                   {/* Price / PE Selectors */}
                   <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
                     <button
                       onClick={() => setChartType('price')}
                       className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
                         chartType === 'price'
-                          ? 'bg-blue-500 text-white shadow-md'
+                          ? `${chartEngine === 'pro' ? 'bg-purple-600' : 'bg-blue-500'} text-white shadow-md`
                           : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
                       }`}
                     >
@@ -718,7 +800,7 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
                         onClick={() => setChartRange(r)}
                         className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
                           chartRange === r
-                            ? `${chartType === 'price' ? 'bg-blue-500' : 'bg-purple-500'} text-white shadow-md`
+                            ? `${chartType === 'price' ? (chartEngine === 'pro' ? 'bg-purple-600' : 'bg-blue-500') : 'bg-purple-500'} text-white shadow-md`
                             : 'text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
                         }`}
                       >
@@ -727,22 +809,24 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
                     ))}
                   </div>
 
-                  {/* Technical SMA Indicators Overlay Toggle */}
-                  <button
-                    type="button"
-                    onClick={() => setShowMovingAverages(!showMovingAverages)}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border shrink-0 ${
-                      showMovingAverages
-                        ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400 font-extrabold'
-                        : 'bg-transparent border-slate-200 dark:border-slate-800 text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
-                    }`}
-                  >
-                    Overlay SMA (10/30)
-                  </button>
+                  {/* Technical SMA Indicators Overlay Toggle (Only in SVG mode) */}
+                  {chartEngine === 'svg' && (
+                    <button
+                      type="button"
+                      onClick={() => setShowMovingAverages(!showMovingAverages)}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border shrink-0 ${
+                        showMovingAverages
+                          ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400 font-extrabold'
+                          : 'bg-transparent border-slate-200 dark:border-slate-800 text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                      }`}
+                    >
+                      Overlay SMA (10/30)
+                    </button>
+                  )}
                 </div>
               </div>
 
-              {activePoint && (
+              {chartEngine === 'svg' && activePoint && (
                 <div className="flex flex-wrap gap-3 sm:gap-6 items-center bg-slate-50 dark:bg-slate-850 px-4 py-2.5 rounded-2xl text-xs font-semibold text-slate-500 mb-6">
                   <div>Date: <span className="text-slate-800 dark:text-white font-bold">{activePoint.date}</span></div>
                   {chartType === 'price' ? (
@@ -757,144 +841,158 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
                   )}
                 </div>
               )}
-
-              <div className="relative w-full min-h-[220px]">
-                {chartLoading && (
-                  <div className="absolute inset-0 bg-white/60 dark:bg-slate-900/60 backdrop-blur-[2px] flex items-center justify-center z-30 rounded-2xl">
-                    <div className="flex flex-col items-center gap-2">
-                      <RefreshCw className={`w-8 h-8 ${chartType === 'price' ? 'text-blue-500' : 'text-purple-500'} animate-spin`} />
-                      <span className="text-xs font-bold text-slate-550 dark:text-slate-400">Loading historical trend...</span>
-                    </div>
+                  <div className="relative w-full min-h-[220px]">
+                {chartEngine === 'pro' ? (
+                  <div className="h-[480px] w-full bg-slate-900 rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800">
+                    <AdvancedChart
+                      symbol={decodedSymbol}
+                      chartRange={chartRange}
+                      onRangeChange={setChartRange}
+                      chartMode={chartType}
+                      onModeChange={setChartType}
+                      theme={theme}
+                    />
                   </div>
-                )}
-
-                {chartError ? (
-                  <div className="py-20 text-center text-red-500 font-semibold">{chartError}</div>
-                ) : chartPoints.length === 0 ? (
-                  <div className="py-20 text-center text-slate-500 font-semibold">No historical data available for this range.</div>
                 ) : (
                   <>
-                    <svg viewBox={`0 0 ${svgWidth} ${svgHeight}`} className="w-full h-auto overflow-visible select-none">
-                      <defs>
-                        <linearGradient id="chart-gradient" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor={chartType === 'price' ? '#3b82f6' : '#a855f7'} stopOpacity="0.25" />
-                          <stop offset="100%" stopColor={chartType === 'price' ? '#3b82f6' : '#a855f7'} stopOpacity="0.00" />
-                        </linearGradient>
-                      </defs>
+                    {chartLoading && (
+                      <div className="absolute inset-0 bg-white/60 dark:bg-slate-900/60 backdrop-blur-[2px] flex items-center justify-center z-30 rounded-2xl">
+                        <div className="flex flex-col items-center gap-2">
+                          <RefreshCw className={`w-8 h-8 ${chartType === 'price' ? 'text-blue-500' : 'text-purple-500'} animate-spin`} />
+                          <span className="text-xs font-bold text-slate-550 dark:text-slate-400">Loading historical trend...</span>
+                        </div>
+                      </div>
+                    )}
 
-                      {/* horizontal helper gridlines */}
-                      <line x1={padding} y1={padding} x2={svgWidth - padding} y2={padding} stroke="currentColor" className="text-slate-100 dark:text-slate-800/40" strokeWidth="1" strokeDasharray="4 4" />
-                      <line x1={padding} y1={svgHeight / 2} x2={svgWidth - padding} y2={svgHeight / 2} stroke="currentColor" className="text-slate-100 dark:text-slate-800/40" strokeWidth="1" strokeDasharray="4 4" />
-                      <line x1={padding} y1={svgHeight - padding} x2={svgWidth - padding} y2={svgHeight - padding} stroke="currentColor" className="text-slate-150 dark:text-slate-800/80" strokeWidth="1" />
+                    {chartError ? (
+                      <div className="py-20 text-center text-red-500 font-semibold">{chartError}</div>
+                    ) : chartPoints.length === 0 ? (
+                      <div className="py-20 text-center text-slate-500 font-semibold">No historical data available for this range.</div>
+                    ) : (
+                      <>
+                        <svg viewBox={`0 0 ${svgWidth} ${svgHeight}`} className="w-full h-auto overflow-visible select-none">
+                          <defs>
+                            <linearGradient id="chart-gradient" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="0%" stopColor={chartType === 'price' ? '#3b82f6' : '#a855f7'} stopOpacity="0.25" />
+                              <stop offset="100%" stopColor={chartType === 'price' ? '#3b82f6' : '#a855f7'} stopOpacity="0.00" />
+                            </linearGradient>
+                          </defs>
 
-                      {/* Area under curve */}
-                      {areaPath && <path d={areaPath} fill="url(#chart-gradient)" />}
+                          {/* horizontal helper gridlines */}
+                          <line x1={padding} y1={padding} x2={svgWidth - padding} y2={padding} stroke="currentColor" className="text-slate-100 dark:text-slate-800/40" strokeWidth="1" strokeDasharray="4 4" />
+                          <line x1={padding} y1={svgHeight / 2} x2={svgWidth - padding} y2={svgHeight / 2} stroke="currentColor" className="text-slate-100 dark:text-slate-800/40" strokeWidth="1" strokeDasharray="4 4" />
+                          <line x1={padding} y1={svgHeight - padding} x2={svgWidth - padding} y2={svgHeight - padding} stroke="currentColor" className="text-slate-150 dark:text-slate-800/80" strokeWidth="1" />
 
-                      {/* Volume bars (bottom 15%) - only show for Price chart */}
-                      {chartType === 'price' && points.map((p, idx) => {
-                        const barHeight = (p.data.volume / maxVol) * 35;
-                        const yStart = svgHeight - padding;
-                        const yEnd = yStart - barHeight;
-                        return (
-                          <line 
-                            key={idx} 
-                            x1={p.x} 
-                            y1={yStart} 
-                            x2={p.x} 
-                            y2={yEnd} 
-                            stroke="currentColor" 
-                            className="text-slate-200 dark:text-slate-850" 
-                            strokeWidth="2.5" 
-                          />
-                        );
-                      })}
+                          {/* Area under curve */}
+                          {areaPath && <path d={areaPath} fill="url(#chart-gradient)" />}
 
-                      {/* SVG stroke path */}
-                      {linePath && (
-                        <path 
-                          d={linePath} 
-                          fill="none" 
-                          stroke={chartType === 'price' ? '#3b82f6' : '#a855f7'} 
-                          strokeWidth="2.5" 
-                          strokeLinecap="round" 
-                          strokeLinejoin="round" 
-                          className={`drop-shadow-[0_2px_8px_${chartType === 'price' ? 'rgba(59,130,246,0.3)' : 'rgba(168,85,247,0.3)'}]`}
-                        />
-                      )}
+                          {/* Volume bars (bottom 15%) - only show for Price chart */}
+                          {chartType === 'price' && points.map((p, idx) => {
+                            const barHeight = (p.data.volume / maxVol) * 35;
+                            const yStart = svgHeight - padding;
+                            const yEnd = yStart - barHeight;
+                            return (
+                              <line 
+                                key={idx} 
+                                x1={p.x} 
+                                y1={yStart} 
+                                x2={p.x} 
+                                y2={yEnd} 
+                                stroke="currentColor" 
+                                className="text-slate-200 dark:text-slate-850" 
+                                strokeWidth="2.5" 
+                              />
+                            );
+                          })}
 
-                      {/* Technical Simple Moving Average overlay paths */}
-                      {showMovingAverages && sma10Path && (
-                        <path 
-                          d={sma10Path} 
-                          fill="none" 
-                          stroke="#eab308" 
-                          strokeWidth="1.5" 
-                          strokeDasharray="3 3"
-                          className="opacity-90"
-                        />
-                      )}
-                      {showMovingAverages && sma30Path && (
-                        <path 
-                          d={sma30Path} 
-                          fill="none" 
-                          stroke="#10b981" 
-                          strokeWidth="1.5" 
-                          strokeDasharray="3 3"
-                          className="opacity-90"
-                        />
-                      )}
+                          {/* SVG stroke path */}
+                          {linePath && (
+                            <path 
+                              d={linePath} 
+                              fill="none" 
+                              stroke={chartType === 'price' ? '#3b82f6' : '#a855f7'} 
+                              strokeWidth="2.5" 
+                              strokeLinecap="round" 
+                              strokeLinejoin="round" 
+                              className={`drop-shadow-[0_2px_8px_${chartType === 'price' ? 'rgba(59,130,246,0.3)' : 'rgba(168,85,247,0.3)'}]`}
+                            />
+                          )}
 
-                      {/* Hover vertical alignment line */}
-                      {activePoint && points.find(p => p.data.date === activePoint.date) && (
-                        <line 
-                          x1={points.find(p => p.data.date === activePoint.date)!.x} 
-                          y1={padding} 
-                          x2={points.find(p => p.data.date === activePoint.date)!.x} 
-                          y2={svgHeight - padding} 
-                          stroke="currentColor" 
-                          className={chartType === 'price' ? 'text-blue-500/30' : 'text-purple-500/30'} 
-                          strokeWidth="1.5" 
-                          strokeDasharray="2 2"
-                        />
-                      )}
+                          {/* Technical Simple Moving Average overlay paths */}
+                          {showMovingAverages && sma10Path && (
+                            <path 
+                              d={sma10Path} 
+                              fill="none" 
+                              stroke="#eab308" 
+                              strokeWidth="1.5" 
+                              strokeDasharray="3 3"
+                              className="opacity-90"
+                            />
+                          )}
+                          {showMovingAverages && sma30Path && (
+                            <path 
+                              d={sma30Path} 
+                              fill="none" 
+                              stroke="#10b981" 
+                              strokeWidth="1.5" 
+                              strokeDasharray="3 3"
+                              className="opacity-90"
+                            />
+                          )}
 
-                      {/* Hover target circle indicator */}
-                      {activePoint && points.find(p => p.data.date === activePoint.date) && (
-                        <circle 
-                          cx={points.find(p => p.data.date === activePoint.date)!.x} 
-                          cy={points.find(p => p.data.date === activePoint.date)!.y} 
-                          r="5" 
-                          fill={chartType === 'price' ? '#3b82f6' : '#a855f7'} 
-                          stroke="white" 
-                          strokeWidth="1.5" 
-                          className={`drop-shadow-[0_0_4px_${chartType === 'price' ? 'rgba(59,130,246,0.8)' : 'rgba(168,85,247,0.8)'}]`}
-                        />
-                      )}
-                    </svg>
+                          {/* Hover vertical alignment line */}
+                          {activePoint && points.find(p => p.data.date === activePoint.date) && (
+                            <line 
+                              x1={points.find(p => p.data.date === activePoint.date)!.x} 
+                              y1={padding} 
+                              x2={points.find(p => p.data.date === activePoint.date)!.x} 
+                              y2={svgHeight - padding} 
+                              stroke="currentColor" 
+                              className={chartType === 'price' ? 'text-blue-500/30' : 'text-purple-500/30'} 
+                              strokeWidth="1.5" 
+                              strokeDasharray="2 2"
+                            />
+                          )}
 
-                    {/* Horizontal interactive hover panels overlay */}
-                    <div className="absolute inset-0 flex touch-none">
-                      {points.map((p, idx) => (
-                        <div 
-                          key={idx} 
-                          className="h-full flex-1 cursor-crosshair"
-                          onMouseEnter={() => setHoveredPoint(p.data)}
-                          onMouseLeave={() => setHoveredPoint(null)}
-                          onTouchStart={() => setHoveredPoint(p.data)}
-                          onTouchMove={(e) => {
-                            const touch = e.touches[0];
-                            if (!touch) return;
-                            const el = document.elementFromPoint(touch.clientX, touch.clientY);
-                            const idxAttr = el?.getAttribute('data-chart-idx');
-                            if (idxAttr != null) {
-                              const i = Number(idxAttr);
-                              if (chartPoints[i]) setHoveredPoint(chartPoints[i]);
-                            }
-                          }}
-                          data-chart-idx={idx}
-                        />
-                      ))}
-                    </div>
+                          {/* Hover target circle indicator */}
+                          {activePoint && points.find(p => p.data.date === activePoint.date) && (
+                            <circle 
+                              cx={points.find(p => p.data.date === activePoint.date)!.x} 
+                              cy={points.find(p => p.data.date === activePoint.date)!.y} 
+                              r="5" 
+                              fill={chartType === 'price' ? '#3b82f6' : '#a855f7'} 
+                              stroke="white" 
+                              strokeWidth="1.5" 
+                              className={`drop-shadow-[0_0_4px_${chartType === 'price' ? 'rgba(59,130,246,0.8)' : 'rgba(168,85,247,0.8)'}]`}
+                            />
+                          )}
+                        </svg>
+
+                        {/* Horizontal interactive hover panels overlay */}
+                        <div className="absolute inset-0 flex touch-none">
+                          {points.map((p, idx) => (
+                            <div 
+                              key={idx} 
+                              className="h-full flex-1 cursor-crosshair"
+                              onMouseEnter={() => setHoveredPoint(p.data)}
+                              onMouseLeave={() => setHoveredPoint(null)}
+                              onTouchStart={() => setHoveredPoint(p.data)}
+                              onTouchMove={(e) => {
+                                const touch = e.touches[0];
+                                if (!touch) return;
+                                const el = document.elementFromPoint(touch.clientX, touch.clientY);
+                                const idxAttr = el?.getAttribute('data-chart-idx');
+                                if (idxAttr != null) {
+                                  const i = Number(idxAttr);
+                                  if (chartPoints[i]) setHoveredPoint(chartPoints[i]);
+                                }
+                              }}
+                              data-chart-idx={idx}
+                            />
+                          ))}
+                        </div>
+                      </>
+                    )}
                   </>
                 )}
               </div>
