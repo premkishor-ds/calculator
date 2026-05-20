@@ -239,8 +239,108 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
       }
     };
 
-    fetchChartRange();
   }, [chartRange, decodedSymbol, data]);
+
+  // Compiles analytical scores dynamically based on fundamental ratios
+  const scores = React.useMemo(() => {
+    if (!data) return { valuation: 0, growth: 0, profitability: 0, health: 0, total: 0 };
+    const { ratios } = data;
+    let valScore = 50;
+    if (ratios.pe > 0) {
+      if (ratios.pe < 15) valScore = 85;
+      else if (ratios.pe < 25) valScore = 70;
+      else if (ratios.pe < 40) valScore = 50;
+      else valScore = 30;
+    }
+    if (ratios.pegRatio > 0 && ratios.pegRatio < 1.5) valScore += 10;
+    
+    let growthScore = 40;
+    const grRate = ratios.roe > 0 ? ratios.roe : 15;
+    if (grRate > 22) growthScore = 90;
+    else if (grRate > 15) growthScore = 75;
+    else if (grRate > 8) growthScore = 55;
+    
+    let profScore = 50;
+    if (ratios.roe > 0) {
+      if (ratios.roe > 22) profScore = 92;
+      else if (ratios.roe > 15) profScore = 78;
+      else if (ratios.roe > 10) profScore = 58;
+    }
+    if (ratios.profitMargin > 15) profScore += 8;
+
+    let healthScore = 60;
+    const de = ratios.debtToEquity > 0 ? ratios.debtToEquity / 100 : 0.2;
+    if (de < 0.2) healthScore = 95;
+    else if (de < 0.8) healthScore = 80;
+    else if (de < 1.5) healthScore = 55;
+    else healthScore = 30;
+    if (ratios.currentRatio > 1.5) healthScore += 5;
+
+    return {
+      valuation: Math.min(100, valScore),
+      growth: Math.min(100, growthScore),
+      profitability: Math.min(100, profScore),
+      health: Math.min(100, healthScore),
+      total: Math.round((valScore + growthScore + profScore + healthScore) / 4)
+    };
+  }, [data]);
+
+  // Generates alert warning factors based on leverage and efficiency benchmarks
+  const redFlags = React.useMemo(() => {
+    if (!data) return [];
+    const { ratios } = data;
+    const flags: string[] = [];
+    const de = ratios.debtToEquity > 0 ? ratios.debtToEquity / 100 : 0;
+    if (de > 1.5) {
+      flags.push("High Leverage: Debt-to-equity ratio is dangerously elevated (>1.5), representing refinancing risks.");
+    }
+    if (ratios.pe > 45) {
+      flags.push("Premium Valuation: Stock trades at a very high price-to-earnings multiple, indicating high market expectations.");
+    }
+    if (ratios.currentRatio > 0 && ratios.currentRatio < 1.0) {
+      flags.push("Liquidity Stress: Current ratio is below 1.0, suggesting potential working capital constraints.");
+    }
+    if (ratios.roe > 0 && ratios.roe < 10) {
+      flags.push("Sub-Par Compounding: Return on Equity is below 10%, indicating sub-optimal capital allocation efficiency.");
+    }
+    if (flags.length === 0) {
+      flags.push("Pristine Corporate Governance: Dynamic auditing scanned 0 critical fundamental red flags in reported filings.");
+    }
+    return flags;
+  }, [data]);
+
+  // Numerical Solver for Implied Growth Rate (Reverse DCF valuation)
+  const impliedGrowth = React.useMemo(() => {
+    if (!data || !data.ratios.price || !data.ratios.eps || data.ratios.eps <= 0) return 12.5;
+    const { ratios } = data;
+    const d = discountRate / 100;
+    const tg = terminalGrowth / 100;
+    const eps = ratios.eps;
+    
+    const low = -0.20;
+    const high = 0.60;
+    let bestGrowth = 0.12;
+    let minDiff = Infinity;
+    
+    for (let g = low; g <= high; g += 0.001) {
+      let dcf = 0;
+      let currentEps = eps;
+      for (let t = 1; t <= 10; t++) {
+        currentEps *= (1 + g);
+        dcf += currentEps / Math.pow(1 + d, t);
+      }
+      const terminalValue = (currentEps * (1 + tg)) / Math.max(0.005, d - tg);
+      dcf += terminalValue / Math.pow(1 + d, 10);
+      
+      const diff = Math.abs(dcf - ratios.price);
+      if (diff < minDiff) {
+        minDiff = diff;
+        bestGrowth = g;
+      }
+    }
+    
+    return bestGrowth * 100;
+  }, [data, discountRate, terminalGrowth]);
 
   if (loading) {
     return (
@@ -322,70 +422,6 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
   const { ratios, profile, balanceSheet, profitLoss, cashFlow, quarterlyProfitLoss, peers, pros, cons } = data;
   const isPositive = ratios.change >= 0;
 
-  // Compiles analytical scores dynamically based on fundamental ratios
-  const scores = React.useMemo(() => {
-    let valScore = 50;
-    if (ratios.pe > 0) {
-      if (ratios.pe < 15) valScore = 85;
-      else if (ratios.pe < 25) valScore = 70;
-      else if (ratios.pe < 40) valScore = 50;
-      else valScore = 30;
-    }
-    if (ratios.pegRatio > 0 && ratios.pegRatio < 1.5) valScore += 10;
-    
-    let growthScore = 40;
-    const grRate = ratios.roe > 0 ? ratios.roe : 15;
-    if (grRate > 22) growthScore = 90;
-    else if (grRate > 15) growthScore = 75;
-    else if (grRate > 8) growthScore = 55;
-    
-    let profScore = 50;
-    if (ratios.roe > 0) {
-      if (ratios.roe > 22) profScore = 92;
-      else if (ratios.roe > 15) profScore = 78;
-      else if (ratios.roe > 10) profScore = 58;
-    }
-    if (ratios.profitMargin > 15) profScore += 8;
-
-    let healthScore = 60;
-    const de = ratios.debtToEquity > 0 ? ratios.debtToEquity / 100 : 0.2;
-    if (de < 0.2) healthScore = 95;
-    else if (de < 0.8) healthScore = 80;
-    else if (de < 1.5) healthScore = 55;
-    else healthScore = 30;
-    if (ratios.currentRatio > 1.5) healthScore += 5;
-
-    return {
-      valuation: Math.min(100, valScore),
-      growth: Math.min(100, growthScore),
-      profitability: Math.min(100, profScore),
-      health: Math.min(100, healthScore),
-      total: Math.round((valScore + growthScore + profScore + healthScore) / 4)
-    };
-  }, [ratios]);
-
-  // Generates alert warning factors based on leverage and efficiency benchmarks
-  const redFlags = React.useMemo(() => {
-    const flags: string[] = [];
-    const de = ratios.debtToEquity > 0 ? ratios.debtToEquity / 100 : 0;
-    if (de > 1.5) {
-      flags.push("High Leverage: Debt-to-equity ratio is dangerously elevated (>1.5), representing refinancing risks.");
-    }
-    if (ratios.pe > 45) {
-      flags.push("Premium Valuation: Stock trades at a very high price-to-earnings multiple, indicating high market expectations.");
-    }
-    if (ratios.currentRatio > 0 && ratios.currentRatio < 1.0) {
-      flags.push("Liquidity Stress: Current ratio is below 1.0, suggesting potential working capital constraints.");
-    }
-    if (ratios.roe > 0 && ratios.roe < 10) {
-      flags.push("Sub-Par Compounding: Return on Equity is below 10%, indicating sub-optimal capital allocation efficiency.");
-    }
-    if (flags.length === 0) {
-      flags.push("Pristine Corporate Governance: Dynamic auditing scanned 0 critical fundamental red flags in reported filings.");
-    }
-    return flags;
-  }, [ratios]);
-
   // Render statements chronologically
   const chronologicalQuarterly = quarterlyProfitLoss ? [...quarterlyProfitLoss].reverse() : [];
   const chronologicalAnnual = profitLoss ? [...profitLoss].reverse() : [];
@@ -399,38 +435,15 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
     ? chartPoints.map(p => p.close || 0)
     : chartPoints.map(p => p.pe || 0);
 
-  // Numerical Solver for Implied Growth Rate (Reverse DCF valuation)
-  const impliedGrowth = React.useMemo(() => {
-    if (!ratios.price || !ratios.eps || ratios.eps <= 0) return 12.5;
-    
-    const d = discountRate / 100;
-    const tg = terminalGrowth / 100;
-    const eps = ratios.eps;
-    
-    let low = -0.20;
-    let high = 0.60;
-    let bestGrowth = 0.12;
-    let minDiff = Infinity;
-    
-    for (let g = low; g <= high; g += 0.001) {
-      let dcf = 0;
-      let currentEps = eps;
-      for (let t = 1; t <= 10; t++) {
-        currentEps *= (1 + g);
-        dcf += currentEps / Math.pow(1 + d, t);
-      }
-      const terminalValue = (currentEps * (1 + tg)) / Math.max(0.005, d - tg);
-      dcf += terminalValue / Math.pow(1 + d, 10);
-      
-      const diff = Math.abs(dcf - ratios.price);
-      if (diff < minDiff) {
-        minDiff = diff;
-        bestGrowth = g;
-      }
-    }
-    
-    return bestGrowth * 100;
-  }, [ratios.price, ratios.eps, discountRate, terminalGrowth]);
+  const maxVal = activeValues.length > 0 ? Math.max(...activeValues) : 100;
+  const minVal = activeValues.length > 0 ? Math.min(...activeValues) : 0;
+  const valRange = maxVal - minVal || 1;
+
+  const svgWidth = 800;
+  const svgHeight = 220;
+  const padding = 15;
+  const graphWidth = svgWidth - padding * 2;
+  const graphHeight = svgHeight - padding * 2;
 
   // Simple Moving Average overlay paths for Technical Charting
   const getSMA = (idx: number, period: number) => {
@@ -459,18 +472,6 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
         return { x: padding + (idx / Math.max(1, chartPoints.length - 1)) * graphWidth, y };
       }).filter(p => p !== null) as { x: number; y: number }[]
     : [];
-
-  const sma30Path = sma30Points.map((p, idx) => `${idx === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
-
-  const maxVal = activeValues.length > 0 ? Math.max(...activeValues) : 100;
-  const minVal = activeValues.length > 0 ? Math.min(...activeValues) : 0;
-  const valRange = maxVal - minVal || 1;
-
-  const svgWidth = 800;
-  const svgHeight = 220;
-  const padding = 15;
-  const graphWidth = svgWidth - padding * 2;
-  const graphHeight = svgHeight - padding * 2;
 
   // Map elements to high fidelity coordinate points
   const points = chartPoints.map((p, idx) => {
