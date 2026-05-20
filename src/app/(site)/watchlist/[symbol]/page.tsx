@@ -239,6 +239,7 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
       }
     };
 
+    fetchChartRange();
   }, [chartRange, decodedSymbol, data]);
 
   // Compiles analytical scores dynamically based on fundamental ratios
@@ -472,6 +473,8 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
         return { x: padding + (idx / Math.max(1, chartPoints.length - 1)) * graphWidth, y };
       }).filter(p => p !== null) as { x: number; y: number }[]
     : [];
+
+  const sma30Path = sma30Points.map((p, idx) => `${idx === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
 
   // Map elements to high fidelity coordinate points
   const points = chartPoints.map((p, idx) => {
