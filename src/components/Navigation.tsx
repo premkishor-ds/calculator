@@ -10,6 +10,7 @@ const LINKS = [
   { href: '/faq', label: 'FAQ' },
   { href: '/blog', label: 'Blog' },
   { href: '/watchlist', label: 'Watchlist' },
+  { href: '/screener', label: 'Screener' },
   { href: '/chart', label: 'Terminal' },
 ] as const;
 
