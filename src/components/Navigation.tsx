@@ -22,10 +22,13 @@ export const Navigation = () => {
 
   // Initialize theme from storage/system on mount
   useEffect(() => {
-    const savedTheme = localStorage.getItem('theme') as 'dark' | 'light' | null;
-    const isSystemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    const currentTheme = savedTheme || (isSystemDark ? 'dark' : 'light');
-    setTheme(currentTheme);
+    const timer = setTimeout(() => {
+      const savedTheme = localStorage.getItem('theme') as 'dark' | 'light' | null;
+      const isSystemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const currentTheme = savedTheme || (isSystemDark ? 'dark' : 'light');
+      setTheme(currentTheme);
+    }, 0);
+    return () => clearTimeout(timer);
   }, []);
 
   // Synchronize when the theme changes externally

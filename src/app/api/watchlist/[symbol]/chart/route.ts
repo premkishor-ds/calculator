@@ -2,6 +2,60 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { yahooFinance } from '@/lib/yahoo-finance';
 
+// Server-side cache: key = `${symbol}:${interval}`, TTL varies by interval
+const chartCache = new Map<string, { data: any; ts: number }>();
+
+function getCacheTTL(interval: string): number {
+  // Intraday data expires faster; daily+ can be cached longer
+  if (['1m', '2m', '5m'].includes(interval)) return 2 * 60 * 1000;       // 2 min
+  if (['15m', '30m', '60m', '90m'].includes(interval)) return 5 * 60 * 1000; // 5 min
+  return 15 * 60 * 1000; // 15 min for daily/weekly/monthly
+}
+
+/**
+ * Maps a UI interval string to:
+ *  - yahooInterval: the Yahoo Finance chart interval
+ *  - period1: how far back to fetch
+ *  - isIntraday: whether timestamps include time
+ */
+function resolveIntervalConfig(uiInterval: string): {
+  yahooInterval: '1m' | '2m' | '5m' | '15m' | '30m' | '60m' | '90m' | '1d' | '1wk' | '1mo';
+  period1: Date;
+  isIntraday: boolean;
+} {
+  const now = new Date();
+
+  const daysAgo = (d: number) => { const dt = new Date(now); dt.setDate(dt.getDate() - d); return dt; };
+  const yearsAgo = (y: number) => { const dt = new Date(now); dt.setFullYear(dt.getFullYear() - y); return dt; };
+
+  switch (uiInterval) {
+    case '1m':     return { yahooInterval: '1m',  period1: daysAgo(7),    isIntraday: true };
+    case '5m':     return { yahooInterval: '5m',  period1: daysAgo(59),   isIntraday: true };
+    case '30m':    return { yahooInterval: '30m', period1: daysAgo(59),   isIntraday: true };
+    case '1h':     return { yahooInterval: '60m', period1: daysAgo(729),  isIntraday: true };
+    case 'Daily':  return { yahooInterval: '1d',  period1: yearsAgo(20),  isIntraday: false };
+    case 'Weekly': return { yahooInterval: '1wk', period1: yearsAgo(20),  isIntraday: false };
+    case 'Monthly':return { yahooInterval: '1mo', period1: yearsAgo(20),  isIntraday: false };
+    // Legacy range-based fallbacks
+    case '1d':     return { yahooInterval: '5m',  period1: daysAgo(1),    isIntraday: true };
+    case '1w':     return { yahooInterval: '15m', period1: daysAgo(7),    isIntraday: true };
+    case '1y':     return { yahooInterval: '1d',  period1: yearsAgo(1),   isIntraday: false };
+    case '5y':     return { yahooInterval: '1wk', period1: yearsAgo(5),   isIntraday: false };
+    case 'max':    return { yahooInterval: '1mo', period1: new Date('2000-01-01'), isIntraday: false };
+    default:       return { yahooInterval: '1d',  period1: yearsAgo(1),   isIntraday: false };
+  }
+}
+
+function formatDate(d: Date, isIntraday: boolean): string {
+  if (isNaN(d.getTime())) return '';
+  if (isIntraday) {
+    const day = d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+    const time = d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: false });
+    return `${day} ${time}`;
+  }
+  return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ symbol: string }> }
@@ -13,83 +67,33 @@ export async function GET(
     }
 
     const { searchParams } = new URL(request.url);
-    const range = searchParams.get('range') || '1y';
+    // Accept both `interval` (new) and `range` (legacy) params
+    const uiInterval = searchParams.get('interval') || searchParams.get('range') || 'Daily';
 
-    // Map query range to Yahoo Finance period1 and interval parameters
-    let period1Date: Date;
-    let interval: '5m' | '15m' | '1d' | '1wk' | '1mo' = '1d';
-
-    switch (range.toLowerCase()) {
-      case '1d':
-        const oneDayAgo = new Date();
-        oneDayAgo.setDate(oneDayAgo.getDate() - 1);
-        period1Date = oneDayAgo;
-        interval = '5m';
-        break;
-      case '1w':
-        const oneWeekAgo = new Date();
-        oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-        period1Date = oneWeekAgo;
-        interval = '15m';
-        break;
-      case '1m':
-        const oneMonthAgo = new Date();
-        oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
-        period1Date = oneMonthAgo;
-        interval = '1d';
-        break;
-      case '1y':
-        const oneYearAgo = new Date();
-        oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
-        period1Date = oneYearAgo;
-        interval = '1d';
-        break;
-      case '5y':
-        const fiveYearsAgo = new Date();
-        fiveYearsAgo.setFullYear(fiveYearsAgo.getFullYear() - 5);
-        period1Date = fiveYearsAgo;
-        interval = '1wk';
-        break;
-      case 'max':
-        period1Date = new Date('2000-01-01');
-        interval = '1mo';
-        break;
-      default:
-        const defOneYearAgo = new Date();
-        defOneYearAgo.setFullYear(defOneYearAgo.getFullYear() - 1);
-        period1Date = defOneYearAgo;
-        interval = '1d';
+    const cacheKey = `${symbol.toUpperCase()}:${uiInterval}`;
+    const cached = chartCache.get(cacheKey);
+    if (cached && Date.now() - cached.ts < getCacheTTL(uiInterval)) {
+      return NextResponse.json(cached.data);
     }
 
-    const config = {
-      period1: period1Date,
-      interval
-    };
+    const { yahooInterval, period1, isIntraday } = resolveIntervalConfig(uiInterval);
 
-    const needsHistoricalEps = ['5y', 'max'].includes(range.toLowerCase());
-
+    const needsHistoricalEps = !isIntraday;
     const tenYearsAgo = new Date();
     tenYearsAgo.setFullYear(tenYearsAgo.getFullYear() - 10);
-    const period1 = `${tenYearsAgo.getFullYear()}-01-01`;
+    const epsPeriod1 = `${tenYearsAgo.getFullYear()}-01-01`;
 
-    // Fetch resources in parallel
-    const promises = [
-      yahooFinance.chart(symbol, config),
-      yahooFinance.quoteSummary(symbol, { modules: ['defaultKeyStatistics'] })
-    ] as any[];
-
+    const promises: any[] = [
+      yahooFinance.chart(symbol, { period1, interval: yahooInterval }),
+      yahooFinance.quoteSummary(symbol, { modules: ['defaultKeyStatistics'] }),
+    ];
     if (needsHistoricalEps) {
       promises.push(
-        yahooFinance.fundamentalsTimeSeries(symbol, {
-          period1,
-          module: 'financials',
-          type: 'annual'
-        })
+        yahooFinance.fundamentalsTimeSeries(symbol, { period1: epsPeriod1, module: 'financials', type: 'annual' })
       );
     }
 
     const results = await Promise.allSettled(promises);
-
     const chartRes = results[0];
     const statsRes = results[1];
     const financialsRes = needsHistoricalEps ? results[2] : null;
@@ -98,98 +102,53 @@ export async function GET(
       return NextResponse.json({ error: `Failed to fetch chart data for ${symbol}` }, { status: 502 });
     }
 
-    const chartDataRaw = chartRes.value;
-    const chartQuotes = chartDataRaw.quotes || [];
+    const chartQuotes: any[] = (chartRes.value as any).quotes || [];
 
-    // Get current EPS for baseline fallback
     let currentEps = 0;
     if (statsRes.status === 'fulfilled' && statsRes.value) {
-      const stats = statsRes.value.defaultKeyStatistics || {};
+      const stats = (statsRes.value as any).defaultKeyStatistics || {};
       currentEps = stats.trailingEps || stats.forwardEps || 0;
     }
 
-    // Set up chronological annual financials for historical EPS matching
     let sortedFinancials: { date: Date; eps: number }[] = [];
     if (financialsRes && financialsRes.status === 'fulfilled' && Array.isArray(financialsRes.value)) {
-      sortedFinancials = financialsRes.value
-        .map((f: any) => ({
-          date: new Date(f.date),
-          eps: f.basicEPS || f.dilutedEPS || 0
-        }))
-        .filter((f: any) => !isNaN(f.date.getTime()))
-        .sort((a: any, b: any) => a.date.getTime() - b.date.getTime());
+      sortedFinancials = (financialsRes.value as any[])
+        .map((f) => ({ date: new Date(f.date), eps: f.basicEPS || f.dilutedEPS || 0 }))
+        .filter((f) => !isNaN(f.date.getTime()))
+        .sort((a, b) => a.date.getTime() - b.date.getTime());
     }
 
-    // Format point date based on the selected range
-    const formatPointDate = (dateVal: Date, r: string) => {
-      try {
-        const dObj = new Date(dateVal);
-        if (isNaN(dObj.getTime())) return '';
+    const maxVol = chartQuotes.length > 0 ? Math.max(...chartQuotes.map((q) => q.volume || 0)) : 1;
 
-        const rLower = r.toLowerCase();
-        if (rLower === '1d') {
-          return dObj.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: false });
-        }
-        if (rLower === '1w') {
-          const day = dObj.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
-          const time = dObj.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: false });
-          return `${day} ${time}`;
-        }
-        if (rLower === '1m' || rLower === '1y') {
-          return dObj.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
-        }
-        return dObj.toLocaleDateString('en-IN', { month: 'short', year: 'numeric' });
-      } catch {
-        return '';
-      }
-    };
-
-    // Calculate maximum volume for overlay scaling
-    const maxVol = chartQuotes.length > 0 ? Math.max(...chartQuotes.map((q: any) => q.volume || 0)) : 1;
-
-    // Map chart points to OHLCV + PE for candlestick chart support
     const points = chartQuotes
-      .filter((q: any) => q.close !== undefined && q.close !== null)
-      .map((q: any) => {
+      .filter((q) => q.close != null)
+      .map((q) => {
         const qDate = new Date(q.date);
         let activeEps = currentEps;
-
         if (needsHistoricalEps && sortedFinancials.length > 0) {
           for (let i = sortedFinancials.length - 1; i >= 0; i--) {
-            if (sortedFinancials[i].date <= qDate) {
-              activeEps = sortedFinancials[i].eps;
-              break;
-            }
+            if (sortedFinancials[i].date <= qDate) { activeEps = sortedFinancials[i].eps; break; }
           }
         }
-
         const close = Number(q.close.toFixed(2));
         const open  = Number((q.open  || q.close).toFixed(2));
         const high  = Number((q.high  || q.close).toFixed(2));
         const low   = Number((q.low   || q.close).toFixed(2));
-        const peVal = activeEps > 0 ? Number((close / activeEps).toFixed(2)) : 0;
-
         return {
-          // Unix timestamp in seconds — required by lightweight-charts
           time: Math.floor(qDate.getTime() / 1000),
-          date: formatPointDate(qDate, range),
-          open,
-          high,
-          low,
-          close,
+          date: formatDate(qDate, isIntraday),
+          open, high, low, close,
           volume: q.volume || 0,
-          pe: peVal
+          pe: activeEps > 0 ? Number((close / activeEps).toFixed(2)) : 0,
         };
       })
-      // Deduplicate by timestamp (keep last occurrence), then sort ascending
-      .filter((p: any, idx: number, arr: any[]) => arr.findLastIndex((x: any) => x.time === p.time) === idx)
-      .sort((a: any, b: any) => a.time - b.time);
+      .filter((p, idx, arr) => arr.findLastIndex((x) => x.time === p.time) === idx)
+      .sort((a, b) => a.time - b.time);
 
-    return NextResponse.json({
-      range,
-      maxVolume: maxVol,
-      points
-    });
+    const responseData = { interval: uiInterval, maxVolume: maxVol, points };
+    chartCache.set(cacheKey, { data: responseData, ts: Date.now() });
+
+    return NextResponse.json(responseData);
 
   } catch (error) {
     console.error('Failed to fetch detailed chart data:', error);

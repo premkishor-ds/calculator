@@ -195,7 +195,10 @@ export default function WatchlistPage() {
 
   // Fetch watchlists on mount
   useEffect(() => {
-    fetchWatchlists();
+    const timer = setTimeout(() => {
+      fetchWatchlists();
+    }, 0);
+    return () => clearTimeout(timer);
   }, [fetchWatchlists]);
 
   // Fetch stocks on mount and schedule live updates every 60s

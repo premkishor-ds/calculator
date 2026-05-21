@@ -13,6 +13,7 @@ import {
   CrosshairMode,
   IChartApi,
   ISeriesApi,
+  SeriesType,
   CandlestickData,
   HistogramData,
   LineData,
@@ -45,7 +46,7 @@ interface DrawingItem {
   price?: number;
   time?: number;
   color: string;
-  config?: any; // Stores Risk/Reward ratio levels, channel widths, brush paths, annotations
+  config?: unknown; // Stores Risk/Reward ratio levels, channel widths, brush paths, annotations
 }
 
 interface RenderableDrawing {
@@ -58,7 +59,7 @@ interface RenderableDrawing {
   y?: number;
   x?: number;
   color: string;
-  config?: any;
+  config?: unknown;
 }
 
 interface TempDrawing {
@@ -325,21 +326,19 @@ export default function AdvancedChart({
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef     = useRef<IChartApi | null>(null);
-  const mainSeriesRef = useRef<ISeriesApi<any> | null>(null);
+  const mainSeriesRef = useRef<ISeriesApi<SeriesType> | null>(null);
   const volRef       = useRef<ISeriesApi<'Histogram'> | null>(null);
   const dataRef      = useRef<ChartPoint[]>([]); // always-current raw history
   const markersPluginRef = useRef<any>(null);
+  const activeStyleRef = useRef<string>('');
 
   const [data,     setData]     = useState<ChartPoint[]>([]);
   const [loading,  setLoading]  = useState(false);
   const [error,    setError]    = useState('');
-  
-  // Custom Intervals states
-  const [selectedInterval, setSelectedInterval] = useState<string>('5m');
-  const [showCustomInterval, setShowCustomInterval] = useState(false);
-  const [customValue, setCustomValue] = useState('10');
-  const [customUnit, setCustomUnit] = useState<'s' | 'm' | 'h' | 'D'>('m');
 
+  // Client-side per-symbol+interval cache to avoid redundant fetches
+  const dataCache = useRef<Map<string, ChartPoint[]>>(new Map());
+  
   // Chart Styles states
   const [selectedStyle, setSelectedStyle] = useState<string>('Candlestick');
   const [showStyleMenu, setShowStyleMenu] = useState(false);
@@ -362,6 +361,8 @@ export default function AdvancedChart({
   const [replaySpeed, setReplaySpeed] = useState(1000); // ms per candle
   const replayTimerRef = useRef<NodeJS.Timeout | null>(null);
 
+  const [selectedInterval, setSelectedInterval] = useState<string>('Daily');
+
   /* Derived controlled/uncontrolled values */
   const interval = controlledInterval ?? selectedInterval;
   const style = controlledStyle ?? selectedStyle;
@@ -381,7 +382,6 @@ export default function AdvancedChart({
     const next = new Set(indicators);
     if (next.has(ind)) next.delete(ind);
     else next.add(ind);
-    
     if (onIndicatorsChange) onIndicatorsChange(next);
     else setActiveIndicators(next);
   };
@@ -396,7 +396,7 @@ export default function AdvancedChart({
   const [renderableDrawings, setRenderableDrawings] = useState<RenderableDrawing[]>([]);
   const [renderableTempDrawing, setRenderableTempDrawing] = useState<any | null>(null);
 
-  const getActiveSeries = (): ISeriesApi<any> | null => mainSeriesRef.current;
+  const getActiveSeries = (): ISeriesApi<SeriesType> | null => mainSeriesRef.current;
 
   // Sync to database
   const syncDrawingsToDB = async (updatedDrawings: DrawingItem[]) => {
@@ -425,36 +425,16 @@ export default function AdvancedChart({
     }
   };
 
-  /* WebSocket subscriber for simulated ticks */
-  useEffect(() => {
-    if (!symbol || replayMode) return;
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//localhost:5001`;
-    let socket: WebSocket | null = null;
-    let reconnectTimer: NodeJS.Timeout;
-
-    function connect() {
-      socket = new WebSocket(wsUrl);
-      socket.onopen = () => console.log(`Client streaming ticks for ${symbol}`);
-      socket.onmessage = (event) => {
-        try {
-          const tick = JSON.parse(event.data);
-          if (tick.type === 'tick' && tick.symbol.toUpperCase() === symbol.toUpperCase()) {
-            handleIncomingTick(tick);
-          }
-        } catch {}
-      };
-      socket.onclose = () => {
-        reconnectTimer = setTimeout(connect, 3000);
-      };
+  const updateSeries = (p: ChartPoint) => {
+    const main = mainSeriesRef.current;
+    const vol = volRef.current;
+    if (main && chartMode === 'price') {
+      main.update({ time: p.time as Time, open: p.open, high: p.high, low: p.low, close: p.close });
     }
-
-    connect();
-    return () => {
-      if (socket) socket.close();
-      clearTimeout(reconnectTimer);
-    };
-  }, [symbol, interval, replayMode]);
+    if (vol && chartMode === 'price') {
+      vol.update({ time: p.time as Time, value: p.volume, color: p.close >= p.open ? 'rgba(16,185,129,0.35)' : 'rgba(239,68,68,0.35)' });
+    }
+  };
 
   const handleIncomingTick = (tick: { price: number; volume: number; time: number }) => {
     const sec = getIntervalSeconds(interval);
@@ -489,22 +469,72 @@ export default function AdvancedChart({
     });
   };
 
-  const updateSeries = (p: ChartPoint) => {
-    const main = mainSeriesRef.current;
-    const vol = volRef.current;
-    if (main && chartMode === 'price') {
-      main.update({ time: p.time as Time, open: p.open, high: p.high, low: p.low, close: p.close });
+  /* WebSocket subscriber for simulated ticks */
+  useEffect(() => {
+    if (!symbol || replayMode) return;
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${protocol}//localhost:5001`;
+    let socket: WebSocket | null = null;
+    let reconnectTimer: NodeJS.Timeout;
+
+    function connect() {
+      socket = new WebSocket(wsUrl);
+      socket.onopen = () => console.log(`Client streaming ticks for ${symbol}`);
+      socket.onmessage = (event) => {
+        try {
+          const tick = JSON.parse(event.data);
+          if (tick.type === 'tick' && tick.symbol.toUpperCase() === symbol.toUpperCase()) {
+            handleIncomingTick(tick);
+          }
+        } catch {}
+      };
+      socket.onclose = () => {
+        reconnectTimer = setTimeout(connect, 3000);
+      };
     }
-    if (vol && chartMode === 'price') {
-      vol.update({ time: p.time as Time, value: p.volume, color: p.close >= p.open ? 'rgba(16,185,129,0.35)' : 'rgba(239,68,68,0.35)' });
-    }
-  };
+
+    connect();
+    return () => {
+      if (socket) socket.close();
+      clearTimeout(reconnectTimer);
+    };
+  }, [symbol, interval, replayMode]);
 
   /* Recalculate SVG drawing vector coordinates outside of renders */
   useEffect(() => {
     const chart = chartRef.current;
     const series = getActiveSeries();
     if (!chart || !series) return;
+
+    const findClosestTime = (targetTime: number): number => {
+      const pts = dataRef.current;
+      if (pts.length === 0) return targetTime;
+      
+      let low = 0;
+      let high = pts.length - 1;
+      
+      if (targetTime <= pts[low].time) return pts[low].time;
+      if (targetTime >= pts[high].time) return pts[high].time;
+      
+      while (low <= high) {
+        const mid = Math.floor((low + high) / 2);
+        if (pts[mid].time === targetTime) {
+          return pts[mid].time;
+        }
+        if (targetTime < pts[mid].time) {
+          high = mid - 1;
+        } else {
+          low = mid + 1;
+        }
+      }
+      
+      if (low >= pts.length) return pts[high].time;
+      if (high < 0) return pts[low].time;
+      
+      const diffLow = Math.abs(pts[low].time - targetTime);
+      const diffHigh = Math.abs(pts[high].time - targetTime);
+      return diffLow < diffHigh ? pts[low].time : pts[high].time;
+    };
 
     const nextRenderables: RenderableDrawing[] = [];
     drawings.forEach((drawing, idx) => {
@@ -514,14 +544,17 @@ export default function AdvancedChart({
           nextRenderables.push({ id: `saved-${idx}`, type: 'horizontal', y, color: drawing.color });
         }
       } else if (drawing.type === 'vertical' && drawing.time !== undefined) {
-        const x = chart.timeScale().timeToCoordinate(drawing.time as Time);
+        const closestTime = findClosestTime(drawing.time);
+        const x = chart.timeScale().timeToCoordinate(closestTime as Time);
         if (x !== null) {
           nextRenderables.push({ id: `saved-${idx}`, type: 'vertical', x, color: drawing.color });
         }
       } else if (drawing.points && drawing.points.length >= 2) {
-        const x1 = chart.timeScale().timeToCoordinate(drawing.points[0].time as Time);
+        const closestTime1 = findClosestTime(drawing.points[0].time);
+        const closestTime2 = findClosestTime(drawing.points[1].time);
+        const x1 = chart.timeScale().timeToCoordinate(closestTime1 as Time);
         const y1 = series.priceToCoordinate(drawing.points[0].price);
-        const x2 = chart.timeScale().timeToCoordinate(drawing.points[1].time as Time);
+        const x2 = chart.timeScale().timeToCoordinate(closestTime2 as Time);
         const y2 = series.priceToCoordinate(drawing.points[1].price);
 
         if (x1 !== null && y1 !== null && x2 !== null && y2 !== null) {
@@ -539,9 +572,11 @@ export default function AdvancedChart({
 
     // Temp active drawing coordinates
     if (tempDrawing && tempDrawing.startPoint && tempDrawing.endPoint) {
-      const x1 = chart.timeScale().timeToCoordinate(tempDrawing.startPoint.time as Time);
+      const closestTime1 = findClosestTime(tempDrawing.startPoint.time);
+      const closestTime2 = findClosestTime(tempDrawing.endPoint.time);
+      const x1 = chart.timeScale().timeToCoordinate(closestTime1 as Time);
       const y1 = series.priceToCoordinate(tempDrawing.startPoint.price);
-      const x2 = chart.timeScale().timeToCoordinate(tempDrawing.endPoint.time as Time);
+      const x2 = chart.timeScale().timeToCoordinate(closestTime2 as Time);
       const y2 = series.priceToCoordinate(tempDrawing.endPoint.price);
 
       if (x1 !== null && y1 !== null && x2 !== null && y2 !== null) {
@@ -780,26 +815,50 @@ export default function AdvancedChart({
 
   useEffect(() => {
     if (!symbol) return;
-    setLoading(true);
 
-    fetch(`/api/watchlist/${encodeURIComponent(symbol)}/chart?range=${chartRange.toLowerCase()}`)
+    const cacheKey = `${symbol}:${interval}`;
+    const cached = dataCache.current.get(cacheKey);
+    if (cached && cached.length > 0) {
+      dataRef.current = cached;
+      setData(cached);
+      setError('');
+      applyChartConfigurations(cached);
+      return;
+    }
+
+    let cancelled = false;
+    setLoading(true);
+    setError('');
+
+    fetch(`/api/watchlist/${encodeURIComponent(symbol)}/chart?interval=${encodeURIComponent(interval)}`)
       .then(r => {
         if (!r.ok) throw new Error('Failed to load candlestick feeds');
         return r.json();
       })
       .then(json => {
-        setError('');
-        const pts = json.points ?? [];
+        if (cancelled) return;
+        const pts: ChartPoint[] = json.points ?? [];
+        if (pts.length === 0) {
+          setError('No candle data available for this interval.');
+          setLoading(false);
+          return;
+        }
+        dataCache.current.set(cacheKey, pts);
         dataRef.current = pts;
-        
+        setData(pts);
+        setError('');
         applyChartConfigurations(pts);
         setLoading(false);
       })
       .catch(err => {
-        setError(err.message);
+        if (cancelled) return;
+        setError(err.message || 'Failed to load chart data');
         setLoading(false);
       });
-  }, [symbol, chartRange, interval, style]);
+
+    return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [symbol, interval, style]);
 
   /* Replay Loop */
   useEffect(() => {
@@ -855,37 +914,21 @@ export default function AdvancedChart({
     const chart = chartRef.current;
     if (!chart) return;
 
-    // Apply Timeframe Aggregations
-    const seconds = getIntervalSeconds(interval);
-    let aggregated = rawPoints;
-    if (seconds > 300) { // Aggregate to higher intervals if selected
-      const grouped: { [key: number]: ChartPoint[] } = {};
-      rawPoints.forEach(p => {
-        const key = Math.floor(p.time / seconds) * seconds;
-        if (!grouped[key]) grouped[key] = [];
-        grouped[key].push(p);
-      });
-      aggregated = Object.keys(grouped).map(k => {
-        const timeVal = parseInt(k);
-        const list = grouped[timeVal];
-        return {
-          time: timeVal,
-          date: list[list.length - 1].date,
-          open: list[0].open,
-          high: Math.max(...list.map(x => x.high)),
-          low: Math.min(...list.map(x => x.low)),
-          close: list[list.length - 1].close,
-          volume: list.reduce((sum, x) => sum + x.volume, 0),
-          pe: list[list.length - 1].pe
-        };
-      });
+    const timeScale = chart.timeScale();
+    const range = timeScale.getVisibleLogicalRange();
+    let zoomState: { visibleCount: number; rightOffset: number } | null = null;
+    if (range) {
+      zoomState = {
+        visibleCount: range.to - range.from,
+        rightOffset: (dataRef.current.length || rawPoints.length) - range.to
+      };
     }
 
     // Apply Chart Styles (Heikin Ashi, Renko, Line Break)
-    let processed = aggregated;
-    if (style === 'Heikin Ashi') processed = computeHeikinAshi(aggregated);
-    else if (style === 'Renko') processed = computeRenko(aggregated);
-    else if (style === 'Line Break') processed = computeLineBreak(aggregated);
+    let processed = rawPoints;
+    if (style === 'Heikin Ashi') processed = computeHeikinAshi(rawPoints);
+    else if (style === 'Renko') processed = computeRenko(rawPoints);
+    else if (style === 'Line Break') processed = computeLineBreak(rawPoints);
 
     // Sync Series Types
     recreateMainSeries(style);
@@ -923,7 +966,12 @@ export default function AdvancedChart({
     // Apply Strategy Backtester Trade markers
     applyMarkers(main, markers || []);
 
-    chart.timeScale().fitContent();
+    if (zoomState) {
+      const newTo = processed.length - zoomState.rightOffset;
+      timeScale.setVisibleLogicalRange({ from: newTo - zoomState.visibleCount, to: newTo });
+    } else {
+      timeScale.fitContent();
+    }
   };
 
   /* Reactively update markers when Strategy backtest runs without full canvas rebuilds */
@@ -937,11 +985,17 @@ export default function AdvancedChart({
     const chart = chartRef.current;
     if (!chart) return;
 
+    if (activeStyleRef.current === style && mainSeriesRef.current) {
+      return;
+    }
+
     if (mainSeriesRef.current) {
       chart.removeSeries(mainSeriesRef.current);
       mainSeriesRef.current = null;
       markersPluginRef.current = null;
     }
+
+    activeStyleRef.current = style;
 
     const isDark = theme === 'dark';
     
@@ -1030,6 +1084,7 @@ export default function AdvancedChart({
       const lines = pineScript.split('\n');
       let overlay = true;
       const plots: Array<{ name: string; color: string; values: any[] }> = [];
+      const localScope: Record<string, LineData<Time>[]> = {};
 
       lines.forEach(line => {
         const clean = line.trim();
@@ -1055,7 +1110,7 @@ export default function AdvancedChart({
             const calculated = func === 'ema' ? calcEMA(dataRef.current, period) : calcSMA(dataRef.current, period);
             
             // Register this variable in local script scope
-            (window as any)[varName] = calculated;
+            localScope[varName] = calculated;
           }
           return;
         }
@@ -1070,7 +1125,7 @@ export default function AdvancedChart({
           const colorMatch = clean.match(/color\s*=\s*["']([^"']+)["']/);
           if (colorMatch) color = colorMatch[1];
 
-          const calculatedVals = (window as any)[varToPlot];
+          const calculatedVals = localScope[varToPlot];
           if (calculatedVals) {
             plots.push({ name: varToPlot, color, values: calculatedVals });
           }
@@ -1080,8 +1135,9 @@ export default function AdvancedChart({
       setCustomPlots(plots);
       applyChartConfigurations(dataRef.current);
       setShowPineModal(false);
-    } catch (err: any) {
-      setPineError(`Sandbox Compiler Error: ${err.message}`);
+    } catch (err) {
+      const errMsg = err instanceof Error ? err.message : String(err);
+      setPineError(`Sandbox Compiler Error: ${errMsg}`);
     }
   };
 
@@ -1138,12 +1194,6 @@ export default function AdvancedChart({
     chart.priceScale('right').applyOptions({ autoScale: true });
   };
 
-  const handleCreateCustomInterval = () => {
-    const formatted = `${customValue}${customUnit === 'D' ? 'D' : customUnit}`;
-    changeInterval(formatted);
-    setShowCustomInterval(false);
-  };
-
   const last = data[data.length - 1];
 
   return (
@@ -1178,57 +1228,29 @@ export default function AdvancedChart({
 
           {/* Time Intervals Selector */}
           <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-1 rounded-xl">
-            {['1m', '5m', '1h', 'Daily', 'Weekly'].map(int => (
+            {([
+              { label: '1 Min',   val: '1m'      },
+              { label: '5 Min',   val: '5m'      },
+              { label: '30 Min',  val: '30m'     },
+              { label: '1 Hour',  val: '1h'      },
+              { label: '1 Day',   val: 'Daily'   },
+              { label: '1 Week',  val: 'Weekly'  },
+              { label: '1 Month', val: 'Monthly' },
+            ] as const).map(({ label, val }) => (
               <button
-                key={int}
-                onClick={() => changeInterval(int)}
+                key={val}
+                onClick={() => changeInterval(val)}
                 className={`px-2.5 py-1 rounded-lg text-[10px] font-extrabold transition-all cursor-pointer ${
-                  interval === int
+                  interval === val
                     ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-white shadow-sm border border-slate-200 dark:border-slate-600'
                     : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
                 }`}
               >
-                {int}
+                {label}
               </button>
             ))}
-            
-            {/* Custom Timeframe Button */}
-            <button
-              onClick={() => setShowCustomInterval(!showCustomInterval)}
-              className="p-1 rounded-lg text-[10px] text-slate-400 hover:text-blue-500 cursor-pointer"
-              title="Add Custom Interval"
-            >
-              <Plus className="w-3 h-3" />
-            </button>
           </div>
 
-          {/* Custom Timeframe modal bubble */}
-          {showCustomInterval && (
-            <div className="absolute top-12 left-32 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-3 rounded-xl shadow-2xl z-30 flex items-center gap-2">
-              <input
-                type="number"
-                value={customValue}
-                onChange={e => setCustomValue(e.target.value)}
-                className="w-14 px-2 py-1 bg-slate-100 dark:bg-slate-800 text-xs font-bold text-center rounded-lg border border-slate-200 dark:border-slate-700 focus:outline-none"
-              />
-              <select
-                value={customUnit}
-                onChange={e => setCustomUnit(e.target.value as any)}
-                className="bg-slate-100 dark:bg-slate-800 text-xs font-bold px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700 focus:outline-none"
-              >
-                <option value="s">Seconds</option>
-                <option value="m">Minutes</option>
-                <option value="h">Hours</option>
-                <option value="D">Days</option>
-              </select>
-              <button
-                onClick={handleCreateCustomInterval}
-                className="px-3 py-1 bg-blue-500 text-white font-extrabold text-[10px] rounded-lg cursor-pointer"
-              >
-                Create
-              </button>
-            </div>
-          )}
         </div>
 
         {/* 🎬 Historical Replay Mode Controller */}

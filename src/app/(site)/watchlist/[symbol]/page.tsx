@@ -49,6 +49,8 @@ const AdvancedChart = dynamic(() => import('@/components/AdvancedChart'), {
   ),
 });
 
+import AIMarketIntelligence from '@/components/AIMarketIntelligence';
+
 interface Ratios {
   price: number;
   change: number;
@@ -1833,7 +1835,7 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
   const [data, setData] = useState<StockDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [activeTab, setActiveTab] = useState<'ratios' | 'qpl' | 'pl' | 'bs' | 'cf' | 'peers' | 'shareholding' | 'about' | 'news' | 'ai'>('ratios');
+  const [activeTab, setActiveTab] = useState<'ratios' | 'qpl' | 'pl' | 'bs' | 'cf' | 'peers' | 'shareholding' | 'about' | 'news' | 'ai' | 'prediction'>('ratios');
   const [hoveredPoint, setHoveredPoint] = useState<ChartPoint | null>(null);
 
   // Dynamic price & PE chart state
@@ -1895,7 +1897,7 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
   };
 
   useEffect(() => {
-    const tabs = ['ratios', 'ai', 'news', 'about', 'qpl', 'pl', 'bs', 'cf', 'peers', 'shareholding'];
+    const tabs = ['ratios', 'prediction', 'ai', 'news', 'about', 'qpl', 'pl', 'bs', 'cf', 'peers', 'shareholding'];
     
     const observerCallback = (entries: IntersectionObserverEntry[]) => {
       if (isScrollingRef.current) return;
@@ -1941,11 +1943,14 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
 
   // Load theme after mount
   useEffect(() => {
-    const savedTheme = localStorage.getItem('theme') as 'dark' | 'light' | null;
-    const isSystemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    const currentTheme = savedTheme || (isSystemDark ? 'dark' : 'light');
-    setTheme(currentTheme);
-    document.documentElement.classList.toggle('dark', currentTheme === 'dark');
+    const timer = setTimeout(() => {
+      const savedTheme = localStorage.getItem('theme') as 'dark' | 'light' | null;
+      const isSystemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const currentTheme = savedTheme || (isSystemDark ? 'dark' : 'light');
+      setTheme(currentTheme);
+      document.documentElement.classList.toggle('dark', currentTheme === 'dark');
+    }, 0);
+    return () => clearTimeout(timer);
   }, []);
 
   // Synchronize when the theme changes externally
@@ -2471,6 +2476,17 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
             Overview & Ratios
           </button>
           <button
+            id="tab-btn-prediction"
+            onClick={() => handleTabClick('prediction')}
+            className={`pb-3 px-2 text-sm font-semibold border-b-2 whitespace-nowrap transition-all ${
+              activeTab === 'prediction'
+                ? 'border-blue-500 text-blue-500 dark:text-blue-400 font-extrabold'
+                : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+            }`}
+          >
+            🎯 Price Prediction
+          </button>
+          <button
             id="tab-btn-ai"
             onClick={() => handleTabClick('ai')}
             className={`pb-3 px-2 text-sm font-semibold border-b-2 whitespace-nowrap transition-all ${
@@ -2848,6 +2864,11 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
                   </>
                 )}
               </div>
+            </div>
+
+            {/* AI Market Intelligence Engine */}
+            <div id="section-prediction" className="scroll-mt-24 md:col-span-3">
+              <AIMarketIntelligence data={data} livePrice={livePrice} liveOrderBook={liveOrderBook} />
             </div>
 
             {/* Fundamental Ratios Panel */}

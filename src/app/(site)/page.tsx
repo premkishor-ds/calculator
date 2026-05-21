@@ -26,21 +26,24 @@ function WealthDashboardContent() {
 
   // Extract from query parameters on mount
   useEffect(() => {
-    const qLumpsum = searchParams.get('lumpsum');
-    const qSip = searchParams.get('sip');
-    const qStepUp = searchParams.get('stepup');
-    const qCagr = searchParams.get('cagr');
-    const qYears = searchParams.get('years');
-    const qInflation = searchParams.get('inflation');
-    const qSymbol = searchParams.get('symbol');
+    const timer = setTimeout(() => {
+      const qLumpsum = searchParams.get('lumpsum');
+      const qSip = searchParams.get('sip');
+      const qStepUp = searchParams.get('stepup');
+      const qCagr = searchParams.get('cagr');
+      const qYears = searchParams.get('years');
+      const qInflation = searchParams.get('inflation');
+      const qSymbol = searchParams.get('symbol');
 
-    if (qLumpsum) setInitialLumpsum(Math.max(0, parseInt(qLumpsum)));
-    if (qSip) setStartSip(Math.max(0, parseInt(qSip)));
-    if (qStepUp) setStepUp(Math.min(100, Math.max(0, parseInt(qStepUp))));
-    if (qCagr) setCagr(Math.min(100, Math.max(1, parseInt(qCagr))));
-    if (qYears) setYears(Math.min(50, Math.max(1, parseInt(qYears))));
-    if (qInflation) setInflation(Math.min(20, Math.max(0, parseInt(qInflation))));
-    if (qSymbol) setSelectedSymbol(qSymbol);
+      if (qLumpsum) setInitialLumpsum(Math.max(0, parseInt(qLumpsum)));
+      if (qSip) setStartSip(Math.max(0, parseInt(qSip)));
+      if (qStepUp) setStepUp(Math.min(100, Math.max(0, parseInt(qStepUp))));
+      if (qCagr) setCagr(Math.min(100, Math.max(1, parseInt(qCagr))));
+      if (qYears) setYears(Math.min(50, Math.max(1, parseInt(qYears))));
+      if (qInflation) setInflation(Math.min(20, Math.max(0, parseInt(qInflation))));
+      if (qSymbol) setSelectedSymbol(qSymbol);
+    }, 0);
+    return () => clearTimeout(timer);
   }, [searchParams]);
 
   const resetAll = () => {
@@ -56,12 +59,15 @@ function WealthDashboardContent() {
 
   // Load theme after mount
   useEffect(() => {
-    const savedTheme = localStorage.getItem('theme') as 'dark' | 'light' | null;
-    const isSystemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    const currentTheme = savedTheme || (isSystemDark ? 'dark' : 'light');
+    const timer = setTimeout(() => {
+      const savedTheme = localStorage.getItem('theme') as 'dark' | 'light' | null;
+      const isSystemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const currentTheme = savedTheme || (isSystemDark ? 'dark' : 'light');
 
-    setTheme(currentTheme);
-    document.documentElement.classList.toggle('dark', currentTheme === 'dark');
+      setTheme(currentTheme);
+      document.documentElement.classList.toggle('dark', currentTheme === 'dark');
+    }, 0);
+    return () => clearTimeout(timer);
   }, []);
 
   // Synchronize when the theme changes externally
