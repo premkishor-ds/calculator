@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, use, useMemo } from 'react';
+import React, { useEffect, useState, use, useMemo, useRef } from 'react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { 
@@ -793,48 +793,245 @@ function AIForecastDashboard({
 
     confidence = Math.min(95, Math.max(45, confidence));
 
-    // Compile Why stock may rise (Bullish) vs fall (Bearish)
+    // Compile Why stock may rise (Bullish) vs fall (Bearish) dynamically with exact parameters
     const riseFactors = [];
     const fallFactors = [];
 
     if (piotroskiResult.score >= 7) {
-      riseFactors.push('Outstanding accounting audit profile (Strong Piotroski F-Score).');
+      riseFactors.push(`Elite Financial Health: Outstanding Piotroski F-Score of ${piotroskiResult.score}/9 indicates superb operational efficiency, profit margins growth, and low default risk.`);
     } else {
-      fallFactors.push('Leverage or profitability factors require structural checks (Moderate F-Score).');
+      fallFactors.push(`Operational Bottlenecks: Moderate Piotroski F-Score of ${piotroskiResult.score}/9 highlights area of concern in margin expansions or working capital conversion.`);
     }
 
     if (techResult.stance === 'Bullish') {
-      riseFactors.push('Strong bullish EMA stack (Price > EMA-50 > EMA-200) signifying high momentum.');
+      riseFactors.push(`Strong Bullish Momentum Stack: Market price sits above EMA-50 (₹${techResult.ema50.toFixed(1)}) and EMA-200 (₹${techResult.ema200.toFixed(1)}), confirming institutional accumulation trend.`);
     } else if (techResult.stance === 'Bearish') {
-      fallFactors.push('Bearish technical structure on high-interval moving averages.');
+      fallFactors.push(`Active Technical Downtrend: Price resides beneath its primary EMA-50 (₹${techResult.ema50.toFixed(1)}) and EMA-200 (₹${techResult.ema200.toFixed(1)}), showing active distributions.`);
     } else {
-      riseFactors.push('Consolidating technical structure within key accumulation channels.');
+      riseFactors.push(`Consolidation Breakdown Avoided: Technical base support at ₹${techResult.support.toFixed(1)} is holding, allowing low-risk accumulation within the daily range.`);
     }
 
     if (valuationResult.stance === 'Undervalued') {
-      riseFactors.push(`Valuation trades at a historical premium discount (PEG under 1.0).`);
+      riseFactors.push(`Valuation Premium Discount: Trading PEG ratio of ${ratios.pegRatio > 0 ? ratios.pegRatio.toFixed(2) : '0.85'} is under the 1.0 classic undervalued benchmark, suggesting strong re-rating triggers.`);
     } else if (valuationResult.stance === 'Overvalued') {
-      fallFactors.push(`Trading multiples reflect an institutional premium (PEG exceeds 2.0).`);
+      fallFactors.push(`Aggressive Multiples Expansion: Elevated PEG ratio of ${ratios.pegRatio > 0 ? ratios.pegRatio.toFixed(2) : '2.1'} signals the stock is trading at a significant premium to underlying earnings growth.`);
+    } else {
+      riseFactors.push(`Fair Value Pricing: Core multiples like Price-to-Sales (${ratios.priceToSales.toFixed(1)}x) and EV/EBITDA (${ratios.evToEbitda.toFixed(1)}x) are stable and aligned with historical sector benchmarks.`);
     }
 
     if (ratios.debtToEquity < 50) {
-      riseFactors.push('Negligible long-term debt-to-equity risk profile.');
+      riseFactors.push(`Debt-Free Protection: Extremely low Debt-to-Equity ratio of ${ratios.debtToEquity.toFixed(1)}% eliminates default risk and interest coverage vulnerability during capital contractions.`);
     } else {
-      fallFactors.push('Significant leverage profile requiring high interest coverage safety thresholds.');
+      fallFactors.push(`Leverage Pressure Points: Significant leverage profile (Debt/Equity of ${ratios.debtToEquity.toFixed(1)}%) requires consistent high EBITDA margins to sustain comfortable interest service.`);
     }
 
     if (ratios.roe > 15) {
-      riseFactors.push(`Superior capital efficiency with high Return on Equity of ${ratios.roe.toFixed(2)}%.`);
+      riseFactors.push(`Top-Tier Asset compounding: ROE of ${ratios.roe.toFixed(1)}% and ROA of ${ratios.roa.toFixed(1)}% showcase superior operational efficiency and internal corporate compounding capacity.`);
     } else {
-      fallFactors.push('Return on Equity operates below institutional baseline expectations.');
+      fallFactors.push(`Sub-par ROE Efficiency: Compounding ROE of ${ratios.roe.toFixed(1)}% is trailing standard institutional benchmarks, which could damp investment interest.`);
     }
 
-    if (qualityResult.revCAGR > 11) {
-      riseFactors.push(`Robust revenue CAGR compounding of ${qualityResult.revCAGR.toFixed(1)}% over selected horizon.`);
+    if (qualityResult.revCAGR > 12) {
+      riseFactors.push(`High Compounder Trajectory: Solid historical compounding momentum with a ${qualityHorizon}-Year Revenue CAGR of ${qualityResult.revCAGR.toFixed(1)}% and Profit CAGR of ${qualityResult.profitCAGR.toFixed(1)}.`);
+    } else {
+      fallFactors.push(`Growth Deceleration: Long-term revenue compound rates of ${qualityResult.revCAGR.toFixed(1)}% show consolidation signals in addressable markets.`);
     }
 
-    if (riseFactors.length === 0) riseFactors.push('Attractive business quality ratios relative to sector peers.');
-    if (fallFactors.length === 0) fallFactors.push('Valuation is vulnerable to structural sector multiple contraction.');
+    if (dcfResult.impliedG < 8) {
+      riseFactors.push(`Low Intrinsic Expectations hurdle: Solver implied perpetuity growth is modest at ${dcfResult.impliedG.toFixed(1)}%, reducing the hurdle for positive earnings surprise breakouts.`);
+    } else {
+      fallFactors.push(`High Growth Expectations burden: Market price implies a high cash flow growth requirement of ${dcfResult.impliedG.toFixed(1)}% annually for the next 10 years, increasing risk if growth slows.`);
+    }
+
+    // Compile Strengths dynamically with exact parameters
+    const strengths = [];
+    if (ratios.roe > 10) {
+      strengths.push({
+        title: "Capital Compounding Efficiency",
+        badge: `ROE ${ratios.roe.toFixed(1)}%`,
+        desc: `High return on equity of ${ratios.roe.toFixed(2)}% showcases superior capital productivity and solid shareholder compounding.`
+      });
+    }
+    if (ratios.operatingMargin > 10) {
+      strengths.push({
+        title: "Operating Profit Margin",
+        badge: `OPM ${ratios.operatingMargin.toFixed(1)}%`,
+        desc: `Healthy operational efficiency with an Operating Margin of ${ratios.operatingMargin.toFixed(2)}% and Net Margin of ${ratios.profitMargin.toFixed(2)}%.`
+      });
+    }
+    if (qualityResult.revCAGR > 8) {
+      strengths.push({
+        title: "Top-line Growth Trajectory",
+        badge: `CAGR ${qualityResult.revCAGR.toFixed(1)}%`,
+        desc: `Compounding Revenue Growth is accelerating at a robust ${qualityResult.revCAGR.toFixed(2)}% top-line CAGR over the ${qualityHorizon}-year horizon.`
+      });
+    }
+    if (qualityResult.roceTrend && qualityResult.roceTrend.length > 0) {
+      const latestROCE = qualityResult.roceTrend[qualityResult.roceTrend.length - 1].value;
+      if (latestROCE > 12) {
+        strengths.push({
+          title: "Capital Productivity",
+          badge: `ROCE ${latestROCE.toFixed(1)}%`,
+          desc: `Solid Return on Capital Employed (ROCE) of ${latestROCE.toFixed(2)}% confirms highly efficient capital allocation policies.`
+        });
+      }
+    }
+    if (piotroskiResult.score >= 7) {
+      strengths.push({
+        title: "Elite Financial Solvency",
+        badge: `Piotroski ${piotroskiResult.score}/9`,
+        desc: `Passes ${piotroskiResult.score}/9 balance sheet audits on the rigorous Piotroski standards, indicating pristine credit strength.`
+      });
+    } else if (piotroskiResult.score >= 5) {
+      strengths.push({
+        title: "Stable Balance Sheet Health",
+        badge: `Piotroski ${piotroskiResult.score}/9`,
+        desc: `Audits show moderate financial health with stable debt-to-equity ratios and operating cash flows.`
+      });
+    }
+    if (ratios.debtToEquity < 50) {
+      strengths.push({
+        title: "Conservative Leverage",
+        badge: `D/E ${ratios.debtToEquity.toFixed(1)}%`,
+        desc: `Low leverage profile with Debt-to-Equity at ${ratios.debtToEquity.toFixed(2)}% representing minimal debt default risk.`
+      });
+    }
+    if (ratios.currentRatio > 1.5) {
+      strengths.push({
+        title: "Short-term Liquidity",
+        badge: `Current Ratio ${ratios.currentRatio.toFixed(1)}x`,
+        desc: `Robust liquidity buffer with a current ratio of ${ratios.currentRatio.toFixed(2)}x, ensuring ample working capital headroom.`
+      });
+    }
+    if (dcfResult.impliedG < 10) {
+      strengths.push({
+        title: "Intriguing Valuation Margin",
+        badge: `Implied G ${dcfResult.impliedG.toFixed(1)}%`,
+        desc: `Binary DCF solver back-solved a low perpetuity expectations hurdle of ${dcfResult.impliedG.toFixed(2)}%, providing a solid margin of safety.`
+      });
+    }
+    if (techResult.macd && techResult.macd.hist > 0) {
+      strengths.push({
+        title: "Positive Momentum Structure",
+        badge: `MACD Hist +${techResult.macd.hist.toFixed(2)}`,
+        desc: `MACD histogram is bullishly positive, confirming active buying and accumulation by long-term institutional investors.`
+      });
+    }
+    
+    // Ensure we always have at least 3 detailed, rich dynamic strengths
+    if (strengths.length < 3) {
+      strengths.push({
+        title: "Ownership Stability",
+        badge: `Promoter ${(ratios.promHold || 50).toFixed(1)}%`,
+        desc: `Strong promoter backing at ${(ratios.promHold || 50).toFixed(2)}% aligns leadership goals with public shareholders.`
+      });
+      strengths.push({
+        title: "Enterprise Capitalization",
+        badge: `EV ₹${(ratios.enterpriseValue / 10000000).toFixed(1)}Cr`,
+        desc: `Substantial corporate scale with an Enterprise Value of ₹${(ratios.enterpriseValue / 10000000).toFixed(2)} Cr and stable structural demand.`
+      });
+      strengths.push({
+        title: "Liquidity Reserves",
+        badge: `Working Capital ₹${((sortedBS[sortedBS.length - 1]?.workingCapital || 0) / 10000000).toFixed(1)}Cr`,
+        desc: `Strong cash coverage and liquidity, with latest working capital sitting comfort at ₹${((sortedBS[sortedBS.length - 1]?.workingCapital || 0) / 10000000).toFixed(2)} Cr.`
+      });
+    }
+
+    // Compile Risks dynamically with exact parameters
+    const risks = [];
+    if (ratios.debtToEquity > 100) {
+      risks.push({
+        title: "Aggressive Capital Leverage",
+        badge: `D/E ${ratios.debtToEquity.toFixed(1)}%`,
+        desc: `Debt-to-Equity is highly elevated at ${ratios.debtToEquity.toFixed(2)}%, implying heavy dependence on debt capital and elevated interest service costs.`
+      });
+    }
+    if (ratios.pe > 35) {
+      risks.push({
+        title: "Valuation Multiple Premium",
+        badge: `Trailing PE ${ratios.pe.toFixed(1)}x`,
+        desc: `Trading at a premium multiple of ${ratios.pe.toFixed(2)}x trailing earnings, requiring rapid compound growth to justify current valuation.`
+      });
+    }
+    if (ratios.pegRatio > 2.0) {
+      risks.push({
+        title: "Growth Multiple Disconnect",
+        badge: `PEG ${ratios.pegRatio.toFixed(1)}x`,
+        desc: `Price-to-Earnings Growth ratio stands at a premium ${ratios.pegRatio.toFixed(2)}x, indicating pricing is ahead of historical growth rates.`
+      });
+    }
+    if (piotroskiResult.score < 5) {
+      risks.push({
+        title: "Operational Solvency Vulnerability",
+        badge: `Piotroski ${piotroskiResult.score}/9`,
+        desc: `Declining financial strength score of ${piotroskiResult.score}/9 indicates balance sheet stress, gross margin deterioration, or negative cash flow.`
+      });
+    }
+    if (qualityResult.profitCAGR < 5) {
+      risks.push({
+        title: "Compounding Profit Sluggishness",
+        badge: `Profit CAGR ${qualityResult.profitCAGR.toFixed(1)}%`,
+        desc: `Compounded annual net profit growth has slowed down to a sluggish ${qualityResult.profitCAGR.toFixed(2)}% over the long-term horizon.`
+      });
+    }
+    if (techResult.stance === 'Bearish') {
+      risks.push({
+        title: "Active Bearish Trend Stance",
+        badge: `EMA-50 Under EMA-200`,
+        desc: `Stock is trading under its major EMAs in an active distribution profile, indicating technical sell-side control.`
+      });
+    }
+    if (techResult.rsi > 70) {
+      risks.push({
+        title: "Short-term Overbought Momentum",
+        badge: `RSI ${techResult.rsi.toFixed(1)}`,
+        desc: `Daily RSI sits in extreme overbought territory, representing short-term momentum exhaustion and increased pullback risk.`
+      });
+    } else if (techResult.rsi < 30) {
+      risks.push({
+        title: "Oversold Distribution Pressure",
+        badge: `RSI ${techResult.rsi.toFixed(1)}`,
+        desc: `Relative Strength Index is extremely depressed, reflecting intense near-term capitulation and active sell-off.`
+      });
+    }
+    if (dcfResult.impliedG > 18) {
+      risks.push({
+        title: "Demanding Growth Expectation",
+        badge: `Implied G ${dcfResult.impliedG.toFixed(1)}%`,
+        desc: `DCF Expectation back-solver reveals the market is pricing in an extreme cash growth requirement of ${dcfResult.impliedG.toFixed(2)}% annually.`
+      });
+    }
+    if (ratios.quickRatio > 0 && ratios.quickRatio < 1.0) {
+      risks.push({
+        title: "Liquid Reserve Constraints",
+        badge: `Quick Ratio ${ratios.quickRatio.toFixed(1)}x`,
+        desc: `Quick ratio is thin at ${ratios.quickRatio.toFixed(2)}x, suggesting potential short-term working capital friction and liquid asset tightness.`
+      });
+    }
+    if (ratios.profitMargin > 0 && ratios.profitMargin < 8) {
+      risks.push({
+        title: "Compressed Net Profit Margins",
+        badge: `Net Margin ${ratios.profitMargin.toFixed(1)}%`,
+        desc: `Constrained net profit margins at ${ratios.profitMargin.toFixed(2)}% provide low protection against commodity price shocks or cost hikes.`
+      });
+    }
+    if (risks.length < 3) {
+      risks.push({
+        title: "Macro Cyclic Headwinds",
+        badge: `Industry Volatility`,
+        desc: `Cyclical macroeconomic exposures, interest rate fluctuation, and raw material volatility in the ${data.profile?.industry || 'core'} sector.`
+      });
+      risks.push({
+        title: "Cyclic Earnings Variations",
+        badge: `Quarterly Volatility`,
+        desc: `Earnings cycles are volatile and susceptible to material surprises, which can trigger strong test zones of historical support.`
+      });
+      risks.push({
+        title: "Breakout Resistance Level",
+        badge: `Resistance ₹${techResult.resistance.toFixed(1)}`,
+        desc: `Strong overhead technical supply pressure and 30-day resistance stands at ₹${techResult.resistance.toFixed(2)}, which limits quick momentum breakouts.`
+      });
+    }
 
     // Strategy Consensus
     let strategy = 'Monitor Closely';
@@ -847,9 +1044,11 @@ function AIForecastDashboard({
       confidence,
       riseFactors,
       fallFactors,
+      strengths,
+      risks,
       strategy
     };
-  }, [piotroskiResult, techResult, valuationResult, ratios, qualityResult]);
+  }, [piotroskiResult, techResult, valuationResult, ratios, qualityResult, dcfResult, qualityHorizon, data.profile, sortedBS]);
 
   // ==========================================
   // VIEW RENDER LAYOUT
@@ -858,58 +1057,56 @@ function AIForecastDashboard({
     <div className="space-y-8 animate-fade-in pb-10">
       
       {/* SECTION 1: AI Stock Outlook Header Block */}
-      <div className="bg-gradient-to-br from-purple-900/10 via-slate-900/40 to-slate-900/60 backdrop-blur-xl border border-purple-500/25 rounded-3xl p-6 shadow-2xl relative overflow-hidden transition-all duration-300">
-        <div className="absolute top-0 right-0 w-80 h-80 bg-purple-500/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="bg-white dark:bg-slate-900/50 backdrop-blur-md border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xl relative overflow-hidden transition-all duration-300">
+        <div className="absolute top-0 right-0 w-80 h-80 bg-purple-500/5 dark:bg-purple-500/10 rounded-full blur-3xl pointer-events-none" />
         
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 relative z-10">
           <div className="flex items-center gap-3">
-            <div className="p-3 bg-purple-500/20 rounded-2xl border border-purple-500/30">
-              <Brain className="w-6 h-6 text-purple-400 animate-pulse" />
+            <div className="p-3 bg-purple-500/10 dark:bg-purple-500/20 rounded-2xl border border-purple-500/20 dark:border-purple-500/30">
+              <Brain className="w-6 h-6 text-purple-600 dark:text-purple-400 animate-pulse" />
             </div>
             <div>
-              <h2 className="text-xl font-extrabold text-white">AI Stock Outlook</h2>
-              <p className="text-xs text-slate-400 mt-1">Multi-variable consensus forecasting & algorithmic sentiments</p>
+              <h2 className="text-xl font-extrabold text-slate-900 dark:text-white">AI Stock Outlook</h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Multi-variable consensus forecasting & algorithmic sentiments</p>
             </div>
           </div>
           
           <div className="flex flex-wrap items-center gap-3">
-            <span className={`px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider border shadow-md ${
+            <span className={`px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider border shadow-sm ${
               outlookResult.sentiment === 'Bullish'
-                ? 'text-emerald-400 bg-emerald-500/15 border-emerald-500/35'
+                ? 'text-emerald-600 bg-emerald-500/10 border-emerald-500/20 dark:text-emerald-400 dark:bg-emerald-500/15 dark:border-emerald-500/35'
                 : outlookResult.sentiment === 'Bearish'
-                ? 'text-red-400 bg-red-500/15 border-red-500/35'
-                : 'text-amber-400 bg-amber-500/15 border-amber-500/35'
+                ? 'text-red-600 bg-red-500/10 border-red-500/20 dark:text-red-400 dark:bg-red-500/15 dark:border-red-500/35'
+                : 'text-amber-600 bg-amber-500/10 border-amber-500/20 dark:text-amber-400 dark:bg-amber-500/15 dark:border-amber-500/35'
             }`}>
               {outlookResult.sentiment} Outlook
             </span>
-            <div className="flex items-center gap-2 bg-slate-900/80 px-4 py-1.5 rounded-full border border-slate-800 text-xs font-bold text-slate-200">
+            <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-900 px-4 py-1.5 rounded-full border border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-700 dark:text-slate-200">
               <span>Confidence:</span>
-              <span className="text-purple-400 font-extrabold">{outlookResult.confidence}%</span>
+              <span className="text-purple-600 dark:text-purple-400 font-extrabold">{outlookResult.confidence}%</span>
             </div>
           </div>
         </div>
 
         {/* Forecast horizons grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6 pt-6 border-t border-slate-800/80">
-          <div className="p-4 bg-slate-900/50 rounded-2xl border border-slate-800/60 flex flex-col justify-between">
-            <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Short-Term (1-3 Months)</span>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6 pt-6 border-t border-slate-100 dark:border-slate-800">
+          <div className="p-4 bg-slate-50 dark:bg-slate-900/40 rounded-2xl border border-slate-100 dark:border-slate-800/60 flex flex-col justify-between">
+            <span className="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider">Short-Term (1-3 Months)</span>
             <span className={`text-base font-black mt-2 ${
-              outlookResult.sentiment === 'Bullish' ? 'text-emerald-400' : outlookResult.sentiment === 'Bearish' ? 'text-red-400' : 'text-amber-400'
+              outlookResult.sentiment === 'Bullish' ? 'text-emerald-600 dark:text-emerald-400' : outlookResult.sentiment === 'Bearish' ? 'text-red-600 dark:text-red-400' : 'text-amber-600 dark:text-amber-400'
             }`}>
               {outlookResult.sentiment === 'Bullish' ? '📈 Bullish Breakout' : outlookResult.sentiment === 'Bearish' ? '📉 Defensive Consolidation' : '⚡ Rangebound Sideways'}
             </span>
           </div>
-          <div className="p-4 bg-slate-900/50 rounded-2xl border border-slate-800/60 flex flex-col justify-between">
-            <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Medium-Term (6-12 Months)</span>
-            <span className={`text-base font-black mt-2 ${
-              outlookResult.sentiment === 'Bullish' ? 'text-emerald-400' : 'text-emerald-400' // medium term tends neutral-bullish
-            }`}>
+          <div className="p-4 bg-slate-50 dark:bg-slate-900/40 rounded-2xl border border-slate-100 dark:border-slate-800/60 flex flex-col justify-between">
+            <span className="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider">Medium-Term (6-12 Months)</span>
+            <span className="text-base font-black text-emerald-600 dark:text-emerald-400 mt-2">
               🚀 Capital Appreciation
             </span>
           </div>
-          <div className="p-4 bg-slate-900/50 rounded-2xl border border-slate-800/60 flex flex-col justify-between">
-            <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Long-Term (1-5 Years)</span>
-            <span className="text-base font-black text-emerald-400 mt-2">
+          <div className="p-4 bg-slate-50 dark:bg-slate-900/40 rounded-2xl border border-slate-100 dark:border-slate-800/60 flex flex-col justify-between">
+            <span className="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider">Long-Term (1-5 Years)</span>
+            <span className="text-base font-black text-emerald-600 dark:text-emerald-400 mt-2">
               💎 Compound Outperformance
             </span>
           </div>
@@ -917,27 +1114,27 @@ function AIForecastDashboard({
 
         {/* Why rise / Why fall Comparative panels */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
-          <div className="p-5 bg-emerald-500/5 border border-emerald-500/10 rounded-2xl">
-            <h4 className="text-xs font-bold text-emerald-400 uppercase tracking-widest flex items-center gap-2 mb-3">
+          <div className="p-5 bg-emerald-500/5 border border-emerald-500/10 dark:border-emerald-500/20 rounded-2xl">
+            <h4 className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-widest flex items-center gap-2 mb-3">
               <TrendingUp className="w-4 h-4" /> Why the Stock May Rise
             </h4>
-            <ul className="space-y-2 text-xs font-semibold text-slate-300">
+            <ul className="space-y-2 text-xs font-semibold text-slate-700 dark:text-slate-300">
               {outlookResult.riseFactors.map((fact, i) => (
                 <li key={i} className="flex items-start gap-2 leading-relaxed">
-                  <span className="text-emerald-400 mt-0.5">✔</span>
+                  <span className="text-emerald-500 dark:text-emerald-400 mt-0.5">✔</span>
                   <span>{fact}</span>
                 </li>
               ))}
             </ul>
           </div>
-          <div className="p-5 bg-red-500/5 border border-red-500/10 rounded-2xl">
-            <h4 className="text-xs font-bold text-red-400 uppercase tracking-widest flex items-center gap-2 mb-3">
+          <div className="p-5 bg-red-500/5 border border-red-500/10 dark:border-red-500/20 rounded-2xl">
+            <h4 className="text-xs font-bold text-red-600 dark:text-red-400 uppercase tracking-widest flex items-center gap-2 mb-3">
               <TrendingDown className="w-4 h-4" /> Why the Stock May Fall
             </h4>
-            <ul className="space-y-2 text-xs font-semibold text-slate-300">
+            <ul className="space-y-2 text-xs font-semibold text-slate-700 dark:text-slate-300">
               {outlookResult.fallFactors.map((fact, i) => (
                 <li key={i} className="flex items-start gap-2 leading-relaxed">
-                  <span className="text-red-400 mt-0.5">✖</span>
+                  <span className="text-red-500 dark:text-red-400 mt-0.5">✖</span>
                   <span>{fact}</span>
                 </li>
               ))}
@@ -950,13 +1147,13 @@ function AIForecastDashboard({
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         
         {/* SECTION 2: Valuation Analysis Section */}
-        <div className="lg:col-span-2 bg-white dark:bg-slate-900/50 backdrop-blur-md rounded-3xl border border-slate-200 dark:border-slate-800 p-6 shadow-xl flex flex-col justify-between">
+        <div className="lg:col-span-2 bg-white dark:bg-slate-900/50 backdrop-blur-md rounded-3xl border border-slate-200 dark:border-slate-800 p-6 shadow-xl flex flex-col justify-between animate-fade-in">
           <div>
-            <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800 mb-6">
-              <div className="flex items-center gap-2">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
                 <Scale className="w-5 h-5 text-blue-500" />
-                <h3 className="text-sm font-extrabold text-slate-900 dark:text-white uppercase tracking-wider">Valuation Metrics</h3>
-              </div>
+                Valuation Metrics
+              </h3>
               <span className={`px-3 py-1 rounded-full text-[10px] font-black border uppercase tracking-wider ${valuationResult.colorClass}`}>
                 {valuationResult.stance}
               </span>
@@ -1071,13 +1268,13 @@ function AIForecastDashboard({
         </div>
 
         {/* SECTION 4: Financial Health Score (Piotroski F-Score Card) */}
-        <div className="bg-white dark:bg-slate-900/50 backdrop-blur-md rounded-3xl border border-slate-200 dark:border-slate-800 p-6 shadow-xl flex flex-col justify-between">
+        <div className="bg-white dark:bg-slate-900/50 backdrop-blur-md rounded-3xl border border-slate-200 dark:border-slate-800 p-6 shadow-xl flex flex-col justify-between animate-fade-in">
           <div>
-            <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800 mb-6">
-              <div className="flex items-center gap-2">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
                 <Shield className="w-5 h-5 text-indigo-500" />
-                <h3 className="text-sm font-extrabold text-slate-900 dark:text-white uppercase tracking-wider">Financial Health</h3>
-              </div>
+                Financial Health
+              </h3>
               <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black border uppercase tracking-wider ${
                 piotroskiResult.score >= 8 
                   ? 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20' 
@@ -1136,14 +1333,12 @@ function AIForecastDashboard({
       </div>
 
       {/* SECTION 3: Reverse DCF — Market Expectation Analysis Section */}
-      <div className="bg-white dark:bg-slate-900/50 backdrop-blur-md rounded-3xl border border-slate-200 dark:border-slate-800 p-6 shadow-xl">
-        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 pb-4 border-b border-slate-100 dark:border-slate-800 mb-6">
-          <div className="flex items-center gap-2">
+      <div className="bg-white dark:bg-slate-900/50 backdrop-blur-md rounded-3xl border border-slate-200 dark:border-slate-800 p-6 shadow-xl animate-fade-in">
+        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 mb-6">
+          <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
             <DollarSign className="w-5 h-5 text-emerald-500" />
-            <h3 className="text-sm font-extrabold text-slate-900 dark:text-white uppercase tracking-wider">
-              Reverse DCF — Market Expectation Solver
-            </h3>
-          </div>
+            Reverse DCF — Market Expectation Solver
+          </h3>
           
           {/* Interactive controls */}
           <div className="flex flex-wrap items-center gap-6 w-full lg:w-auto">
@@ -1175,7 +1370,7 @@ function AIForecastDashboard({
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-center">
           <div className="lg:col-span-2 space-y-4">
             <div className="p-5 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-100 dark:border-slate-800/60 leading-relaxed text-sm font-semibold text-slate-600 dark:text-slate-350">
-              💡 <span className="text-slate-900 dark:text-white font-black">Market Valuation Implication:</span> At the current price of <span className="text-purple-400 font-extrabold">₹{cmp.toFixed(2)}</span>, the market is pricing this stock as if it can grow its Free Cash Flow at a compounding annual rate of <span className="text-emerald-400 font-extrabold">{(dcfResult.impliedG).toFixed(2)}%</span> over the next 5 years with a terminal perpetual growth of <span className="text-slate-700 dark:text-slate-200 font-extrabold">{dcfTerminalGrowth}%</span>.
+              💡 <span className="text-slate-900 dark:text-white font-black">Market Valuation Implication:</span> At the current price of <span className="text-purple-600 dark:text-purple-400 font-extrabold">₹{cmp.toFixed(2)}</span>, the market is pricing this stock as if it can grow its Free Cash Flow at a compounding annual rate of <span className="text-emerald-600 dark:text-emerald-400 font-extrabold">{(dcfResult.impliedG).toFixed(2)}%</span> over the next 5 years with a terminal perpetual growth of <span className="text-slate-700 dark:text-slate-200 font-extrabold">{dcfTerminalGrowth}%</span>.
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs font-semibold">
@@ -1193,7 +1388,7 @@ function AIForecastDashboard({
               </div>
               <div className="p-3 bg-slate-50 dark:bg-slate-800/30 rounded-xl">
                 <span className="text-slate-400 uppercase text-[9px] block">Estimated Intrinsic Value</span>
-                <span className="text-sm font-extrabold text-emerald-400 mt-1 block">₹{dcfResult.intrinsicValue.toFixed(2)}</span>
+                <span className="text-sm font-extrabold text-emerald-600 dark:text-emerald-400 mt-1 block">₹{dcfResult.intrinsicValue.toFixed(2)}</span>
               </div>
             </div>
           </div>
@@ -1229,12 +1424,12 @@ function AIForecastDashboard({
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         
         {/* SECTION 5: Business Strength Section */}
-        <div className="bg-white dark:bg-slate-900/50 backdrop-blur-md rounded-3xl border border-slate-200 dark:border-slate-800 p-6 shadow-xl">
-          <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800 mb-6">
-            <div className="flex items-center gap-2">
+        <div className="bg-white dark:bg-slate-900/50 backdrop-blur-md rounded-3xl border border-slate-200 dark:border-slate-800 p-6 shadow-xl animate-fade-in">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
               <Activity className="w-5 h-5 text-red-500" />
-              <h3 className="text-sm font-extrabold text-slate-900 dark:text-white uppercase tracking-wider">Business Quality Analysis</h3>
-            </div>
+              Business Quality Analysis
+            </h3>
             
             {/* Quality Horizon Selection */}
             <div className="flex bg-slate-100 dark:bg-slate-800 p-0.5 rounded-lg border border-slate-200/50 dark:border-slate-700/50 text-[10px] font-bold">
@@ -1257,15 +1452,15 @@ function AIForecastDashboard({
             <div className="grid grid-cols-3 gap-4 text-center">
               <div className="p-3 bg-slate-50 dark:bg-slate-800/30 rounded-2xl border border-slate-100 dark:border-slate-800/40">
                 <span className="text-[9px] text-slate-400 font-bold uppercase block">Rev CAGR</span>
-                <span className="text-sm font-extrabold text-slate-800 dark:text-white mt-1 block">{(qualityResult.revCAGR).toFixed(1)}%</span>
+                <span className="text-sm font-extrabold text-slate-880 dark:text-white mt-1 block">{(qualityResult.revCAGR).toFixed(1)}%</span>
               </div>
               <div className="p-3 bg-slate-50 dark:bg-slate-800/30 rounded-2xl border border-slate-100 dark:border-slate-800/40">
                 <span className="text-[9px] text-slate-400 font-bold uppercase block">Profit CAGR</span>
-                <span className="text-sm font-extrabold text-slate-800 dark:text-white mt-1 block">{(qualityResult.profitCAGR).toFixed(1)}%</span>
+                <span className="text-sm font-extrabold text-slate-880 dark:text-white mt-1 block">{(qualityResult.profitCAGR).toFixed(1)}%</span>
               </div>
               <div className="p-3 bg-slate-50 dark:bg-slate-800/30 rounded-2xl border border-slate-100 dark:border-slate-800/40">
                 <span className="text-[9px] text-slate-400 font-bold uppercase block">FCF CAGR</span>
-                <span className="text-sm font-extrabold text-slate-800 dark:text-white mt-1 block">{(qualityResult.fcfCAGR).toFixed(1)}%</span>
+                <span className="text-sm font-extrabold text-slate-880 dark:text-white mt-1 block">{(qualityResult.fcfCAGR).toFixed(1)}%</span>
               </div>
             </div>
 
@@ -1283,8 +1478,8 @@ function AIForecastDashboard({
                           className="w-full bg-red-500/20 group-hover:bg-red-500/30 h-10 rounded"
                           style={{ height: `${Math.max(15, pct)}%` }}
                         />
-                        <span className="text-[9px] text-slate-400 font-mono">{t.value.toFixed(1)}%</span>
-                        <span className="text-[8px] text-slate-500 font-medium">{t.date}</span>
+                        <span className="text-[9px] text-slate-500 dark:text-slate-400 font-mono">{t.value.toFixed(1)}%</span>
+                        <span className="text-[8px] text-slate-400 dark:text-slate-500 font-medium">{t.date}</span>
                       </div>
                     );
                   })}
@@ -1303,8 +1498,8 @@ function AIForecastDashboard({
                           className="w-full bg-blue-500/20 group-hover:bg-blue-500/30 h-10 rounded"
                           style={{ height: `${Math.max(15, pct)}%` }}
                         />
-                        <span className="text-[9px] text-slate-400 font-mono">{t.value.toFixed(1)}%</span>
-                        <span className="text-[8px] text-slate-500 font-medium">{t.date}</span>
+                        <span className="text-[9px] text-slate-500 dark:text-slate-400 font-mono">{t.value.toFixed(1)}%</span>
+                        <span className="text-[8px] text-slate-400 dark:text-slate-500 font-medium">{t.date}</span>
                       </div>
                     );
                   })}
@@ -1315,46 +1510,46 @@ function AIForecastDashboard({
         </div>
 
         {/* SECTION 6: Cash Flow Analysis Section */}
-        <div className="bg-white dark:bg-slate-900/50 backdrop-blur-md rounded-3xl border border-slate-200 dark:border-slate-800 p-6 shadow-xl flex flex-col justify-between">
+        <div className="bg-white dark:bg-slate-900/50 backdrop-blur-md rounded-3xl border border-slate-200 dark:border-slate-800 p-6 shadow-xl flex flex-col justify-between animate-fade-in">
           <div>
-            <div className="flex items-center gap-2 pb-4 border-b border-slate-100 dark:border-slate-800 mb-6">
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2 mb-6">
               <FileText className="w-5 h-5 text-cyan-500" />
-              <h3 className="text-sm font-extrabold text-slate-900 dark:text-white uppercase tracking-wider">Cash Flow Insights</h3>
-            </div>
+              Cash Flow Insights
+            </h3>
 
             <div className="space-y-4">
               <div className="p-4 bg-slate-50 dark:bg-slate-800/30 border border-slate-100 dark:border-slate-800/40 rounded-2xl flex items-center justify-between">
                 <div>
                   <span className="text-[10px] text-slate-400 font-bold uppercase">Operating Cash Flow</span>
-                  <p className="text-sm font-extrabold text-slate-850 dark:text-white mt-1">
+                  <p className="text-sm font-extrabold text-slate-800 dark:text-white mt-1">
                     ₹{(sortedCF[sortedCF.length - 1]?.operatingCashFlow / 10000000).toFixed(2)} Cr
                   </p>
                 </div>
-                <span className="text-[10px] font-bold text-slate-400 bg-slate-100 dark:bg-slate-805 px-2 py-0.5 rounded-full">Audited</span>
+                <span className="text-[10px] font-bold text-slate-450 bg-slate-100 dark:bg-slate-800/50 px-2 py-0.5 rounded-full">Audited</span>
               </div>
               <div className="p-4 bg-slate-50 dark:bg-slate-800/30 border border-slate-100 dark:border-slate-800/40 rounded-2xl flex items-center justify-between">
                 <div>
                   <span className="text-[10px] text-slate-400 font-bold uppercase">Investing Cash Flow</span>
-                  <p className="text-sm font-extrabold text-slate-850 dark:text-white mt-1">
+                  <p className="text-sm font-extrabold text-slate-800 dark:text-white mt-1">
                     ₹{(sortedCF[sortedCF.length - 1]?.investingCashFlow / 10000000).toFixed(2)} Cr
                   </p>
                 </div>
-                <span className="text-[10px] font-bold text-slate-400 bg-slate-100 dark:bg-slate-805 px-2 py-0.5 rounded-full">Capex Included</span>
+                <span className="text-[10px] font-bold text-slate-450 bg-slate-100 dark:bg-slate-800/50 px-2 py-0.5 rounded-full">Capex Included</span>
               </div>
               <div className="p-4 bg-slate-50 dark:bg-slate-800/30 border border-slate-100 dark:border-slate-800/40 rounded-2xl flex items-center justify-between">
                 <div>
                   <span className="text-[10px] text-slate-400 font-bold uppercase">Financing Cash Flow</span>
-                  <p className="text-sm font-extrabold text-slate-850 dark:text-white mt-1">
+                  <p className="text-sm font-extrabold text-slate-800 dark:text-white mt-1">
                     ₹{(sortedCF[sortedCF.length - 1]?.financingCashFlow / 10000000).toFixed(2)} Cr
                   </p>
                 </div>
-                <span className="text-[10px] font-bold text-slate-400 bg-slate-100 dark:bg-slate-805 px-2 py-0.5 rounded-full">Debt Actions</span>
+                <span className="text-[10px] font-bold text-slate-450 bg-slate-100 dark:bg-slate-800/50 px-2 py-0.5 rounded-full">Debt Actions</span>
               </div>
             </div>
           </div>
 
           <div className="mt-6 p-4 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-100 dark:border-slate-800/60 leading-relaxed text-[11px] text-slate-500 dark:text-slate-400 font-semibold">
-            💬 <span className="text-slate-800 dark:text-slate-200">AI Cash Insight:</span> {
+            💬 <span className="text-slate-850 dark:text-white">AI Cash Insight:</span> {
               sortedCF[sortedCF.length - 1]?.freeCashFlow > 0
                 ? 'Strong cash generation cycle! The operating cash conversion exceeds net income, illustrating healthy high-quality earnings.'
                 : 'Free Cash Flow is slightly constrained due to heavy capital expenditure or operational working capital cycles. Highly typical for growth periods.'
@@ -1367,33 +1562,33 @@ function AIForecastDashboard({
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         
         {/* SECTION 7: Working Capital Analysis */}
-        <div className="bg-white dark:bg-slate-900/50 backdrop-blur-md rounded-3xl border border-slate-200 dark:border-slate-800 p-6 shadow-xl flex flex-col justify-between">
+        <div className="bg-white dark:bg-slate-900/50 backdrop-blur-md rounded-3xl border border-slate-200 dark:border-slate-800 p-6 shadow-xl flex flex-col justify-between animate-fade-in">
           <div>
-            <div className="flex items-center gap-2 pb-4 border-b border-slate-100 dark:border-slate-800 mb-6">
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2 mb-6">
               <Briefcase className="w-5 h-5 text-amber-500" />
-              <h3 className="text-sm font-extrabold text-slate-900 dark:text-white uppercase tracking-wider">Working Capital Analysis</h3>
-            </div>
+              Working Capital Analysis
+            </h3>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="p-4 bg-slate-50 dark:bg-slate-800/30 rounded-2xl">
                 <span className="text-[10px] text-slate-400 font-bold block uppercase">Net Working Capital</span>
-                <span className="text-base font-extrabold text-slate-850 dark:text-white mt-1 block">
+                <span className="text-base font-extrabold text-slate-800 dark:text-white mt-1 block">
                   ₹{((sortedBS[sortedBS.length - 1]?.workingCapital || 0) / 10000000).toFixed(2)} Cr
                 </span>
               </div>
               <div className="p-4 bg-slate-50 dark:bg-slate-800/30 rounded-2xl">
                 <span className="text-[10px] text-slate-400 font-bold block uppercase">Current Ratio</span>
-                <span className="text-base font-extrabold text-slate-850 dark:text-white mt-1 block">
+                <span className="text-base font-extrabold text-slate-800 dark:text-white mt-1 block">
                   {ratios.currentRatio > 0 ? ratios.currentRatio.toFixed(2) : '1.85'}x
                 </span>
               </div>
               <div className="p-4 bg-slate-50 dark:bg-slate-800/30 rounded-2xl">
                 <span className="text-[10px] text-slate-400 font-bold block uppercase">Receivable Days</span>
-                <span className="text-base font-extrabold text-slate-850 dark:text-white mt-1 block">34 Days</span>
+                <span className="text-base font-extrabold text-slate-800 dark:text-white mt-1 block">34 Days</span>
               </div>
               <div className="p-4 bg-slate-50 dark:bg-slate-800/30 rounded-2xl">
                 <span className="text-[10px] text-slate-400 font-bold block uppercase">Cash Conversion Cycle</span>
-                <span className="text-base font-extrabold text-emerald-400 mt-1 block">42 Days</span>
+                <span className="text-base font-extrabold text-emerald-500 mt-1 block">42 Days</span>
               </div>
             </div>
           </div>
@@ -1404,12 +1599,12 @@ function AIForecastDashboard({
         </div>
 
         {/* SECTION 8: Ownership & Churning Analysis */}
-        <div className="bg-white dark:bg-slate-900/50 backdrop-blur-md rounded-3xl border border-slate-200 dark:border-slate-800 p-6 shadow-xl flex flex-col justify-between">
+        <div className="bg-white dark:bg-slate-900/50 backdrop-blur-md rounded-3xl border border-slate-200 dark:border-slate-800 p-6 shadow-xl flex flex-col justify-between animate-fade-in">
           <div>
-            <div className="flex items-center gap-2 pb-4 border-b border-slate-100 dark:border-slate-800 mb-6">
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2 mb-6">
               <Users className="w-5 h-5 text-orange-500" />
-              <h3 className="text-sm font-extrabold text-slate-900 dark:text-white uppercase tracking-wider">Ownership & Churning</h3>
-            </div>
+              Ownership & Churning
+            </h3>
 
             <div className="space-y-4">
               {/* Shareholding split progress bar */}
@@ -1432,11 +1627,11 @@ function AIForecastDashboard({
               <div className="grid grid-cols-2 gap-4 text-xs font-semibold">
                 <div className="p-3 bg-slate-50 dark:bg-slate-800/30 rounded-xl">
                   <span className="text-slate-400 uppercase text-[9px] block">Delivery % (30D Avg)</span>
-                  <span className="text-sm font-extrabold text-slate-850 dark:text-white mt-1 block">54.2%</span>
+                  <span className="text-sm font-extrabold text-slate-800 dark:text-white mt-1 block">54.2%</span>
                 </div>
                 <div className="p-3 bg-slate-50 dark:bg-slate-800/30 rounded-xl">
                   <span className="text-slate-400 uppercase text-[9px] block">Ownership Trend</span>
-                  <span className="text-sm font-extrabold text-emerald-400 mt-1 block">Strong Accumulation</span>
+                  <span className="text-sm font-extrabold text-emerald-500 mt-1 block">Strong Accumulation</span>
                 </div>
               </div>
             </div>
@@ -1452,13 +1647,13 @@ function AIForecastDashboard({
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         
         {/* SECTION 9: Technical Trend Analysis */}
-        <div className="lg:col-span-2 bg-white dark:bg-slate-900/50 backdrop-blur-md rounded-3xl border border-slate-200 dark:border-slate-800 p-6 shadow-xl flex flex-col justify-between">
+        <div className="lg:col-span-2 bg-white dark:bg-slate-900/50 backdrop-blur-md rounded-3xl border border-slate-200 dark:border-slate-800 p-6 shadow-xl flex flex-col justify-between animate-fade-in">
           <div>
-            <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800 mb-6">
-              <div className="flex items-center gap-2">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
                 <Gauge className="w-5 h-5 text-teal-500" />
-                <h3 className="text-sm font-extrabold text-slate-900 dark:text-white uppercase tracking-wider">Technical Trend Analysis</h3>
-              </div>
+                Technical Trend Analysis
+              </h3>
               <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black border uppercase tracking-wider ${
                 techResult.zone === 'Buy Zone'
                   ? 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20'
@@ -1475,15 +1670,15 @@ function AIForecastDashboard({
                 <span className="text-[10px] text-slate-400 font-bold uppercase block">EMA Indicators</span>
                 <div className="mt-2 space-y-1 text-xs font-semibold">
                   <div className="flex justify-between">
-                    <span className="text-slate-450">EMA-20:</span>
+                    <span className="text-slate-455">EMA-20:</span>
                     <span className="text-slate-800 dark:text-slate-200 font-mono">₹{techResult.ema20.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-slate-450">EMA-50:</span>
+                    <span className="text-slate-455">EMA-50:</span>
                     <span className="text-slate-800 dark:text-slate-200 font-mono">₹{techResult.ema50.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-slate-450">EMA-200:</span>
+                    <span className="text-slate-455">EMA-200:</span>
                     <span className="text-slate-800 dark:text-slate-200 font-mono">₹{techResult.ema200.toFixed(2)}</span>
                   </div>
                 </div>
@@ -1493,7 +1688,7 @@ function AIForecastDashboard({
                 <span className="text-[10px] text-slate-400 font-bold uppercase block">Momentum Metrics</span>
                 <div className="mt-2 space-y-1 text-xs font-semibold">
                   <div className="flex justify-between">
-                    <span className="text-slate-450">RSI (14):</span>
+                    <span className="text-slate-455">RSI (14):</span>
                     <span className={`font-extrabold font-mono ${
                       techResult.rsi > 70 ? 'text-red-500' : techResult.rsi < 30 ? 'text-emerald-500' : 'text-slate-800 dark:text-slate-200'
                     }`}>
@@ -1501,7 +1696,7 @@ function AIForecastDashboard({
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-slate-450">MACD Hist:</span>
+                    <span className="text-slate-455">MACD Hist:</span>
                     <span className={`font-mono ${techResult.macd.hist >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
                       {techResult.macd.hist.toFixed(2)}
                     </span>
@@ -1513,12 +1708,12 @@ function AIForecastDashboard({
                 <span className="text-[10px] text-slate-400 font-bold uppercase block">Channels (30D)</span>
                 <div className="mt-2 space-y-1 text-xs font-semibold">
                   <div className="flex justify-between">
-                    <span className="text-slate-450">Resistance:</span>
-                    <span className="text-red-400 font-mono">₹{techResult.resistance.toFixed(2)}</span>
+                    <span className="text-slate-455">Resistance:</span>
+                    <span className="text-red-500 dark:text-red-400 font-mono">₹{techResult.resistance.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-slate-450">Support:</span>
-                    <span className="text-emerald-400 font-mono">₹{techResult.support.toFixed(2)}</span>
+                    <span className="text-slate-455">Support:</span>
+                    <span className="text-emerald-500 dark:text-emerald-400 font-mono">₹{techResult.support.toFixed(2)}</span>
                   </div>
                 </div>
               </div>
@@ -1535,44 +1730,94 @@ function AIForecastDashboard({
         </div>
 
         {/* SECTION 10: AI Investment Summary Section */}
-        <div className="bg-gradient-to-br from-indigo-900/10 via-slate-900/40 to-slate-900/60 backdrop-blur-xl border border-indigo-500/25 rounded-3xl p-6 shadow-xl flex flex-col justify-between">
+        <div className="lg:col-span-3 bg-white dark:bg-slate-900/50 backdrop-blur-md border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xl flex flex-col justify-between animate-fade-in">
           <div>
-            <div className="flex items-center justify-between pb-4 border-b border-indigo-800/50 mb-6">
-              <div className="flex items-center gap-2">
-                <CheckCircle className="w-5 h-5 text-indigo-400" />
-                <h3 className="text-sm font-extrabold text-white uppercase tracking-wider">AI Investment Summary</h3>
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 border-b border-slate-100 dark:border-slate-800/60 pb-4 gap-4">
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <CheckCircle className="w-5 h-5 text-indigo-500 animate-pulse" />
+                AI Investment Summary & Stance
+              </h3>
+              <div className="flex items-center gap-3">
+                <span className={`px-3 py-1 rounded-full text-xs font-black border uppercase tracking-wider shadow-sm ${
+                  outlookResult.sentiment === 'Bullish'
+                    ? 'text-emerald-600 bg-emerald-500/10 border-emerald-500/20 dark:text-emerald-400 dark:bg-emerald-500/15 dark:border-emerald-500/35'
+                    : outlookResult.sentiment === 'Bearish'
+                    ? 'text-red-600 bg-red-500/10 border-red-500/20 dark:text-red-400 dark:bg-red-500/15 dark:border-red-500/35'
+                    : 'text-amber-600 bg-amber-500/10 border-amber-500/20 dark:text-amber-400 dark:bg-amber-500/15 dark:border-amber-500/35'
+                }`}>
+                  {outlookResult.sentiment} Sentiment
+                </span>
+                <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-900/80 px-3 py-1 rounded-full border border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-700 dark:text-slate-200 shadow-inner">
+                  <span>Audited Score:</span>
+                  <span className="text-indigo-600 dark:text-indigo-400 font-extrabold">{piotroskiResult.score}/9</span>
+                </div>
               </div>
-              <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black border uppercase tracking-wider ${
-                outlookResult.sentiment === 'Bullish'
-                  ? 'text-emerald-400 bg-emerald-500/15 border-emerald-500/35'
-                  : 'text-amber-400 bg-amber-500/15 border-amber-500/35'
-              }`}>
-                {outlookResult.sentiment}
-              </span>
             </div>
 
-            <div className="space-y-4">
-              <div>
-                <span className="text-[10px] text-slate-400 font-bold uppercase block mb-1">Strengths</span>
-                <ul className="list-disc pl-4 text-xs font-semibold text-slate-300 space-y-1">
-                  <li>Strong balance sheet, low default indicators.</li>
-                  <li>Healthy margins, high structural efficiency.</li>
-                </ul>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              
+              {/* STRENGTHS COLUMN */}
+              <div className="space-y-4">
+                <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold uppercase tracking-wider block mb-2 px-2 bg-emerald-500/10 dark:bg-emerald-500/15 rounded-md py-1 w-max">
+                  ✔ Core Growth Strengths
+                </span>
+                
+                <div className="grid grid-cols-1 gap-4">
+                  {outlookResult.strengths.map((str, idx) => (
+                    <div key={idx} className="p-4 rounded-2xl bg-emerald-500/5 border border-emerald-500/10 dark:border-emerald-500/20 hover:border-emerald-500/30 transition-all flex flex-col justify-between gap-1.5 shadow-sm">
+                      <div className="flex justify-between items-center gap-2">
+                        <span className="text-xs font-bold text-slate-850 dark:text-slate-200">{str.title}</span>
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 uppercase tracking-wide border border-emerald-500/20">
+                          {str.badge}
+                        </span>
+                      </div>
+                      <p className="text-[11px] font-semibold text-slate-550 dark:text-slate-400 leading-relaxed">
+                        {str.desc}
+                      </p>
+                    </div>
+                  ))}
+                </div>
               </div>
 
-              <div>
-                <span className="text-[10px] text-slate-400 font-bold uppercase block mb-1">Risks</span>
-                <ul className="list-disc pl-4 text-xs font-semibold text-slate-350 space-y-1">
-                  <li>Valuation contains a moderate growth premium.</li>
-                  <li>Susceptible to broader market profit bookings.</li>
-                </ul>
+              {/* RISKS COLUMN */}
+              <div className="space-y-4">
+                <span className="text-[10px] text-red-650 dark:text-red-400 font-bold uppercase tracking-wider block mb-2 px-2 bg-red-500/10 dark:bg-red-500/15 rounded-md py-1 w-max">
+                  ✖ Solvency & Volatility Risks
+                </span>
+                
+                <div className="grid grid-cols-1 gap-4">
+                  {outlookResult.risks.map((risk, idx) => (
+                    <div key={idx} className="p-4 rounded-2xl bg-red-500/5 border border-red-500/10 dark:border-red-500/20 hover:border-red-500/30 transition-all flex flex-col justify-between gap-1.5 shadow-sm">
+                      <div className="flex justify-between items-center gap-2">
+                        <span className="text-xs font-bold text-slate-850 dark:text-slate-200">{risk.title}</span>
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-red-500/15 text-red-600 dark:text-red-400 uppercase tracking-wide border border-red-500/20">
+                          {risk.badge}
+                        </span>
+                      </div>
+                      <p className="text-[11px] font-semibold text-slate-550 dark:text-slate-400 leading-relaxed">
+                        {risk.desc}
+                      </p>
+                    </div>
+                  ))}
+                </div>
               </div>
+
             </div>
           </div>
 
-          <div className="mt-6 pt-4 border-t border-slate-800">
-            <span className="text-[9px] text-slate-450 font-bold uppercase block mb-1">Suggested Strategy</span>
-            <p className="text-sm font-black text-indigo-400">{outlookResult.strategy}</p>
+          <div className="mt-8 pt-6 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-slate-50 dark:bg-slate-900/40 p-4 sm:p-5 rounded-2xl border border-slate-200/50 dark:border-slate-800">
+            <div>
+              <span className="text-[9px] text-slate-400 dark:text-slate-500 font-black uppercase tracking-wider block mb-1">
+                Suggested Capital Allocation Strategy
+              </span>
+              <p className="text-sm font-black text-slate-900 dark:text-white leading-relaxed flex items-center gap-1.5">
+                🎯 {outlookResult.strategy}
+              </p>
+            </div>
+            <div className="px-4 py-2 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl text-xs font-extrabold text-white shadow-md shadow-indigo-500/10 flex items-center gap-1">
+              <span>Machine Consensus Approved</span>
+              <Check className="w-3.5 h-3.5" />
+            </div>
           </div>
         </div>
 
@@ -1620,6 +1865,79 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
   const [priceFlash, setPriceFlash] = useState<'up' | 'down' | null>(null);
 
   const decodedSymbol = decodeURIComponent(resolvedParams.symbol);
+
+  const isScrollingRef = useRef(false);
+  const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const activeTabRef = useRef(activeTab);
+
+  useEffect(() => {
+    activeTabRef.current = activeTab;
+  }, [activeTab]);
+
+  const handleTabClick = (tabId: string) => {
+    isScrollingRef.current = true;
+    setActiveTab(tabId as any);
+    if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
+    
+    const el = document.getElementById(`section-${tabId}`);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    const btn = document.getElementById(`tab-btn-${tabId}`);
+    if (btn) {
+      btn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+    }
+
+    scrollTimeoutRef.current = setTimeout(() => {
+      isScrollingRef.current = false;
+    }, 800);
+  };
+
+  useEffect(() => {
+    const tabs = ['ratios', 'ai', 'news', 'about', 'qpl', 'pl', 'bs', 'cf', 'peers', 'shareholding'];
+    
+    const observerCallback = (entries: IntersectionObserverEntry[]) => {
+      if (isScrollingRef.current) return;
+
+      let activeSectionId = activeTabRef.current;
+      const scrollOffset = 140; // 24rem/96px sticky header offset
+
+      tabs.forEach(tab => {
+        const el = document.getElementById(`section-${tab}`);
+        if (el) {
+          const rect = el.getBoundingClientRect();
+          if (rect.top <= scrollOffset + 50 && rect.bottom > scrollOffset) {
+            activeSectionId = tab as any;
+          }
+        }
+      });
+
+      if (activeSectionId !== activeTabRef.current) {
+        setActiveTab(activeSectionId as any);
+        const btn = document.getElementById(`tab-btn-${activeSectionId}`);
+        if (btn) {
+          btn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+        }
+      }
+    };
+
+    const observer = new IntersectionObserver(observerCallback, {
+      root: null,
+      rootMargin: '-120px 0px -40% 0px',
+      threshold: [0, 0.1, 0.2],
+    });
+
+    tabs.forEach(tab => {
+      const el = document.getElementById(`section-${tab}`);
+      if (el) observer.observe(el);
+    });
+
+    return () => {
+      observer.disconnect();
+      if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
+    };
+  }, []);
 
   // Load theme after mount
   useEffect(() => {
@@ -2138,11 +2456,13 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
           </div>
         </div>
 
-        {/* Tab Selection */}
-        <div className="flex border-b border-slate-200 dark:border-slate-800 mb-8 overflow-x-auto gap-4 scrollbar-none">
+
+        {/* Tab Selection - Continuous Scroll Cockpit sticky header */}
+        <div className="sticky top-0 z-30 flex bg-slate-50/80 dark:bg-slate-950/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 mb-8 py-3.5 px-2 overflow-x-auto gap-4 scrollbar-none transition-all duration-300">
           <button
-            onClick={() => setActiveTab('ratios')}
-            className={`pb-4 px-2 text-sm font-semibold border-b-2 whitespace-nowrap transition-all ${
+            id="tab-btn-ratios"
+            onClick={() => handleTabClick('ratios')}
+            className={`pb-3 px-2 text-sm font-semibold border-b-2 whitespace-nowrap transition-all ${
               activeTab === 'ratios'
                 ? 'border-blue-500 text-blue-500 dark:text-blue-400'
                 : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
@@ -2151,8 +2471,9 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
             Overview & Ratios
           </button>
           <button
-            onClick={() => setActiveTab('ai')}
-            className={`pb-4 px-2 text-sm font-semibold border-b-2 whitespace-nowrap transition-all ${
+            id="tab-btn-ai"
+            onClick={() => handleTabClick('ai')}
+            className={`pb-3 px-2 text-sm font-semibold border-b-2 whitespace-nowrap transition-all ${
               activeTab === 'ai'
                 ? 'border-blue-500 text-blue-500 dark:text-blue-400 font-extrabold'
                 : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
@@ -2161,8 +2482,9 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
             🧠 AI Outlook & Analysis
           </button>
           <button
-            onClick={() => setActiveTab('news')}
-            className={`pb-4 px-2 text-sm font-semibold border-b-2 whitespace-nowrap transition-all ${
+            id="tab-btn-news"
+            onClick={() => handleTabClick('news')}
+            className={`pb-3 px-2 text-sm font-semibold border-b-2 whitespace-nowrap transition-all ${
               activeTab === 'news'
                 ? 'border-blue-500 text-blue-500 dark:text-blue-400'
                 : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
@@ -2171,8 +2493,9 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
             Latest News
           </button>
           <button
-            onClick={() => setActiveTab('about')}
-            className={`pb-4 px-2 text-sm font-semibold border-b-2 whitespace-nowrap transition-all ${
+            id="tab-btn-about"
+            onClick={() => handleTabClick('about')}
+            className={`pb-3 px-2 text-sm font-semibold border-b-2 whitespace-nowrap transition-all ${
               activeTab === 'about'
                 ? 'border-blue-500 text-blue-500 dark:text-blue-400'
                 : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
@@ -2181,18 +2504,20 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
             About & Profile
           </button>
           <button
-            onClick={() => setActiveTab('qpl')}
-            className={`pb-4 px-2 text-sm font-semibold border-b-2 whitespace-nowrap transition-all ${
+            id="tab-btn-qpl"
+            onClick={() => handleTabClick('qpl')}
+            className={`pb-3 px-2 text-sm font-semibold border-b-2 whitespace-nowrap transition-all ${
               activeTab === 'qpl'
                 ? 'border-blue-500 text-blue-500 dark:text-blue-400'
                 : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
             }`}
           >
-            Quarterly Results (Recent)
+            Quarterly Results
           </button>
           <button
-            onClick={() => setActiveTab('pl')}
-            className={`pb-4 px-2 text-sm font-semibold border-b-2 whitespace-nowrap transition-all ${
+            id="tab-btn-pl"
+            onClick={() => handleTabClick('pl')}
+            className={`pb-3 px-2 text-sm font-semibold border-b-2 whitespace-nowrap transition-all ${
               activeTab === 'pl'
                 ? 'border-blue-500 text-blue-500 dark:text-blue-400'
                 : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
@@ -2201,8 +2526,9 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
             Profit & Loss (10Y)
           </button>
           <button
-            onClick={() => setActiveTab('bs')}
-            className={`pb-4 px-2 text-sm font-semibold border-b-2 whitespace-nowrap transition-all ${
+            id="tab-btn-bs"
+            onClick={() => handleTabClick('bs')}
+            className={`pb-3 px-2 text-sm font-semibold border-b-2 whitespace-nowrap transition-all ${
               activeTab === 'bs'
                 ? 'border-blue-500 text-blue-500 dark:text-blue-400'
                 : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
@@ -2211,8 +2537,9 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
             Balance Sheet (10Y)
           </button>
           <button
-            onClick={() => setActiveTab('cf')}
-            className={`pb-4 px-2 text-sm font-semibold border-b-2 whitespace-nowrap transition-all ${
+            id="tab-btn-cf"
+            onClick={() => handleTabClick('cf')}
+            className={`pb-3 px-2 text-sm font-semibold border-b-2 whitespace-nowrap transition-all ${
               activeTab === 'cf'
                 ? 'border-blue-500 text-blue-500 dark:text-blue-400'
                 : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
@@ -2221,8 +2548,9 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
             Cash Flow (10Y)
           </button>
           <button
-            onClick={() => setActiveTab('peers')}
-            className={`pb-4 px-2 text-sm font-semibold border-b-2 whitespace-nowrap transition-all ${
+            id="tab-btn-peers"
+            onClick={() => handleTabClick('peers')}
+            className={`pb-3 px-2 text-sm font-semibold border-b-2 whitespace-nowrap transition-all ${
               activeTab === 'peers'
                 ? 'border-blue-500 text-blue-500 dark:text-blue-400'
                 : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
@@ -2231,8 +2559,9 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
             Peer Comparison
           </button>
           <button
-            onClick={() => setActiveTab('shareholding')}
-            className={`pb-4 px-2 text-sm font-semibold border-b-2 whitespace-nowrap transition-all ${
+            id="tab-btn-shareholding"
+            onClick={() => handleTabClick('shareholding')}
+            className={`pb-3 px-2 text-sm font-semibold border-b-2 whitespace-nowrap transition-all ${
               activeTab === 'shareholding'
                 ? 'border-blue-500 text-blue-500 dark:text-blue-400'
                 : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
@@ -2242,8 +2571,10 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
           </button>
         </div>
 
-        {/* Tab Contents */}
-        {activeTab === 'ratios' && (
+        {/* Tab Contents - Continuous Scroll Stack in Exact Sequence */}
+        <div className="space-y-16">
+          {/* 1. Overview & Ratios */}
+          <div id="section-ratios" className="scroll-mt-24">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             
             {/* Interactive high-fidelity Price & Volume Chart block */}
@@ -2915,40 +3246,110 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
             </div>
 
             {/* Pros & Cons Section */}
-            <div className="md:col-span-3 bg-white dark:bg-slate-900/50 backdrop-blur-md rounded-3xl border border-slate-200 dark:border-slate-800 p-6 sm:p-8 shadow-xl">
-              <h3 className="text-lg font-bold mb-6 text-slate-900 dark:text-white">Vision Analysis: Pros & Cons</h3>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                {/* Pros */}
-                <div className="space-y-4">
-                  <div className="flex items-center gap-2 text-emerald-500 font-bold text-sm">
-                    <CheckCircle className="w-5 h-5" />
-                    <span>PROS / ADVANTAGES</span>
+            <div className="md:col-span-3 bg-white dark:bg-slate-900/50 backdrop-blur-md rounded-3xl border border-slate-200 dark:border-slate-800 p-6 sm:p-8 shadow-xl flex flex-col justify-between animate-fade-in">
+              <div>
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 border-b border-slate-105 dark:border-slate-800/60 pb-4 gap-4">
+                  <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    <CheckCircle className="w-5 h-5 text-indigo-500 animate-pulse" />
+                    Vision Analysis: Pros & Cons
+                  </h3>
+                  <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-900/80 px-3 py-1 rounded-full border border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-700 dark:text-slate-200 shadow-inner">
+                    <span>Active Parameters Scan</span>
                   </div>
-                  <ul className="space-y-3">
-                    {pros.map((pro, index) => (
-                      <li key={index} className="flex gap-2 items-start text-sm text-slate-600 dark:text-slate-350">
-                        <span className="text-emerald-500 mt-0.5">•</span>
-                        <span>{pro}</span>
-                      </li>
-                    ))}
-                  </ul>
                 </div>
 
-                {/* Cons */}
-                <div className="space-y-4">
-                  <div className="flex items-center gap-2 text-red-500 font-bold text-sm">
-                    <AlertTriangle className="w-5 h-5" />
-                    <span>CONS / LIMITATIONS</span>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  {/* Pros */}
+                  <div className="space-y-4">
+                    <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold uppercase tracking-wider block mb-2 px-2 bg-emerald-500/10 dark:bg-emerald-500/15 rounded-md py-1 w-max">
+                      ✔ Core Watchlist Advantages
+                    </span>
+                    <div className="grid grid-cols-1 gap-4">
+                      {pros.map((pro, index) => {
+                        let title = "Advantage";
+                        let badge = "PRO";
+                        const lowerPro = pro.toLowerCase();
+                        if (lowerPro.includes("debt")) {
+                          title = "Leverage Profile";
+                          badge = `D/E ${ratios.debtToEquity > 0 ? (ratios.debtToEquity / 100).toFixed(2) : '0.00'}`;
+                        } else if (lowerPro.includes("return on equity") || lowerPro.includes("roe")) {
+                          title = "Capital Compounding";
+                          badge = `ROE ${ratios.roe > 0 ? ratios.roe.toFixed(1) + '%' : 'HIGH'}`;
+                        } else if (lowerPro.includes("return on assets") || lowerPro.includes("roa")) {
+                          title = "Asset Returns Productivity";
+                          badge = `ROA ${ratios.roa > 0 ? ratios.roa.toFixed(1) + '%' : 'HIGH'}`;
+                        } else if (lowerPro.includes("dividend")) {
+                          title = "Shareholder Distribution";
+                          badge = `YIELD ${ratios.divYield > 0 ? ratios.divYield.toFixed(2) + '%' : 'DIVIDEND'}`;
+                        } else if (lowerPro.includes("valuation") || lowerPro.includes("p/e") || lowerPro.includes("pe")) {
+                          title = "Valuation Multiple";
+                          badge = `P/E ${ratios.pe > 0 ? ratios.pe.toFixed(1) + 'x' : 'VALUE'}`;
+                        } else if (lowerPro.includes("liquidity") || lowerPro.includes("current ratio")) {
+                          title = "Working Capital Buffer";
+                          badge = `CR ${ratios.currentRatio > 0 ? ratios.currentRatio.toFixed(2) + 'x' : 'LIQUID'}`;
+                        }
+                        return (
+                          <div key={index} className="p-4 rounded-2xl bg-emerald-500/5 border border-emerald-500/10 dark:border-emerald-500/20 hover:border-emerald-500/30 transition-all flex flex-col justify-between gap-1.5 shadow-sm">
+                            <div className="flex justify-between items-center gap-2">
+                              <span className="text-xs font-bold text-slate-800 dark:text-slate-200">{title}</span>
+                              <span className="px-2 py-0.5 rounded-full text-[9px] font-black bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 uppercase tracking-wide border border-emerald-500/20">
+                                {badge}
+                              </span>
+                            </div>
+                            <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 leading-relaxed">
+                              {pro}
+                            </p>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
-                  <ul className="space-y-3">
-                    {cons.map((con, index) => (
-                      <li key={index} className="flex gap-2 items-start text-sm text-slate-600 dark:text-slate-350">
-                        <span className="text-red-500 mt-0.5">•</span>
-                        <span>{con}</span>
-                      </li>
-                    ))}
-                  </ul>
+
+                  {/* Cons */}
+                  <div className="space-y-4">
+                    <span className="text-[10px] text-red-650 dark:text-red-400 font-bold uppercase tracking-wider block mb-2 px-2 bg-red-500/10 dark:bg-red-500/15 rounded-md py-1 w-max">
+                      ✖ Operational Risks & Constraints
+                    </span>
+                    <div className="grid grid-cols-1 gap-4">
+                      {cons.map((con, index) => {
+                        let title = "Constraint";
+                        let badge = "CON";
+                        const lowerCon = con.toLowerCase();
+                        if (lowerCon.includes("debt")) {
+                          title = "Leverage Burden";
+                          badge = `D/E ${ratios.debtToEquity > 0 ? (ratios.debtToEquity / 100).toFixed(2) : 'HIGH'}`;
+                        } else if (lowerCon.includes("return on equity") || lowerCon.includes("roe")) {
+                          title = "Capital compounding efficiency";
+                          badge = `ROE ${ratios.roe > 0 ? ratios.roe.toFixed(1) + '%' : 'LOW'}`;
+                        } else if (lowerCon.includes("valuation") || lowerCon.includes("p/e") || lowerCon.includes("pe")) {
+                          title = "Premium Valuation Pricing";
+                          badge = `P/E ${ratios.pe > 0 ? ratios.pe.toFixed(1) + 'x' : 'PREMIUM'}`;
+                        } else if (lowerCon.includes("book value")) {
+                          title = "Asset Premium Valuation";
+                          badge = `${ratios.cmpBv > 0 ? ratios.cmpBv.toFixed(1) + 'x BV' : 'VALUATION'}`;
+                        } else if (lowerCon.includes("liquidity") || lowerCon.includes("current ratio")) {
+                          title = "Liquidity Pressure Points";
+                          badge = `CR ${ratios.currentRatio > 0 ? ratios.currentRatio.toFixed(2) + 'x' : 'TIGHT'}`;
+                        } else if (lowerCon.includes("capital premium") || lowerCon.includes("trading margins")) {
+                          title = "Growth Hurdle";
+                          badge = "MARGIN STRESS";
+                        }
+                        return (
+                          <div key={index} className="p-4 rounded-2xl bg-red-500/5 border border-red-500/10 dark:border-red-500/20 hover:border-red-500/30 transition-all flex flex-col justify-between gap-1.5 shadow-sm">
+                            <div className="flex justify-between items-center gap-2">
+                              <span className="text-xs font-bold text-slate-800 dark:text-slate-200">{title}</span>
+                              <span className="px-2 py-0.5 rounded-full text-[9px] font-black bg-red-500/15 text-red-650 dark:text-red-400 uppercase tracking-wide border border-red-500/20">
+                                {badge}
+                              </span>
+                            </div>
+                            <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 leading-relaxed">
+                              {con}
+                            </p>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -2961,7 +3362,7 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
                 </h3>
                 <button
                   type="button"
-                  onClick={() => setActiveTab('news')}
+                  onClick={() => handleTabClick('news')}
                   className="text-xs font-bold text-blue-500 hover:text-blue-600 flex items-center gap-1 group"
                 >
                   View All News <span className="group-hover:translate-x-0.5 transition-transform">→</span>
@@ -3001,13 +3402,57 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
             </div>
             
           </div>
-        )}
+          </div>
 
-        {activeTab === 'ai' && (
+          {/* 2. AI Outlook & Analysis */}
+          <div id="section-ai" className="scroll-mt-24">
           <AIForecastDashboard data={data} displayPrice={displayPrice} theme={theme} />
-        )}
+          </div>
 
-        {activeTab === 'about' && (
+          {/* 3. Latest News */}
+          <div id="section-news" className="scroll-mt-24">
+          <div className="bg-white dark:bg-slate-900/50 backdrop-blur-md rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden p-6 sm:p-8">
+            <div className="flex items-center gap-2 mb-6 border-b border-slate-200 dark:border-slate-800 pb-4">
+              <Newspaper className="w-5 h-5 text-blue-500" />
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white">Latest News & Corporate Updates</h3>
+            </div>
+            {!data.news || data.news.length === 0 ? (
+              <div className="p-12 text-center text-slate-500 font-medium">No recent news articles found for this stock symbol.</div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {data.news.map((item, idx) => (
+                  <a
+                    key={idx}
+                    href={item.link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex flex-col justify-between p-5 bg-slate-50/50 dark:bg-slate-800/30 hover:bg-blue-500/5 dark:hover:bg-blue-500/10 border border-slate-200 dark:border-slate-800 hover:border-blue-500/30 rounded-2xl transition-all group duration-300"
+                  >
+                    <div>
+                      <div className="flex items-center justify-between gap-4 mb-2.5">
+                        <span className="text-[10px] font-extrabold uppercase tracking-wider text-blue-600 dark:text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded">
+                          {item.publisher}
+                        </span>
+                        <span className="text-[10px] text-slate-400 font-medium">
+                          {item.date}
+                        </span>
+                      </div>
+                      <h4 className="text-sm font-bold text-slate-900 dark:text-white group-hover:text-blue-500 transition-colors leading-snug">
+                        {item.title}
+                      </h4>
+                    </div>
+                    <div className="mt-4 flex items-center text-[11px] font-bold text-blue-500 hover:text-blue-600">
+                      Read Article <span className="ml-1 group-hover:translate-x-1 transition-transform">→</span>
+                    </div>
+                  </a>
+                ))}
+              </div>
+            )}
+          </div>
+          </div>
+
+          {/* 4. About & Profile */}
+          <div id="section-about" className="scroll-mt-24">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Corporate Profile overview */}
             <div className="lg:col-span-2 space-y-6">
@@ -3096,9 +3541,10 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
             </div>
 
           </div>
-        )}
+          </div>
 
-        {activeTab === 'qpl' && (
+          {/* 5. Quarterly Results */}
+          <div id="section-qpl" className="scroll-mt-24">
           <div className="bg-white dark:bg-slate-900/50 backdrop-blur-md rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden">
             <div className="p-6 border-b border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div className="flex items-center gap-2">
@@ -3147,9 +3593,10 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
               </div>
             )}
           </div>
-        )}
+          </div>
 
-        {activeTab === 'pl' && (
+          {/* 6. Profit & Loss */}
+          <div id="section-pl" className="scroll-mt-24">
           <div className="bg-white dark:bg-slate-900/50 backdrop-blur-md rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden">
             <div className="p-6 border-b border-slate-200 dark:border-slate-800 flex items-center gap-2">
               <FileText className="w-5 h-5 text-blue-500" />
@@ -3190,9 +3637,10 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
               </div>
             )}
           </div>
-        )}
+          </div>
 
-        {activeTab === 'bs' && (
+          {/* 7. Balance Sheet */}
+          <div id="section-bs" className="scroll-mt-24">
           <div className="bg-white dark:bg-slate-900/50 backdrop-blur-md rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden">
             <div className="p-6 border-b border-slate-200 dark:border-slate-800 flex items-center gap-2">
               <Layers className="w-5 h-5 text-blue-500" />
@@ -3231,9 +3679,10 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
               </div>
             )}
           </div>
-        )}
+          </div>
 
-        {activeTab === 'cf' && (
+          {/* 8. Cash Flow */}
+          <div id="section-cf" className="scroll-mt-24">
           <div className="bg-white dark:bg-slate-900/50 backdrop-blur-md rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden">
             <div className="p-6 border-b border-slate-200 dark:border-slate-800 flex items-center gap-2">
               <DollarSign className="w-5 h-5 text-blue-500" />
@@ -3284,9 +3733,10 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
               </div>
             )}
           </div>
-        )}
+          </div>
 
-        {activeTab === 'peers' && (
+          {/* 9. Peer Comparison */}
+          <div id="section-peers" className="scroll-mt-24">
           <div className="bg-white dark:bg-slate-900/50 backdrop-blur-md rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden">
             <div className="p-6 border-b border-slate-200 dark:border-slate-800 flex items-center gap-2">
               <Users className="w-5 h-5 text-blue-500" />
@@ -3337,9 +3787,10 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
               </div>
             )}
           </div>
-        )}
+          </div>
 
-        {activeTab === 'shareholding' && (
+          {/* 10. Shareholding Pattern */}
+          <div id="section-shareholding" className="scroll-mt-24">
           <div className="bg-white dark:bg-slate-900/50 backdrop-blur-md rounded-3xl border border-slate-200 dark:border-slate-800 p-6 sm:p-8 shadow-xl">
             <h3 className="text-lg font-bold mb-8 flex items-center gap-2 text-slate-900 dark:text-white">
               <PieChart className="w-5 h-5 text-blue-500" /> Shareholding Pattern Breakup
@@ -3390,48 +3841,9 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
               </div>
             </div>
           </div>
-        )}
-
-        {activeTab === 'news' && (
-          <div className="bg-white dark:bg-slate-900/50 backdrop-blur-md rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden p-6 sm:p-8">
-            <div className="flex items-center gap-2 mb-6 border-b border-slate-200 dark:border-slate-800 pb-4">
-              <Newspaper className="w-5 h-5 text-blue-500" />
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white">Latest News & Corporate Updates</h3>
-            </div>
-            {!data.news || data.news.length === 0 ? (
-              <div className="p-12 text-center text-slate-500 font-medium">No recent news articles found for this stock symbol.</div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {data.news.map((item, idx) => (
-                  <a
-                    key={idx}
-                    href={item.link}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex flex-col justify-between p-5 bg-slate-50/50 dark:bg-slate-800/30 hover:bg-blue-500/5 dark:hover:bg-blue-500/10 border border-slate-200 dark:border-slate-800 hover:border-blue-500/30 rounded-2xl transition-all group duration-300"
-                  >
-                    <div>
-                      <div className="flex items-center justify-between gap-4 mb-2.5">
-                        <span className="text-[10px] font-extrabold uppercase tracking-wider text-blue-600 dark:text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded">
-                          {item.publisher}
-                        </span>
-                        <span className="text-[10px] text-slate-400 font-medium">
-                          {item.date}
-                        </span>
-                      </div>
-                      <h4 className="text-sm font-bold text-slate-900 dark:text-white group-hover:text-blue-500 transition-colors leading-snug">
-                        {item.title}
-                      </h4>
-                    </div>
-                    <div className="mt-4 flex items-center text-[11px] font-bold text-blue-500 hover:text-blue-600">
-                      Read Article <span className="ml-1 group-hover:translate-x-1 transition-transform">→</span>
-                    </div>
-                  </a>
-                ))}
-              </div>
-            )}
           </div>
-        )}
+        </div>
+
 
         {/* Dynamic Disclaimer Banner */}
         <div className="mt-8 flex items-start gap-3 p-4 bg-blue-500/5 dark:bg-blue-500/10 rounded-2xl border border-blue-500/20 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
