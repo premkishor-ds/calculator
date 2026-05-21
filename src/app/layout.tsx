@@ -30,6 +30,21 @@ export const metadata: Metadata = {
     index: true,
     follow: true,
   },
+  openGraph: {
+    type: 'website',
+    siteName: 'Vision Wealth',
+    title: 'Vision Wealth | Advanced SIP & CAGR Compounding Calculator',
+    description: 'The most accurate wealth planner for Indian equity investors. Calculate Step-Up SIP, CAGR growth, and retirement goals with inflation and tax adjustments.',
+    url: 'https://dataforger.com',
+    images: [{ url: 'https://dataforger.com/og-default.png', width: 1200, height: 630, alt: 'Vision Wealth' }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    site: '@VisionWealth',
+    title: 'Vision Wealth | Advanced SIP & CAGR Compounding Calculator',
+    description: 'The most accurate wealth planner for Indian equity investors.',
+    images: ['https://dataforger.com/og-default.png'],
+  },
 };
 
 export default function RootLayout({
