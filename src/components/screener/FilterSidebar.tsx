@@ -56,10 +56,17 @@ const FILTER_GROUPS = [
   },
 ];
 
-export const FilterSidebar = () => {
+export const FilterSidebar = ({ 
+  activeFilters, 
+  onToggleFilter,
+  onClearAll
+}: { 
+  activeFilters: string[]; 
+  onToggleFilter: (filter: string) => void;
+  onClearAll: () => void;
+}) => {
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({ general: true });
   const [searchQueries, setSearchQueries] = useState<Record<string, string>>({});
-  const [activeFilters, setActiveFilters] = useState<string[]>(['Market Cap Category']);
 
   const toggleGroup = (id: string) => {
     setExpandedGroups(prev => ({ ...prev, [id]: !prev[id] }));
@@ -67,14 +74,6 @@ export const FilterSidebar = () => {
 
   const handleSearch = (id: string, query: string) => {
     setSearchQueries(prev => ({ ...prev, [id]: query }));
-  };
-
-  const toggleFilter = (filterName: string) => {
-    setActiveFilters(prev => 
-      prev.includes(filterName) 
-        ? prev.filter(f => f !== filterName)
-        : [...prev, filterName]
-    );
   };
 
   return (
@@ -87,7 +86,7 @@ export const FilterSidebar = () => {
            </h2>
         </div>
         <button 
-          onClick={() => setActiveFilters([])}
+          onClick={onClearAll}
           className="text-xs text-slate-400 hover:text-blue-500 font-semibold transition-colors"
         >
           Clear All
@@ -149,7 +148,7 @@ export const FilterSidebar = () => {
                           return (
                             <button 
                               key={filterName}
-                              onClick={() => toggleFilter(filterName)}
+                              onClick={() => onToggleFilter(filterName)}
                               className={`flex items-center justify-between p-2 rounded-lg text-left transition-colors ${
                                 isActive 
                                   ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 font-semibold' 
