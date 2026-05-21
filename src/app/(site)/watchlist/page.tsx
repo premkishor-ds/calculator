@@ -86,6 +86,26 @@ export default function WatchlistPage() {
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const [apiFailed, setApiFailed] = useState(false);
   const [showFavouritesOnly, setShowFavouritesOnly] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const PAGE_SIZE = 10;
+
+  // Unified filter bar state
+  const [activeFilterField, setActiveFilterField] = useState<string>('none');
+  const [filterValue, setFilterValue] = useState<string>('');
+  const [filterDropdownOpen, setFilterDropdownOpen] = useState(false);
+
+  const FILTER_OPTIONS = [
+    { id: 'none',             label: 'No Filter',              type: 'none' },
+    { id: 'pe_lt',            label: 'P/E less than',          type: 'number' },
+    { id: 'pe_gt',            label: 'P/E greater than',       type: 'number' },
+    { id: 'profitGrowth_gt',  label: 'Profit Growth > (%)',    type: 'number' },
+    { id: 'salesGrowth_gt',   label: 'Sales Growth > (%)',     type: 'number' },
+    { id: 'promHold_gt',      label: 'Promoter Holding > (%)', type: 'number' },
+    { id: 'marketCap_gt',     label: 'Market Cap > (Cr)',      type: 'number' },
+    { id: 'divYield_gt',      label: 'Div Yield > (%)',        type: 'number' },
+    { id: 'changePercent_gt', label: 'Change % >',             type: 'number' },
+    { id: 'changePercent_lt', label: 'Change % <',             type: 'number' },
+  ];
 
   // Watchlists State
   const [watchlists, setWatchlists] = useState<WatchlistObj[]>([]);
@@ -499,6 +519,24 @@ export default function WatchlistPage() {
     }
   };
 
+  const applyFieldFilter = (stock: StockData): boolean => {
+    if (activeFilterField === 'none' || filterValue === '') return true;
+    const val = parseFloat(filterValue);
+    if (isNaN(val)) return true;
+    switch (activeFilterField) {
+      case 'pe_lt':            return stock.pe > 0 && stock.pe < val;
+      case 'pe_gt':            return stock.pe > val;
+      case 'profitGrowth_gt':  return stock.profitGrowth > val;
+      case 'salesGrowth_gt':   return stock.salesGrowth > val;
+      case 'promHold_gt':      return stock.promHold > val;
+      case 'marketCap_gt':     return (stock.marketCap / 10000000) > val;
+      case 'divYield_gt':      return stock.divYield > val;
+      case 'changePercent_gt': return stock.changePercent > val;
+      case 'changePercent_lt': return stock.changePercent < val;
+      default: return true;
+    }
+  };
+
   const filteredAndSortedStocks = stocks
     .filter(stock => {
       const matchesSearch = stock.symbol.toLowerCase().includes(search.toLowerCase()) || 
@@ -515,7 +553,7 @@ export default function WatchlistPage() {
         matchesQuery = stock.pe > 0 && stock.pe < 18 && stock.profitGrowth > 10;
       }
 
-      return matchesSearch && matchesFav && matchesTag && matchesQuery;
+      return matchesSearch && matchesFav && matchesTag && matchesQuery && applyFieldFilter(stock);
     })
     .sort((a, b) => {
       const aVal = a[sortField];
@@ -533,6 +571,13 @@ export default function WatchlistPage() {
 
       return 0;
     });
+
+  const totalPages = Math.max(1, Math.ceil(filteredAndSortedStocks.length / PAGE_SIZE));
+  const paginatedStocks = filteredAndSortedStocks.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+  const selectedFilterOption = FILTER_OPTIONS.find(f => f.id === activeFilterField) ?? FILTER_OPTIONS[0];
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  React.useEffect(() => { setCurrentPage(1); }, [search, activeTagFilter, activeQueryFilter, showFavouritesOnly, activeFilterField, filterValue, sortField, sortDirection]);
 
   const renderHeader = (label: string, field: keyof StockData, numeric = true, sticky = false) => {
     const isActive = sortField === field;
@@ -583,7 +628,7 @@ export default function WatchlistPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors duration-300 font-sans pb-20" onClick={() => setTagPopoverSym(null)}>
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors duration-300 font-sans pb-20" onClick={() => { setTagPopoverSym(null); setFilterDropdownOpen(false); }}>
       <div className="w-full px-4 sm:px-6 lg:px-8 py-12 max-w-[1600px] mx-auto">
         
         {/* Page title and description */}
@@ -679,20 +724,74 @@ export default function WatchlistPage() {
           </div>
         </div>
 
-        {/* Dynamic add search dashboard */}
+        {/* Unified Search + Filter Bar */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-          {/* Quick search filter */}
-          <div className="lg:col-span-2 relative bg-white dark:bg-slate-900/50 backdrop-blur-md rounded-3xl border border-slate-200 dark:border-slate-800 p-6 flex flex-col justify-center">
-            <label className="text-xs text-slate-400 font-bold uppercase mb-2 block">Quick Filter Watchlist</label>
+          <div className="lg:col-span-2 relative bg-white dark:bg-slate-900/50 backdrop-blur-md rounded-3xl border border-slate-200 dark:border-slate-800 p-6 flex flex-col justify-center gap-3">
+            <label className="text-xs text-slate-400 font-bold uppercase block">Search &amp; Filter Watchlist</label>
             <div className="relative">
               <Search className="absolute left-4 top-3.5 w-4 h-4 text-slate-400" />
               <input
                 type="text"
-                placeholder="Filter currently active symbols or company names..."
+                placeholder="Search by symbol or company name..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-850 rounded-2xl text-sm placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all font-medium text-slate-850 dark:text-slate-100"
               />
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setFilterDropdownOpen(o => !o)}
+                  className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl border text-xs font-bold transition-all ${
+                    activeFilterField !== 'none'
+                      ? 'bg-blue-500/10 border-blue-500/30 text-blue-600 dark:text-blue-400'
+                      : 'bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-500 hover:border-blue-400'
+                  }`}
+                >
+                  <span>⚙ {selectedFilterOption.label}</span>
+                  <ChevronDown className="w-3.5 h-3.5" />
+                </button>
+                {filterDropdownOpen && (
+                  <div className="absolute left-0 top-full mt-1 z-50 w-64 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl overflow-hidden">
+                    {FILTER_OPTIONS.map(opt => (
+                      <button
+                        key={opt.id}
+                        type="button"
+                        onClick={() => { setActiveFilterField(opt.id); setFilterValue(''); setFilterDropdownOpen(false); }}
+                        className={`w-full text-left px-4 py-2.5 text-xs font-semibold transition-colors ${
+                          activeFilterField === opt.id
+                            ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400'
+                            : 'text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
+                        }`}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              {activeFilterField !== 'none' && (
+                <div className="flex items-center gap-2 flex-1 min-w-[180px]">
+                  <input
+                    type="number"
+                    autoFocus
+                    placeholder={`Enter value for "${selectedFilterOption.label}"...`}
+                    value={filterValue}
+                    onChange={e => setFilterValue(e.target.value)}
+                    className="flex-1 px-4 py-2.5 bg-slate-50 dark:bg-slate-950 border border-blue-400 dark:border-blue-500 rounded-2xl text-sm font-bold text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => { setActiveFilterField('none'); setFilterValue(''); }}
+                    className="p-2 rounded-xl text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors font-bold text-sm"
+                    title="Clear filter"
+                  >✕</button>
+                </div>
+              )}
+              <span className="text-xs text-slate-400 font-semibold ml-auto">
+                {filteredAndSortedStocks.length} result{filteredAndSortedStocks.length !== 1 ? 's' : ''}
+              </span>
             </div>
           </div>
 
@@ -998,7 +1097,7 @@ export default function WatchlistPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-150 dark:divide-slate-800 text-sm font-sans">
-                  {filteredAndSortedStocks.map((stock, idx) => {
+                  {paginatedStocks.map((stock, idx) => {
                     const isPositive = stock.change >= 0;
                     return (
                       <tr 
@@ -1180,6 +1279,41 @@ export default function WatchlistPage() {
             </div>
           )}
         </div>
+
+        {/* Pagination Controls */}
+        {totalPages > 1 && (
+          <div className="mt-6 flex items-center justify-between px-2 flex-wrap gap-3">
+            <span className="text-xs text-slate-400 font-semibold">
+              Showing {(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, filteredAndSortedStocks.length)} of {filteredAndSortedStocks.length} stocks
+            </span>
+            <div className="flex items-center gap-1 flex-wrap">
+              <button onClick={() => setCurrentPage(1)} disabled={currentPage === 1} className="px-3 py-1.5 rounded-xl text-xs font-bold border border-slate-200 dark:border-slate-800 disabled:opacity-30 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">«</button>
+              <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="px-3 py-1.5 rounded-xl text-xs font-bold border border-slate-200 dark:border-slate-800 disabled:opacity-30 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">‹ Prev</button>
+              {Array.from({ length: totalPages }, (_, i) => i + 1)
+                .filter(p => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 1)
+                .reduce<(number | string)[]>((acc, p, i, arr) => {
+                  if (i > 0 && (p as number) - (arr[i - 1] as number) > 1) acc.push('...' + i);
+                  acc.push(p);
+                  return acc;
+                }, [])
+                .map(p =>
+                  typeof p === 'string' ? (
+                    <span key={p} className="px-2 text-slate-400 text-xs">…</span>
+                  ) : (
+                    <button
+                      key={p}
+                      onClick={() => setCurrentPage(p)}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-colors ${
+                        currentPage === p ? 'bg-blue-500 text-white border-blue-500' : 'border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800'
+                      }`}
+                    >{p}</button>
+                  )
+                )}
+              <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="px-3 py-1.5 rounded-xl text-xs font-bold border border-slate-200 dark:border-slate-800 disabled:opacity-30 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">Next ›</button>
+              <button onClick={() => setCurrentPage(totalPages)} disabled={currentPage === totalPages} className="px-3 py-1.5 rounded-xl text-xs font-bold border border-slate-200 dark:border-slate-800 disabled:opacity-30 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">»</button>
+            </div>
+          </div>
+        )}
 
         {/* Dynamic Disclaimer Banner */}
         <div className="mt-8 flex items-start gap-3 p-4 bg-blue-500/5 dark:bg-blue-500/10 rounded-2xl border border-blue-500/20 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
