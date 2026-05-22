@@ -1,8 +1,9 @@
 import { MetadataRoute } from 'next';
 import { DEFAULT_SEEDS } from '@/utils/symbols';
+import { SITE_URL } from '@/lib/backend-config';
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const baseUrl = 'https://dataforger.com';
+  const baseUrl = SITE_URL;
   const now = new Date();
 
   const staticRoutes: MetadataRoute.Sitemap = [

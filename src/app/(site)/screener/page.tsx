@@ -40,14 +40,21 @@ export default function ScreenerPage() {
       setBseCount(meta.bseCount ?? 0);
       setSyncing(Boolean(meta.syncing));
 
-      if (!meta.asOfDate || (meta.savedCount ?? 0) < 100) {
+      const saved = meta.savedCount ?? 0;
+      if (!meta.asOfDate || saved < 100) {
         setStocks([]);
         setTotalInDb(0);
-        setError(
-          meta.syncing
-            ? 'Daily market sync in progress. This may take a few minutes…'
-            : 'No snapshot in database yet. Click “Sync now” or wait for the daily cron job.'
-        );
+        if (meta.syncing) {
+          setError('Daily market sync in progress. This may take a few minutes…');
+        } else if (meta.status === 'failed' && meta.errorMessage) {
+          setError(meta.errorMessage);
+        } else if (meta.errorMessage) {
+          setError(meta.errorMessage);
+        } else {
+          setError(
+            'No snapshot in database yet. Click “Sync now” (runs on the server; first sync can take 10–20 min) or wait for the daily cron job.'
+          );
+        }
         return;
       }
 

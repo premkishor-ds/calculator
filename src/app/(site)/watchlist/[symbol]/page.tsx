@@ -34,7 +34,7 @@ import {
   Lock,
   Unlock
 } from 'lucide-react';
-
+import { getBackendWsUrl } from '@/lib/backend-config';
 
 /* Dynamically import AdvancedChart so it's client-only (no SSR) */
 const AdvancedChart = dynamic(() => import('@/components/AdvancedChart'), {
@@ -185,9 +185,7 @@ interface OrderBookLevel {
   count: number;
 }
 
-const WS_URL = typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1'
-  ? 'wss://calculatorbackend-ul8h.onrender.com'
-  : 'ws://localhost:5001';
+const WS_URL = getBackendWsUrl();
 
 function LiveOrderBook({ 
   bids, 

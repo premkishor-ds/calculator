@@ -89,8 +89,15 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // 2. API routes → Network First with short-lived cache
+  // 2. Live market / screener APIs → always network (no stale quotes)
   if (isApiRoute(url)) {
+    const livePaths = ['/api/watchlist', '/api/search', '/api/screener'];
+    if (livePaths.some((p) => url.pathname.startsWith(p))) {
+      event.respondWith(
+        fetch(event.request).catch(() => caches.match(event.request))
+      );
+      return;
+    }
     event.respondWith(networkFirstWithTTL(event.request, API_CACHE, API_CACHE_TTL_MS, API_CACHE_MAX));
     return;
   }

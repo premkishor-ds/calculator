@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const BACKEND =
-  process.env.SCREENER_BACKEND_URL ||
-  process.env.NEXT_PUBLIC_API_URL ||
-  'http://localhost:5001/api';
+import { getServerBackendApiUrl } from '@/lib/backend-config';
+
+const BACKEND = process.env.SCREENER_BACKEND_URL || getServerBackendApiUrl();
 
 /** Proxy screener requests to Express + MongoDB backend */
 export async function GET(request: NextRequest) {

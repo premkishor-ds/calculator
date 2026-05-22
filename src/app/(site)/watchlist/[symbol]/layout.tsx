@@ -1,4 +1,5 @@
 import { Metadata } from 'next';
+import { SITE_URL } from '@/lib/backend-config';
 
 interface Props {
   params: Promise<{ symbol: string }>;
@@ -9,13 +10,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const decoded = decodeURIComponent(symbol);
   const ticker = decoded.replace('.NS', '').toUpperCase();
 
-  // Fetch minimal data for metadata — reuse existing API
   let name = ticker;
   let price = '';
-  let sector = '';
   try {
     const res = await fetch(
-      `${process.env.NEXT_PUBLIC_SITE_URL || 'https://dataforger.com'}/api/watchlist?symbols=${encodeURIComponent(decoded)}`,
+      `${SITE_URL}/api/watchlist?symbols=${encodeURIComponent(decoded)}`,
       { next: { revalidate: 3600 } }
     );
     if (res.ok) {
@@ -31,8 +30,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   const title = `${name} (${ticker}) Share Price${price ? ` ${price}` : ''} | Financials, PE Ratio, Technical Analysis & AI Insights`;
   const description = `Complete analysis of ${name} (${ticker}): live share price, P/E ratio, ROE, revenue growth, balance sheet, cash flow, AI outlook, Piotroski score, Reverse DCF valuation, peer comparison, and technical indicators.`;
-  const url = `https://dataforger.com/watchlist/${encodeURIComponent(decoded)}`;
-  const ogImage = `https://dataforger.com/api/og?symbol=${encodeURIComponent(decoded)}&name=${encodeURIComponent(name)}`;
+  const url = `${SITE_URL}/watchlist/${encodeURIComponent(decoded)}`;
+  const ogImage = `${SITE_URL}/api/og?symbol=${encodeURIComponent(decoded)}&name=${encodeURIComponent(name)}`;
 
   return {
     title,
@@ -60,7 +59,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       site: '@VisionWealth',
     },
     other: {
-      'article:section': sector || 'Stock Analysis',
       'article:tag': `${ticker}, ${name}, NSE, Indian Stocks, Fundamental Analysis`,
     },
   };
@@ -70,15 +68,14 @@ export default async function StockLayout({ children, params }: { children: Reac
   const { symbol } = await params;
   const decoded = decodeURIComponent(symbol);
   const ticker = decoded.replace('.NS', '').toUpperCase();
-  const baseUrl = 'https://dataforger.com';
 
   const breadcrumbSchema = {
     '@context': 'https://schema.org',
     '@type': 'BreadcrumbList',
     itemListElement: [
-      { '@type': 'ListItem', position: 1, name: 'Home', item: baseUrl },
-      { '@type': 'ListItem', position: 2, name: 'Watchlist', item: `${baseUrl}/watchlist` },
-      { '@type': 'ListItem', position: 3, name: ticker, item: `${baseUrl}/watchlist/${encodeURIComponent(decoded)}` },
+      { '@type': 'ListItem', position: 1, name: 'Home', item: SITE_URL },
+      { '@type': 'ListItem', position: 2, name: 'Watchlist', item: `${SITE_URL}/watchlist` },
+      { '@type': 'ListItem', position: 3, name: ticker, item: `${SITE_URL}/watchlist/${encodeURIComponent(decoded)}` },
     ],
   };
 
@@ -87,7 +84,7 @@ export default async function StockLayout({ children, params }: { children: Reac
     '@type': 'FinancialService',
     name: `${ticker} Stock Analysis`,
     description: `Live share price, fundamentals, AI insights and technical analysis for ${ticker} on NSE India.`,
-    url: `${baseUrl}/watchlist/${encodeURIComponent(decoded)}`,
+    url: `${SITE_URL}/watchlist/${encodeURIComponent(decoded)}`,
     areaServed: 'IN',
     serviceType: 'Stock Research',
   };

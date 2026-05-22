@@ -41,6 +41,7 @@ import {
 } from 'lucide-react';
 import { DEFAULT_SYMBOLS } from '@/utils/symbols';
 import { buildAllTags, DEFAULT_CUSTOM_TAGS, CUSTOM_TAG_IDS, type TagDef, type CustomTagRaw } from '@/utils/tags';
+import { getBackendApiUrl, getBackendWsUrl } from '@/lib/backend-config';
 
 /* Dynamically import the chart so it's client-only (no SSR) */
 const AdvancedChart = dynamic(() => import('@/components/AdvancedChart'), {
@@ -206,13 +207,8 @@ interface WorkspaceTemplate {
   updatedAt: string;
 }
 
-const BACKEND_API_URL = typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1'
-  ? 'https://calculatorbackend-ul8h.onrender.com/api'
-  : (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api');
-
-const WS_URL = typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1'
-  ? 'wss://calculatorbackend-ul8h.onrender.com'
-  : 'ws://localhost:5001';
+const BACKEND_API_URL = getBackendApiUrl();
+const WS_URL = getBackendWsUrl();
 
 const SECTORS_MAP: Record<string, string> = {
   'E2E.NS': 'Tech',
@@ -585,7 +581,7 @@ function TradingTerminalInner() {
       return;
     }
     try {
-      const res = await fetch(`${BACKEND_API_URL}/api/alerts` || `${BACKEND_API_URL}/alerts`, {
+      const res = await fetch(`${BACKEND_API_URL}/alerts`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

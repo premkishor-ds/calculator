@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Outfit } from "next/font/google";
 import "./globals.css";
 import PWAInstallPrompt from '@/components/PWAInstallPrompt';
+import { SITE_URL } from '@/lib/backend-config';
 
 const outfit = Outfit({ subsets: ["latin"] });
 
@@ -17,7 +18,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://dataforger.com'),
+  metadataBase: new URL(SITE_URL),
   title: 'Vision Wealth | Advanced SIP & CAGR Compounding Calculator',
   description: 'The most accurate wealth planner for Indian equity investors. Calculate Step-Up SIP, CAGR growth, and retirement goals with inflation and tax adjustments.',
   keywords: [
@@ -43,15 +44,15 @@ export const metadata: Metadata = {
     siteName: 'Vision Wealth',
     title: 'Vision Wealth | Advanced SIP & CAGR Compounding Calculator',
     description: 'The most accurate wealth planner for Indian equity investors. Calculate Step-Up SIP, CAGR growth, and retirement goals with inflation and tax adjustments.',
-    url: 'https://dataforger.com',
-    images: [{ url: 'https://dataforger.com/og-default.png', width: 1200, height: 630, alt: 'Vision Wealth' }],
+    url: SITE_URL,
+    images: [{ url: `${SITE_URL}/og-default.png`, width: 1200, height: 630, alt: 'Vision Wealth' }],
   },
   twitter: {
     card: 'summary_large_image',
     site: '@VisionWealth',
     title: 'Vision Wealth | Advanced SIP & CAGR Compounding Calculator',
     description: 'The most accurate wealth planner for Indian equity investors.',
-    images: ['https://dataforger.com/og-default.png'],
+    images: [`${SITE_URL}/og-default.png`],
   },
 };
 
@@ -84,7 +85,7 @@ export default function RootLayout({
                 "@type": "FinancialCalculator",
                 "name": "Vision Wealth: Multibagger Compounding Planner",
                 "description": "Advanced financial tool to calculate Step-Up SIP, CAGR growth, and inflation-adjusted wealth for stock market investors.",
-                "url": "https://visionwealth.netlify.app",
+                "url": SITE_URL,
                 "category": "Investment Calculator"
               },
               {

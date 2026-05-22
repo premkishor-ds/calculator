@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const BACKEND = process.env.NEXT_PUBLIC_API_URL || (process.env.NODE_ENV === 'production' ? 'https://calculatorbackend-ul8h.onrender.com/api' : 'http://localhost:5001/api');
+import { getServerBackendApiUrl } from '@/lib/backend-config';
+
+const BACKEND = getServerBackendApiUrl();
 
 export async function GET(request: NextRequest) {
   try {

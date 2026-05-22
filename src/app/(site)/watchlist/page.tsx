@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { DEFAULT_SYMBOLS, DEFAULT_SEEDS } from '@/utils/symbols';
 import { buildAllTags, DEFAULT_CUSTOM_TAGS, CUSTOM_TAG_IDS, type TagDef, type CustomTagRaw } from '@/utils/tags';
+import { getBackendApiUrl } from '@/lib/backend-config';
 
 interface StockData {
   symbol: string;
@@ -68,9 +69,7 @@ interface WatchlistObj {
   isDefault?: boolean;
 }
 
-const BACKEND_API_URL = typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1'
-  ? 'https://calculatorbackend-ul8h.onrender.com/api'
-  : (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api');
+const BACKEND_API_URL = getBackendApiUrl();
 
 export default function WatchlistPage() {
   const router = useRouter();

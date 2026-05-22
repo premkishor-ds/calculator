@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState, useCallback } from 'react';
+import { getBackendWsUrl } from '@/lib/backend-config';
 import { 
   RotateCcw, MousePointer, Slash, Minus, Eraser, Trash2,
   TrendingUp, TrendingDown, RefreshCw, Settings, Play, Pause,
@@ -472,8 +473,7 @@ export default function AdvancedChart({
   /* WebSocket subscriber for simulated ticks */
   useEffect(() => {
     if (!symbol || replayMode) return;
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//localhost:5001`;
+    const wsUrl = getBackendWsUrl();
     let socket: WebSocket | null = null;
     let reconnectTimer: NodeJS.Timeout;
 

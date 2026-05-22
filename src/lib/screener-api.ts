@@ -1,11 +1,22 @@
 import { ActiveFilters } from '@/components/screener/FilterSidebar';
+import { getBackendApiUrl } from '@/lib/backend-config';
 
-const BACKEND_API_URL =
-  typeof window !== 'undefined' &&
-  window.location.hostname !== 'localhost' &&
-  window.location.hostname !== '127.0.0.1'
-    ? 'https://calculatorbackend-ul8h.onrender.com/api'
-    : process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api';
+const BACKEND_API_URL = getBackendApiUrl();
+
+async function fetchWithRetry(url: string, init?: RequestInit, retries = 2): Promise<Response> {
+  let lastErr: unknown;
+  for (let i = 0; i <= retries; i++) {
+    try {
+      const res = await fetch(url, init);
+      if (res.ok || res.status < 500) return res;
+      lastErr = new Error(`HTTP ${res.status}`);
+    } catch (e) {
+      lastErr = e;
+    }
+    if (i < retries) await new Promise((r) => setTimeout(r, 1500 * (i + 1)));
+  }
+  throw lastErr;
+}
 
 /** Maps FilterSidebar field ids to backend query param prefixes */
 const FILTER_PARAM_KEYS: Record<string, string> = {
@@ -44,20 +55,20 @@ export function filtersToSearchParams(
 }
 
 export async function fetchScreenerMeta() {
-  const res = await fetch(`${BACKEND_API_URL}/screener/meta`);
+  const res = await fetchWithRetry(`${BACKEND_API_URL}/screener/meta`);
   if (!res.ok) throw new Error('Failed to load screener metadata');
   return res.json();
 }
 
 export async function fetchScreenerStocks(filters: ActiveFilters, exchange: string) {
   const params = filtersToSearchParams(filters, exchange);
-  const res = await fetch(`${BACKEND_API_URL}/screener?${params.toString()}`);
+  const res = await fetchWithRetry(`${BACKEND_API_URL}/screener?${params.toString()}`);
   if (!res.ok) throw new Error('Failed to load screener data');
   return res.json();
 }
 
 export async function triggerScreenerSync(force = false) {
-  const res = await fetch(`${BACKEND_API_URL}/screener/sync?force=${force}`, {
+  const res = await fetchWithRetry(`${BACKEND_API_URL}/screener/sync?force=${force}`, {
     method: 'POST',
   });
   if (!res.ok) {
