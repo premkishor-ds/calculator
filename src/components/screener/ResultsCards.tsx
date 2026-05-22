@@ -27,10 +27,10 @@ export const ResultsCards = ({
 }) => {
   const router = useRouter();
 
-  if (loading) return (
+  if (loading && stocks.length === 0) return (
     <div className="flex items-center justify-center py-20 gap-3 text-slate-400">
       <RefreshCw className="w-5 h-5 animate-spin" />
-      <span className="text-sm font-semibold">Loading live data...</span>
+      <span className="text-sm font-semibold">Loading live NSE/BSE data...</span>
     </div>
   );
 
@@ -60,7 +60,8 @@ export const ResultsCards = ({
             <div className="flex justify-between items-start mb-4">
               <div>
                 <h3 className="text-lg font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
-                  {s.symbol.replace('.NS', '')}
+                  {s.symbol.replace(/\.(NS|BO)$/i, '')}
+                  <span className="text-[9px] font-medium text-slate-400">{s.symbol.endsWith('.BO') ? 'BSE' : 'NSE'}</span>
                   <span className={`px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider border ${signalClass}`}>
                     {signal}
                   </span>
