@@ -293,6 +293,9 @@ function TradingTerminalInner() {
     return 'VOLTAMP.NS';
   });
 
+  // Track whether the URL param symbol has been honoured already
+  const urlSymbolHonouredRef = useRef(false);
+
   // Watch for active grid cell changes to align root symbol selection
   useEffect(() => {
     const activeSymbol = gridConfigs[activeGridIndex]?.symbol;
@@ -1212,8 +1215,12 @@ function TradingTerminalInner() {
 
           setWatchlistStocks(mergedData);
           if (mergedData.length > 0) {
-            const def = mergedData.find((s: StockQuote) => s.symbol === selectedSymbol) || mergedData[0];
-            selectSymbolRoot(def.symbol);
+            // Only auto-select the first stock if no URL param symbol was provided
+            if (!urlSymbolHonouredRef.current) {
+              const def = mergedData.find((s: StockQuote) => s.symbol === selectedSymbol) || mergedData[0];
+              selectSymbolRoot(def.symbol);
+            }
+            urlSymbolHonouredRef.current = true;
           }
         }
       } catch (err) {
@@ -1229,8 +1236,11 @@ function TradingTerminalInner() {
               tags: [] as string[]
             }));
             setWatchlistStocks(fallbackData);
-            const def = fallbackData.find((s: StockQuote) => s.symbol === selectedSymbol) || fallbackData[0];
-            selectSymbolRoot(def.symbol);
+            if (!urlSymbolHonouredRef.current) {
+              const def = fallbackData.find((s: StockQuote) => s.symbol === selectedSymbol) || fallbackData[0];
+              selectSymbolRoot(def.symbol);
+            }
+            urlSymbolHonouredRef.current = true;
           }
         } catch {}
       } finally {

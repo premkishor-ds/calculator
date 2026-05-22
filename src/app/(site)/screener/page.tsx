@@ -5,6 +5,7 @@ import { FilterSidebar, ActiveFilters } from '@/components/screener/FilterSideba
 import { ResultsTable } from '@/components/screener/ResultsTable';
 import { ResultsCards } from '@/components/screener/ResultsCards';
 import { LayoutGrid, List } from 'lucide-react';
+import { WATCHLIST_SYMBOLS } from '@/utils/symbols';
 
 interface StockRow {
   symbol: string;
@@ -30,7 +31,11 @@ export default function ScreenerPage() {
 
   useEffect(() => {
     setLoading(true);
-    fetch('/api/watchlist')
+    
+    // Fetch live data for watchlist stocks from Yahoo Finance API
+    const symbols = WATCHLIST_SYMBOLS.join(',');
+    
+    fetch(`/api/watchlist?symbols=${encodeURIComponent(symbols)}`)
       .then(r => r.json())
       .then((data: StockRow[]) => setStocks(Array.isArray(data) ? data : []))
       .catch(() => setStocks([]))
