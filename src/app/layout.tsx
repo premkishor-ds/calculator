@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Outfit } from "next/font/google";
 import "./globals.css";
+import PWAInstallPrompt from '@/components/PWAInstallPrompt';
 
 const outfit = Outfit({ subsets: ["latin"] });
 
@@ -30,6 +31,13 @@ export const metadata: Metadata = {
     index: true,
     follow: true,
   },
+  manifest: '/manifest.webmanifest',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'Vision Wealth',
+    startupImage: '/icons/icon-512.png',
+  },
   openGraph: {
     type: 'website',
     siteName: 'Vision Wealth',
@@ -58,6 +66,12 @@ export default function RootLayout({
         <script
           dangerouslySetInnerHTML={{
             __html: `(function(){try{var s=localStorage.getItem('theme');var d=s?s==='dark':window.matchMedia('(prefers-color-scheme: dark)').matches;if(d)document.documentElement.classList.add('dark');}catch(e){}})();`,
+          }}
+        />
+        {/* Register Service Worker */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('/sw.js',{scope:'/'}).catch(function(e){console.warn('SW registration failed:',e);});});}`
           }}
         />
         {/* Advanced JSON-LD for AEO & GEO */}
@@ -95,6 +109,7 @@ export default function RootLayout({
         {/* PRODUCTION READY: Add your Google Analytics Tag here */}
         {/* <Script src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXX" /> */}
         {children}
+        <PWAInstallPrompt />
       </body>
     </html>
   );
