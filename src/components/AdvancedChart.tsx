@@ -1035,7 +1035,7 @@ export default function AdvancedChart({
     if (!chart || !series) return;
 
     let closest = -1;
-    let minDist = 18;
+    let minDist = 30; // Increased base threshold for easier clicking
 
     drawings.forEach((drawing, idx) => {
       if (drawing.type === 'horizontal' && drawing.price !== undefined) {
@@ -1050,23 +1050,45 @@ export default function AdvancedChart({
           minDist = Math.abs(x - xLine);
           closest = idx;
         }
-      } else if (drawing.points && drawing.points.length === 2) {
+      } else if (drawing.points && drawing.points.length >= 2) {
         const x1 = chart.timeScale().timeToCoordinate(drawing.points[0].time as Time);
         const y1 = series.priceToCoordinate(drawing.points[0].price);
         const x2 = chart.timeScale().timeToCoordinate(drawing.points[1].time as Time);
         const y2 = series.priceToCoordinate(drawing.points[1].price);
 
         if (x1 !== null && y1 !== null && x2 !== null && y2 !== null) {
-          // Distance to segment calculation
-          const dx = x2 - x1;
-          const dy = y2 - y1;
-          const len2 = dx * dx + dy * dy;
-          let t = len2 === 0 ? 0 : ((x - x1) * dx + (y - y1) * dy) / len2;
-          t = Math.max(0, Math.min(1, t));
-          const dist = Math.hypot(x - (x1 + t * dx), y - (y1 + t * dy));
-          if (dist < minDist) {
-            minDist = dist;
-            closest = idx;
+          if (drawing.type === 'fibonacci') {
+            const minY = Math.min(y1, y2) - 20;
+            const maxY = Math.max(y1, y2) + 20;
+            if (y >= minY && y <= maxY) {
+              minDist = 0;
+              closest = idx;
+            }
+          } else if (['shape_rect', 'riskreward'].includes(drawing.type)) {
+            const minX = Math.min(x1, x2);
+            const maxX = Math.max(x1, x2);
+            const minY = Math.min(y1, y2) - (drawing.type === 'riskreward' ? Math.abs(y2-y1) : 0);
+            const maxY = Math.max(y1, y2) + (drawing.type === 'riskreward' ? Math.abs(y2-y1) : 0);
+            
+            if (x >= minX && x <= maxX && y >= minY && y <= maxY) {
+              minDist = 0;
+              closest = idx;
+            }
+          } else {
+            // Distance to segment calculation (Trendline, Channel, Annotation, Brush)
+            const dx = x2 - x1;
+            const dy = y2 - y1;
+            const len2 = dx * dx + dy * dy;
+            let t = len2 === 0 ? 0 : ((x - x1) * dx + (y - y1) * dy) / len2;
+            t = Math.max(0, Math.min(1, t));
+            const dist = Math.hypot(x - (x1 + t * dx), y - (y1 + t * dy));
+            
+            // For channels, we also want to allow clicking within the width of the channel
+            const effectiveThreshold = drawing.type === 'channel' ? 60 : minDist;
+            if (dist < effectiveThreshold) {
+              minDist = dist;
+              closest = idx;
+            }
           }
         }
       }
@@ -1882,7 +1904,16 @@ export default function AdvancedChart({
             </div>
           )}
 
-          <div className="relative w-full h-full">
+          <div 
+            className="relative w-full h-full"
+            onContextMenu={(e) => {
+              e.preventDefault();
+              const rect = e.currentTarget.getBoundingClientRect();
+              const x = e.clientX - rect.left;
+              const y = e.clientY - rect.top;
+              eraseAt(x, y);
+            }}
+          >
             <div ref={containerRef} className="w-full h-full" />
             <svg
               ref={svgRef}
