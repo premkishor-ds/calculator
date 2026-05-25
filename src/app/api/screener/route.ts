@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+﻿import { NextRequest, NextResponse } from 'next/server';
 
 import { getServerBackendApiUrl } from '@/lib/backend-config';
 
@@ -37,3 +37,4 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Backend unavailable' }, { status: 502 });
   }
 }
+

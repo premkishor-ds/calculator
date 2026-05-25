@@ -50,7 +50,7 @@ const AdvancedChart = dynamic(() => import('@/components/AdvancedChart'), {
     <div className="flex-1 flex items-center justify-center bg-slate-950 min-h-[300px]">
       <div className="flex flex-col items-center gap-3">
         <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-        <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Initialising Chart Engine…</span>
+        <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Initialising Chart Engineâ€¦</span>
       </div>
     </div>
   ),
@@ -183,7 +183,7 @@ interface VirtualPosition {
 interface ActiveAlert {
   _id: string;
   symbol: string;
-  condition: 'price_above' | 'price_below' | 'price_crosses';
+  condition: 'price_above' | 'price_below' | 'price_crosses' | 'volume_spike' | 'rsi_above' | 'rsi_below';
   value: number;
   isActive: boolean;
   isTriggered: boolean;
@@ -242,7 +242,7 @@ const SECTORS_MAP: Record<string, string> = {
 };
 
 function TradingTerminalInner() {
-  /* ── Core Theme & Workspace States ────────────────────────── */
+  /* â”€â”€ Core Theme & Workspace States â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   const [theme, setTheme] = useState<'dark' | 'light'>('light');
   const [watchlistStocks, setWatchlistStocks] = useState<StockQuote[]>([]);
   const [livePrices, setLivePrices] = useState<Record<string, number>>({});
@@ -341,18 +341,18 @@ function TradingTerminalInner() {
     }
   };
 
-  /* ── Alerts & Sidebar Panel States ────────────────────────── */
+  /* â”€â”€ Alerts & Sidebar Panel States â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   const [showAlertsSidebar, setShowAlertsSidebar] = useState(false);
   const [alertsList, setAlertsList] = useState<ActiveAlert[]>([]);
   const [newAlertCondition, setNewAlertCondition] = useState<ActiveAlert['condition']>('price_above');
   const [newAlertValue, setNewAlertValue] = useState('');
 
-  /* ── Workspace templates States ──────────────────────────── */
+  /* â”€â”€ Workspace templates States â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   const [savedTemplates, setSavedTemplates] = useState<WorkspaceTemplate[]>([]);
   const [newTemplateName, setNewTemplateName] = useState('');
   const [showTemplatesDropdown, setShowTemplatesDropdown] = useState(false);
 
-  /* ── Paper Trading Panel States ──────────────────────────── */
+  /* â”€â”€ Paper Trading Panel States â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   const [virtualBalance, setVirtualBalance] = useState(1000000);
   const [positions, setPositions] = useState<VirtualPosition[]>([]);
   const [orders, setOrders] = useState<VirtualOrder[]>([]);
@@ -379,11 +379,11 @@ function TradingTerminalInner() {
     return cash + positionsPnL;
   }, [virtualBalance, positions, livePrices]);
 
-  /* ── Watchlist Screener States ────────────────────────────── */
+  /* â”€â”€ Watchlist Screener States â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   const [screenerSortField, setScreenerSortField] = useState<'symbol' | 'price' | 'changePercent' | 'sma20' | 'sma50' | 'rsi14'>('symbol');
   const [screenerSortDirection, setScreenerSortDirection] = useState<'asc' | 'desc'>('asc');
 
-  /* ── Backtester States ────────────────────────────────────── */
+  /* â”€â”€ Backtester States â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   const [strategyType, setStrategyType] = useState<'emacross' | 'rsi'>('emacross');
   const [backtestRunning, setBacktestRunning] = useState(false);
   const [backtestResults, setBacktestResults] = useState<{
@@ -394,7 +394,7 @@ function TradingTerminalInner() {
     trades: any[];
   } | null>(null);
 
-  /* ── AI Pattern Scanner States ───────────────────────────── */
+  /* â”€â”€ AI Pattern Scanner States â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   const [aiPatterns, setAiPatterns] = useState<Array<{
     timeStr: string;
     pattern: string;
@@ -404,7 +404,7 @@ function TradingTerminalInner() {
   }>>([]);
   const [aiScanning, setAiScanning] = useState(false);
 
-  /* ── Socket Connection & Simulated Feeds ──────────────────── */
+  /* â”€â”€ Socket Connection & Simulated Feeds â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   const wsRef = useRef<WebSocket | null>(null);
 
   useEffect(() => {
@@ -463,7 +463,7 @@ function TradingTerminalInner() {
     };
   }, [showToast]);
 
-  /* ── Fetch Helper Methods ────────────────────────────────── */
+  /* â”€â”€ Fetch Helper Methods â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   const fetchPositionsAndOrders = useCallback(async () => {
     try {
       const posRes = await fetch(`${BACKEND_API_URL}/trading/positions`);
@@ -505,7 +505,7 @@ function TradingTerminalInner() {
     fetchWorkspaceLayouts();
   }, [fetchPositionsAndOrders, fetchAlerts, fetchWorkspaceLayouts]);
 
-  /* ── Paper Trading Submissions ────────────────────────────── */
+  /* â”€â”€ Paper Trading Submissions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   const handlePlaceOrder = async (e: React.FormEvent) => {
     e.preventDefault();
     const qtyVal = parseInt(orderTicket.quantity);
@@ -559,7 +559,7 @@ function TradingTerminalInner() {
   };
 
   const handleResetPortfolio = async () => {
-    if (!window.confirm('Reset virtual portfolio to ₹1,000,000 cash ledger?')) return;
+    if (!window.confirm('Reset virtual portfolio to â‚¹1,000,000 cash ledger?')) return;
     try {
       const res = await fetch(`${BACKEND_API_URL}/trading/portfolio/reset`, {
         method: 'POST'
@@ -574,7 +574,7 @@ function TradingTerminalInner() {
     } catch {}
   };
 
-  /* ── Alerts Side Panel Submissions ────────────────────────── */
+  /* â”€â”€ Alerts Side Panel Submissions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   const handleCreateAlert = async (e: React.FormEvent) => {
     e.preventDefault();
     const val = parseFloat(newAlertValue);
@@ -596,6 +596,9 @@ function TradingTerminalInner() {
         showToast('Active price trigger alert created!', 'success');
         setNewAlertValue('');
         fetchAlerts();
+      } else {
+        const data = await res.json().catch(() => null);
+        showToast(data?.error || 'Failed to create alert', 'error');
       }
     } catch {
       showToast('Failed to create alert', 'error');
@@ -614,7 +617,7 @@ function TradingTerminalInner() {
     } catch {}
   };
 
-  /* ── Cloud Workspace Templates ───────────────────────────── */
+  /* â”€â”€ Cloud Workspace Templates â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   const handleSaveWorkspaceLayout = async (e: React.FormEvent) => {
     e.preventDefault();
     const name = newTemplateName.trim();
@@ -701,7 +704,7 @@ function TradingTerminalInner() {
     } catch {}
   };
 
-  /* ── Screener Calculations on active watchlist ────────────── */
+  /* â”€â”€ Screener Calculations on active watchlist â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   const watchlistScreenerData = useMemo(() => {
     return watchlistStocks.map(stock => {
       // Deterministic indicators computed on-the-fly from daily price
@@ -742,7 +745,7 @@ function TradingTerminalInner() {
     }
   };
 
-  /* ── Strategy Backtest Loop ───────────────────────────────── */
+  /* â”€â”€ Strategy Backtest Loop â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   const handleRunBacktest = async () => {
     if (!selectedSymbol) return;
     try {
@@ -939,7 +942,7 @@ function TradingTerminalInner() {
     }
   };
 
-  /* ── Candlestick AI Scanner ────────────────────────────────── */
+  /* â”€â”€ Candlestick AI Scanner â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   const handleScanPatterns = async () => {
     if (!selectedSymbol) return;
     try {
@@ -969,7 +972,7 @@ function TradingTerminalInner() {
         if (body <= 0.06 * range && range > 0) {
           found.push({
             timeStr: p.date,
-            pattern: '⚖️ Doji Line',
+            pattern: 'âš–ï¸ Doji Line',
             sentiment: 'Neutral',
             reliability: 'Low',
             close: p.close
@@ -981,7 +984,7 @@ function TradingTerminalInner() {
                  (p.high - Math.max(p.open, p.close) <= 0.15 * body)) {
           found.push({
             timeStr: p.date,
-            pattern: '🔨 Bullish Hammer',
+            pattern: 'ðŸ”¨ Bullish Hammer',
             sentiment: 'Bullish',
             reliability: 'Medium',
             close: p.close
@@ -991,7 +994,7 @@ function TradingTerminalInner() {
         else if (p.close > p.open && prev.close < prev.open && p.open <= prev.close && p.close >= prev.open) {
           found.push({
             timeStr: p.date,
-            pattern: '🟢 Bullish Engulfing',
+            pattern: 'ðŸŸ¢ Bullish Engulfing',
             sentiment: 'Bullish',
             reliability: 'High',
             close: p.close
@@ -999,7 +1002,7 @@ function TradingTerminalInner() {
         } else if (p.close < p.open && prev.close > prev.open && p.open >= prev.close && p.close <= prev.open) {
           found.push({
             timeStr: p.date,
-            pattern: '🔴 Bearish Engulfing',
+            pattern: 'ðŸ”´ Bearish Engulfing',
             sentiment: 'Bearish',
             reliability: 'High',
             close: p.close
@@ -1016,9 +1019,9 @@ function TradingTerminalInner() {
     }
   };
 
-  /* ── Tabbed Bottom Drawer Selector State (Removed) ──────────── */
+  /* â”€â”€ Tabbed Bottom Drawer Selector State (Removed) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
-  /* ── Keyboard Hotkeys Handlers ────────────────────────────── */
+  /* â”€â”€ Keyboard Hotkeys Handlers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const activeElement = document.activeElement?.tagName;
@@ -1068,7 +1071,7 @@ function TradingTerminalInner() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [activeGridIndex, showToast]);
 
-  /* ── Static tags filtering logic ────────────────────────── */
+  /* â”€â”€ Static tags filtering logic â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   const [searchQuery, setSearchQuery] = useState('');
   const [watchlistLoading, setWatchlistLoading] = useState(true);
   const [chartRange, setChartRange] = useState('1Y');
@@ -1499,7 +1502,7 @@ function TradingTerminalInner() {
   return (
     <div className="min-h-dvh lg:h-dvh lg:overflow-hidden bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans" onClick={() => setTagPopoverSym(null)}>
       
-      {/* ── Header ────────────────────────────────────────────── */}
+      {/* â”€â”€ Header â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <header className="flex flex-wrap items-center justify-between gap-3 px-4 sm:px-6 py-2.5 bg-white dark:bg-slate-950 border-b border-slate-200 dark:border-slate-850 shadow-sm shrink-0 z-40">
         <div className="flex items-center gap-3 sm:gap-4 min-w-0">
           <Link href="/watchlist" className="group p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-all text-slate-400 hover:text-slate-900 dark:hover:text-white touch-manipulation shrink-0">
@@ -1522,7 +1525,7 @@ function TradingTerminalInner() {
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500" />
           <input
             type="text"
-            placeholder="Search ticker (e.g. INFY, TATAMOTORS)…"
+            placeholder="Search ticker (e.g. INFY, TATAMOTORS)â€¦"
             value={terminalSearch}
             onChange={e => setTerminalSearch(e.target.value)}
             disabled={terminalSearching}
@@ -1575,7 +1578,7 @@ function TradingTerminalInner() {
         </div>
       </header>
 
-      {/* ── Main Viewport Panel Grid & Drawer ─────────────────── */}
+      {/* â”€â”€ Main Viewport Panel Grid & Drawer â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <main className="flex-1 flex flex-col lg:grid lg:grid-cols-12 lg:overflow-hidden min-h-0 relative">
         
         {/* Mobile View Toggle Tabs */}
@@ -1704,8 +1707,8 @@ function TradingTerminalInner() {
           </div>
 
           {/* Grid Canvas Area */}
-          <div className="flex-1 min-h-0 relative">
-            <div className={`grid gap-2 p-2 w-full h-full bg-slate-100 dark:bg-slate-900/60 overflow-y-auto ${
+          <div className="min-h-[60dvh] lg:min-h-0 flex-1 relative">
+            <div className={`grid gap-2 p-2 w-full h-full bg-slate-100 dark:bg-slate-900/60 lg:overflow-y-auto ${
               gridLayout === 1 ? 'grid-cols-1 grid-rows-1' :
               gridLayout === 2 ? 'grid-cols-1 md:grid-cols-2 grid-rows-1' :
               gridLayout === 4 ? 'grid-cols-2 grid-rows-2' :
@@ -1764,7 +1767,7 @@ function TradingTerminalInner() {
           </div>
 
           {/* Bottom Dock Drawer (Scrollable Stacked Sections) */}
-          <div className="h-auto max-h-[500px] lg:max-h-[450px] bg-white dark:bg-slate-950 border-t border-slate-200 dark:border-slate-850 flex flex-col shrink-0 overflow-y-auto shadow-2xl z-30 select-none">
+          <div className="h-auto lg:max-h-[450px] bg-white dark:bg-slate-950 border-t border-slate-200 dark:border-slate-850 flex flex-col shrink-0 lg:overflow-y-auto shadow-2xl z-30 select-none">
             {/* Drawer Headers (Removed Tab Buttons) */}
             <div className="flex items-center justify-between px-4 bg-slate-50 dark:bg-slate-950 border-b border-slate-200 dark:border-slate-850 shrink-0 overflow-x-auto scrollbar-none gap-2 py-2">
               <div className="text-[12px] font-black uppercase tracking-wider text-slate-800 dark:text-slate-200">
@@ -1776,18 +1779,18 @@ function TradingTerminalInner() {
                 <div className="hidden md:flex items-center gap-2 text-[10px] font-extrabold uppercase shrink-0">
                   <span className="text-slate-400">Spot Ticker:</span>
                   <span className="text-slate-850 dark:text-slate-200">{selectedStock.symbol.replace('.NS','')}</span>
-                  <span className="font-mono text-blue-550 dark:text-blue-400 font-black">₹{(livePrices[selectedStock.symbol] || selectedStock.price).toFixed(2)}</span>
+                  <span className="font-mono text-blue-550 dark:text-blue-400 font-black">â‚¹{(livePrices[selectedStock.symbol] || selectedStock.price).toFixed(2)}</span>
                 </div>
               )}
             </div>
 
             {/* Drawer Content Viewport */}
-            <div className="flex-1 overflow-y-auto p-4 bg-slate-50/30 dark:bg-slate-950/20 min-h-0 text-slate-850 dark:text-slate-200">
+            <div className="flex-1 lg:overflow-y-auto p-4 bg-slate-50/30 dark:bg-slate-950/20 min-h-0 text-slate-850 dark:text-slate-200">
               
               {/* SECTION 1: PAPER TRADING */}
               <div className="mb-8">
                 <h3 className="text-[11px] font-black uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-3 flex items-center gap-2">
-                  💼 Paper Trading
+                  ðŸ’¼ Paper Trading
                 </h3>
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 min-h-[250px]">
                   
@@ -1849,7 +1852,7 @@ function TradingTerminalInner() {
                         />
                       </div>
                       <div>
-                        <label className="text-[9px] text-slate-450 block mb-1">Limit Price (₹)</label>
+                        <label className="text-[9px] text-slate-450 block mb-1">Limit Price (â‚¹)</label>
                         <input
                           type="number"
                           step="0.05"
@@ -1877,11 +1880,11 @@ function TradingTerminalInner() {
                     <div className="grid grid-cols-3 gap-3 text-xs shrink-0 select-none">
                       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 p-3 rounded-xl shadow-sm text-center">
                         <span className="text-[8px] font-black uppercase tracking-wider text-slate-400 block mb-1">VIRTUAL CASH BALANCE</span>
-                        <span className="text-sm font-black text-slate-800 dark:text-slate-150 font-mono">₹{virtualBalance.toLocaleString('en-IN')}</span>
+                        <span className="text-sm font-black text-slate-800 dark:text-slate-150 font-mono">â‚¹{virtualBalance.toLocaleString('en-IN')}</span>
                       </div>
                       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 p-3 rounded-xl shadow-sm text-center">
                         <span className="text-[8px] font-black uppercase tracking-wider text-slate-400 block mb-1">TOTAL ACCOUNT EQUITY</span>
-                        <span className="text-sm font-black text-blue-600 dark:text-blue-400 font-mono">₹{totalEquity.toLocaleString('en-IN')}</span>
+                        <span className="text-sm font-black text-blue-600 dark:text-blue-400 font-mono">â‚¹{totalEquity.toLocaleString('en-IN')}</span>
                       </div>
                       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 p-3 rounded-xl shadow-sm text-center flex flex-col justify-center items-center">
                         <button
@@ -1925,14 +1928,78 @@ function TradingTerminalInner() {
                                       <span className={`px-1.5 py-0.2 text-[8px] rounded uppercase ${pos.side === 'buy' ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-500 border border-rose-500/20'}`}>{pos.side}</span>
                                     </td>
                                     <td className="py-2 px-2 text-right">{pos.quantity}</td>
-                                    <td className="py-2 px-2 text-right">₹{pos.averagePrice.toFixed(2)}</td>
-                                    <td className="py-2 px-2 text-right">₹{live.toFixed(2)}</td>
+                                    <td className="py-2 px-2 text-right">â‚¹{pos.averagePrice.toFixed(2)}</td>
+                                    <td className="py-2 px-2 text-right">â‚¹{live.toFixed(2)}</td>
                                     <td className={`py-2 px-2 text-right font-black ${pnl >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-500 dark:text-rose-455'}`}>
-                                      ₹{pnl.toFixed(2)}
+                                      â‚¹{pnl.toFixed(2)}
                                     </td>
                                   </tr>
                                 );
                               })}
+                            </tbody>
+                          </table>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Orders history and pending order controls */}
+                    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-xl overflow-hidden flex flex-col max-h-56 shadow-sm">
+                      <div className="bg-slate-50 dark:bg-slate-900/60 px-4 py-2 border-b border-slate-100 dark:border-slate-800 text-[9px] font-black uppercase tracking-widest shrink-0 flex items-center justify-between">
+                        <span>Order History</span>
+                        <span className="text-slate-400">{orders.filter(order => order.status === 'pending').length} pending</span>
+                      </div>
+                      <div className="overflow-y-auto p-3 text-[10px]">
+                        {orders.length === 0 ? (
+                          <span className="text-slate-400 block text-center py-5 font-semibold">No virtual orders yet.</span>
+                        ) : (
+                          <table className="w-full text-left border-collapse whitespace-nowrap">
+                            <thead>
+                              <tr className="border-b border-slate-100 dark:border-slate-800 text-slate-400 font-black">
+                                <th className="py-1 px-2">Ticker</th>
+                                <th className="py-1 px-2">Side</th>
+                                <th className="py-1 px-2">Type</th>
+                                <th className="py-1 px-2 text-right">Qty</th>
+                                <th className="py-1 px-2 text-right">Price</th>
+                                <th className="py-1 px-2 text-right">Status</th>
+                                <th className="py-1 px-2 text-right">Action</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100 dark:divide-slate-800/50 font-bold font-mono">
+                              {orders.slice(0, 20).map(order => (
+                                <tr key={order._id || `${order.symbol}-${order.createdAt}`} className="hover:bg-slate-50 dark:hover:bg-slate-800/20">
+                                  <td className="py-2 px-2 text-slate-800 dark:text-slate-100 font-sans font-black">{order.symbol.replace('.NS','')}</td>
+                                  <td className="py-2 px-2">
+                                    <span className={`px-1.5 py-0.2 text-[8px] rounded uppercase ${order.side === 'buy' ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-500 border border-rose-500/20'}`}>{order.side}</span>
+                                  </td>
+                                  <td className="py-2 px-2 uppercase">{order.type}</td>
+                                  <td className="py-2 px-2 text-right">{order.quantity}</td>
+                                  <td className="py-2 px-2 text-right">₹{Number(order.price || 0).toFixed(2)}</td>
+                                  <td className="py-2 px-2 text-right">
+                                    <span className={`px-1.5 py-0.5 rounded uppercase text-[8px] ${
+                                      order.status === 'filled'
+                                        ? 'bg-blue-500/10 text-blue-500'
+                                        : order.status === 'pending'
+                                          ? 'bg-amber-500/10 text-amber-500'
+                                          : 'bg-slate-500/10 text-slate-400'
+                                    }`}>
+                                      {order.status}
+                                    </span>
+                                  </td>
+                                  <td className="py-2 px-2 text-right">
+                                    {order.status === 'pending' && order._id ? (
+                                      <button
+                                        type="button"
+                                        onClick={() => handleCancelOrder(order._id!)}
+                                        className="px-2 py-1 rounded-md bg-rose-500/10 text-rose-500 hover:bg-rose-500/20 font-black uppercase text-[8px]"
+                                      >
+                                        Cancel
+                                      </button>
+                                    ) : (
+                                      <span className="text-slate-500">-</span>
+                                    )}
+                                  </td>
+                                </tr>
+                              ))}
                             </tbody>
                           </table>
                         )}
@@ -1946,7 +2013,7 @@ function TradingTerminalInner() {
               {/* SECTION 2: WATCHLIST SCREENER */}
               <div className="mb-8">
                 <h3 className="text-[11px] font-black uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-3 flex items-center gap-2">
-                  🔍 Screener
+                  ðŸ” Screener
                 </h3>
                 <div className="flex flex-col bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 rounded-xl overflow-hidden shadow-md">
                   <div className="bg-slate-50/80 dark:bg-slate-900/80 px-4 py-2.5 border-b border-slate-100 dark:border-slate-800 text-[10px] font-black uppercase tracking-widest shrink-0 flex justify-between items-center">
@@ -1957,12 +2024,12 @@ function TradingTerminalInner() {
                     <table className="w-full text-left border-collapse whitespace-nowrap">
                       <thead>
                         <tr className="border-b border-slate-150 dark:border-slate-805 text-slate-400 font-black">
-                          <th className="py-1 px-3 cursor-pointer select-none" onClick={() => toggleScreenerSort('symbol')}>Symbol {screenerSortField === 'symbol' ? (screenerSortDirection === 'asc' ? '▲' : '▼') : ''}</th>
-                          <th className="py-1 px-3 text-right cursor-pointer select-none" onClick={() => toggleScreenerSort('price')}>Price {screenerSortField === 'price' ? (screenerSortDirection === 'asc' ? '▲' : '▼') : ''}</th>
-                          <th className="py-1 px-3 text-right cursor-pointer select-none" onClick={() => toggleScreenerSort('changePercent')}>Change% {screenerSortField === 'changePercent' ? (screenerSortDirection === 'asc' ? '▲' : '▼') : ''}</th>
-                          <th className="py-1 px-3 text-right cursor-pointer select-none" onClick={() => toggleScreenerSort('sma20')}>SMA 20 {screenerSortField === 'sma20' ? (screenerSortDirection === 'asc' ? '▲' : '▼') : ''}</th>
-                          <th className="py-1 px-3 text-right cursor-pointer select-none" onClick={() => toggleScreenerSort('sma50')}>SMA 50 {screenerSortField === 'sma50' ? (screenerSortDirection === 'asc' ? '▲' : '▼') : ''}</th>
-                          <th className="py-1 px-3 text-right cursor-pointer select-none" onClick={() => toggleScreenerSort('rsi14')}>RSI (14) {screenerSortField === 'rsi14' ? (screenerSortDirection === 'asc' ? '▲' : '▼') : ''}</th>
+                          <th className="py-1 px-3 cursor-pointer select-none" onClick={() => toggleScreenerSort('symbol')}>Symbol {screenerSortField === 'symbol' ? (screenerSortDirection === 'asc' ? 'â–²' : 'â–¼') : ''}</th>
+                          <th className="py-1 px-3 text-right cursor-pointer select-none" onClick={() => toggleScreenerSort('price')}>Price {screenerSortField === 'price' ? (screenerSortDirection === 'asc' ? 'â–²' : 'â–¼') : ''}</th>
+                          <th className="py-1 px-3 text-right cursor-pointer select-none" onClick={() => toggleScreenerSort('changePercent')}>Change% {screenerSortField === 'changePercent' ? (screenerSortDirection === 'asc' ? 'â–²' : 'â–¼') : ''}</th>
+                          <th className="py-1 px-3 text-right cursor-pointer select-none" onClick={() => toggleScreenerSort('sma20')}>SMA 20 {screenerSortField === 'sma20' ? (screenerSortDirection === 'asc' ? 'â–²' : 'â–¼') : ''}</th>
+                          <th className="py-1 px-3 text-right cursor-pointer select-none" onClick={() => toggleScreenerSort('sma50')}>SMA 50 {screenerSortField === 'sma50' ? (screenerSortDirection === 'asc' ? 'â–²' : 'â–¼') : ''}</th>
+                          <th className="py-1 px-3 text-right cursor-pointer select-none" onClick={() => toggleScreenerSort('rsi14')}>RSI (14) {screenerSortField === 'rsi14' ? (screenerSortDirection === 'asc' ? 'â–²' : 'â–¼') : ''}</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-bold font-mono">
@@ -1979,16 +2046,16 @@ function TradingTerminalInner() {
                               className="hover:bg-slate-50 dark:hover:bg-slate-800/35 cursor-pointer"
                             >
                               <td className="py-2.5 px-3 font-sans text-slate-800 dark:text-slate-100 font-black">{stock.symbol.replace('.NS','')}</td>
-                              <td className="py-2.5 px-3 text-right">₹{stock.price.toFixed(2)}</td>
+                              <td className="py-2.5 px-3 text-right">â‚¹{stock.price.toFixed(2)}</td>
                               <td className={`py-2.5 px-3 text-right ${stock.changePercent >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500 dark:text-red-455'}`}>
                                 {stock.changePercent >= 0 ? '+' : ''}{stock.changePercent.toFixed(2)}%
                               </td>
-                              <td className="py-2.5 px-3 text-right">₹{stock.sma20.toFixed(2)}</td>
-                              <td className="py-2.5 px-3 text-right">₹{stock.sma50.toFixed(2)}</td>
+                              <td className="py-2.5 px-3 text-right">â‚¹{stock.sma20.toFixed(2)}</td>
+                              <td className="py-2.5 px-3 text-right">â‚¹{stock.sma50.toFixed(2)}</td>
                               <td className={`py-2.5 px-3 text-right font-black ${
                                 isBullish ? 'text-emerald-500' : isBearish ? 'text-rose-500' : 'text-slate-700 dark:text-slate-350'
                               }`}>
-                                {stock.rsi14.toFixed(1)} {isBullish ? '🐂' : isBearish ? '🐻' : ''}
+                                {stock.rsi14.toFixed(1)} {isBullish ? 'ðŸ‚' : isBearish ? 'ðŸ»' : ''}
                               </td>
                             </tr>
                           );
@@ -2002,7 +2069,7 @@ function TradingTerminalInner() {
               {/* SECTION 3: SECTOR HEATMAP */}
               <div className="mb-8">
                 <h3 className="text-[11px] font-black uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-3 flex items-center gap-2">
-                  🌡️ Heatmap
+                  ðŸŒ¡ï¸ Heatmap
                 </h3>
                 <div className="flex flex-col space-y-3">
                   <div className="text-[10px] font-black uppercase tracking-widest text-slate-400">Watchlist Heatmap Map by Sectors</div>
@@ -2047,12 +2114,12 @@ function TradingTerminalInner() {
               {/* SECTION 4: STRIKE OPTION CHAIN */}
               <div className="mb-8">
                 <h3 className="text-[11px] font-black uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-3 flex items-center gap-2">
-                  🔗 Strike Option Chain
+                  ðŸ”— Strike Option Chain
                 </h3>
                 <div className="flex flex-col bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 rounded-xl overflow-hidden shadow-md">
                   <div className="bg-slate-50/80 dark:bg-slate-900/80 px-4 py-2.5 border-b border-slate-100 dark:border-slate-850 text-[10px] font-black uppercase tracking-widest shrink-0 flex justify-between items-center">
                     <span>Active simulated derivatives strike chain: {selectedSymbol.replace('.NS','')}</span>
-                    <span className="text-slate-400">Spot price center: ₹{(livePrices[selectedSymbol] || selectedStock?.price || 0).toFixed(2)}</span>
+                    <span className="text-slate-400">Spot price center: â‚¹{(livePrices[selectedSymbol] || selectedStock?.price || 0).toFixed(2)}</span>
                   </div>
                   <div className="flex-1 overflow-y-auto p-3 text-[10px] min-h-0">
                     <table className="w-full text-center border-collapse whitespace-nowrap">
@@ -2091,11 +2158,11 @@ function TradingTerminalInner() {
                             return (
                               <tr key={strike} className="hover:bg-slate-50 dark:hover:bg-slate-800/20">
                                 <td className="py-2 px-2 text-right text-slate-400 font-medium">{Math.floor((strike * 31) % 1500) + 120}k</td>
-                                <td className={`py-2 px-2 text-right ${inCE ? 'bg-emerald-500/5 text-emerald-600 dark:text-emerald-400' : ''}`}>₹{ceBid.toFixed(2)}</td>
-                                <td className={`py-2 px-2 text-right ${inCE ? 'bg-emerald-500/5 text-emerald-600 dark:text-emerald-400' : ''}`}>₹{(ceBid + 0.35).toFixed(2)}</td>
-                                <td className="py-2 px-2 border-x border-slate-105 dark:border-slate-800 font-sans text-slate-800 dark:text-white font-extrabold text-[10px] bg-slate-50/50 dark:bg-slate-900/40">₹{strike}</td>
-                                <td className={`py-2 px-2 text-right ${inPE ? 'bg-rose-500/5 text-rose-500 dark:text-rose-455' : ''}`}>₹{peBid.toFixed(2)}</td>
-                                <td className={`py-2 px-2 text-right ${inPE ? 'bg-rose-500/5 text-rose-500 dark:text-rose-455' : ''}`}>₹{(peBid + 0.35).toFixed(2)}</td>
+                                <td className={`py-2 px-2 text-right ${inCE ? 'bg-emerald-500/5 text-emerald-600 dark:text-emerald-400' : ''}`}>â‚¹{ceBid.toFixed(2)}</td>
+                                <td className={`py-2 px-2 text-right ${inCE ? 'bg-emerald-500/5 text-emerald-600 dark:text-emerald-400' : ''}`}>â‚¹{(ceBid + 0.35).toFixed(2)}</td>
+                                <td className="py-2 px-2 border-x border-slate-105 dark:border-slate-800 font-sans text-slate-800 dark:text-white font-extrabold text-[10px] bg-slate-50/50 dark:bg-slate-900/40">â‚¹{strike}</td>
+                                <td className={`py-2 px-2 text-right ${inPE ? 'bg-rose-500/5 text-rose-500 dark:text-rose-455' : ''}`}>â‚¹{peBid.toFixed(2)}</td>
+                                <td className={`py-2 px-2 text-right ${inPE ? 'bg-rose-500/5 text-rose-500 dark:text-rose-455' : ''}`}>â‚¹{(peBid + 0.35).toFixed(2)}</td>
                                 <td className="py-2 px-2 text-right text-slate-400 font-medium">{Math.floor((strike * 23) % 1500) + 95}k</td>
                               </tr>
                             );
@@ -2110,7 +2177,7 @@ function TradingTerminalInner() {
               {/* SECTION 5: STRATEGY TESTER */}
               <div className="mb-8">
                 <h3 className="text-[11px] font-black uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-3 flex items-center gap-2">
-                  🧪 Strategy Tester
+                  ðŸ§ª Strategy Tester
                 </h3>
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 min-h-[200px]">
                   
@@ -2192,7 +2259,7 @@ function TradingTerminalInner() {
               {/* SECTION 6: AI PATTERN SCANNER */}
               <div className="mb-8">
                 <h3 className="text-[11px] font-black uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-3 flex items-center gap-2">
-                  🤖 AI Pattern Scanner
+                  ðŸ¤– AI Pattern Scanner
                 </h3>
                 <div className="flex flex-col bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 rounded-xl overflow-hidden shadow-md min-h-[250px]">
                   <div className="bg-slate-50/80 dark:bg-slate-900/80 px-4 py-2.5 border-b border-slate-100 dark:border-slate-850 text-[10px] font-black uppercase tracking-widest shrink-0 flex justify-between items-center">
@@ -2237,7 +2304,7 @@ function TradingTerminalInner() {
                                 </span>
                               </td>
                               <td className="py-2 px-3 text-slate-450">{p.reliability}</td>
-                              <td className="py-2 px-3 text-right">₹{p.close.toFixed(2)}</td>
+                              <td className="py-2 px-3 text-right">â‚¹{p.close.toFixed(2)}</td>
                             </tr>
                           ))}
                         </tbody>
@@ -2267,7 +2334,7 @@ function TradingTerminalInner() {
                     : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-300 border border-transparent'
                 }`}
               >
-                📋 Watchlist
+                ðŸ“‹ Watchlist
               </button>
               <button
                 type="button"
@@ -2278,7 +2345,7 @@ function TradingTerminalInner() {
                     : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-300 border border-transparent'
                 }`}
               >
-                🏛️ Fundamentals
+                ðŸ›ï¸ Fundamentals
               </button>
             </div>
             <button
@@ -2286,7 +2353,7 @@ function TradingTerminalInner() {
               onClick={() => setSidebarSize(sidebarSize === 'wide' ? 'normal' : 'wide')}
               className="hidden lg:flex px-2 py-1 text-[9px] font-extrabold text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 bg-slate-100 dark:bg-slate-905 border border-slate-200 dark:border-slate-800 rounded-lg items-center gap-1 transition-all"
             >
-              <span>{sidebarSize === 'wide' ? 'Narrow ➔' : '« Wide'}</span>
+              <span>{sidebarSize === 'wide' ? 'Narrow âž”' : 'Â« Wide'}</span>
             </button>
           </div>
 
@@ -2350,7 +2417,7 @@ function TradingTerminalInner() {
                               : 'bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-850 text-slate-500 hover:border-slate-300 dark:hover:border-slate-800'
                           }`}
                         >
-                          <span className="truncate max-w-[80px]">{wl.name === 'default' ? '🏛️ Institutional' : wl.name}</span>
+                          <span className="truncate max-w-[80px]">{wl.name === 'default' ? 'ðŸ›ï¸ Institutional' : wl.name}</span>
                           {!wl.isDefault && wl.name !== 'default' && (
                             <button
                               type="button"
@@ -2367,7 +2434,7 @@ function TradingTerminalInner() {
                               }}
                               className="text-slate-400 hover:text-red-500 transition-colors ml-0.5 shrink-0"
                             >
-                              ✕
+                              âœ•
                             </button>
                           )}
                         </div>
@@ -2391,7 +2458,7 @@ function TradingTerminalInner() {
                   <input
                     id="watchlist-filter-input"
                     type="text"
-                    placeholder="Filter stocks (Press Space)…"
+                    placeholder="Filter stocks (Press Space)â€¦"
                     value={searchQuery}
                     onChange={e => setSearchQuery(e.target.value)}
                     className="w-full pl-9 pr-4 py-2 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-blue-500/50 rounded-xl text-xs font-bold text-slate-800 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-600 focus:outline-none transition-all"
@@ -2443,7 +2510,7 @@ function TradingTerminalInner() {
                             type="button"
                             onClick={e => { e.stopPropagation(); const r = customTagRaw.find(t => t.tagId === tag.id)!; setEditingTag(r); setEditLabel(r.label); setEditColor(r.color); }}
                             className="text-slate-400 hover:text-slate-650 transition-colors text-[9px] leading-none"
-                          >✎</button>
+                          >âœŽ</button>
                         )}
                       </div>
                     );
@@ -2515,7 +2582,7 @@ function TradingTerminalInner() {
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
                           <div className="text-right">
-                            <div className="text-xs font-black text-slate-900 dark:text-white font-mono">₹{(livePrices[stock.symbol] || stock.price).toFixed(0)}</div>
+                            <div className="text-xs font-black text-slate-900 dark:text-white font-mono">â‚¹{(livePrices[stock.symbol] || stock.price).toFixed(0)}</div>
                             <span className={`inline-block text-[9px] font-extrabold px-1.5 py-0.5 rounded mt-0.5 ${
                               positive ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-red-500/10 text-red-500 dark:text-red-400'
                             }`}>
@@ -2560,7 +2627,7 @@ function TradingTerminalInner() {
                                       >
                                         <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: isActive ? tag.dot : '#64748b' }} />
                                         {tag.label}
-                                        {isActive && <span className="ml-auto text-[8px]">✓</span>}
+                                        {isActive && <span className="ml-auto text-[8px]">âœ“</span>}
                                       </button>
                                     ) : (
                                       <button
@@ -2571,7 +2638,7 @@ function TradingTerminalInner() {
                                       >
                                         <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: isActive ? tag.dot : '#64748b' }} />
                                         {tag.label}
-                                        {isActive && <span className="ml-auto text-[8px]">✓</span>}
+                                        {isActive && <span className="ml-auto text-[8px]">âœ“</span>}
                                       </button>
                                     );
                                   })}
@@ -2625,10 +2692,10 @@ function TradingTerminalInner() {
                   {/* Sub-tab selection row */}
                   <div className="flex items-center border-b border-slate-100 dark:border-slate-900 bg-slate-50 dark:bg-slate-950 px-2 py-1 shrink-0 overflow-x-auto scrollbar-none gap-0.5">
                     {[
-                      { id: 'overview', label: '🏛️ Overview' },
-                      { id: 'dcf', label: '🎯 DCF Target' },
-                      { id: 'financials', label: '📋 Statement Tables' },
-                      { id: 'news', label: '📰 News & Peers' }
+                      { id: 'overview', label: 'ðŸ›ï¸ Overview' },
+                      { id: 'dcf', label: 'ðŸŽ¯ DCF Target' },
+                      { id: 'financials', label: 'ðŸ“‹ Statement Tables' },
+                      { id: 'news', label: 'ðŸ“° News & Peers' }
                     ].map(tab => (
                       <button
                         key={tab.id}
@@ -2651,26 +2718,26 @@ function TradingTerminalInner() {
                       <div className="grid grid-cols-2 gap-3">
                         <div className="bg-slate-50 dark:bg-slate-900/60 p-2.5 rounded-xl border border-slate-150 dark:border-slate-800/80">
                           <span className="text-slate-400 font-extrabold uppercase block tracking-wider text-[8px] mb-0.5">Sector</span>
-                          <span className="font-extrabold text-slate-800 dark:text-slate-200 block truncate">{deepData?.profile?.sector || '—'}</span>
+                          <span className="font-extrabold text-slate-800 dark:text-slate-200 block truncate">{deepData?.profile?.sector || 'â€”'}</span>
                         </div>
                         <div className="bg-slate-50 dark:bg-slate-900/60 p-2.5 rounded-xl border border-slate-150 dark:border-slate-800/80">
                           <span className="text-slate-400 font-extrabold uppercase block tracking-wider text-[8px] mb-0.5">Industry</span>
-                          <span className="font-extrabold text-slate-800 dark:text-slate-200 block truncate">{deepData?.profile?.industry || '—'}</span>
+                          <span className="font-extrabold text-slate-800 dark:text-slate-200 block truncate">{deepData?.profile?.industry || 'â€”'}</span>
                         </div>
                       </div>
 
                       <div className="grid grid-cols-2 gap-3">
                         <div className="bg-slate-50 dark:bg-slate-900/60 p-2.5 rounded-xl border border-slate-150 dark:border-slate-800/80">
                           <span className="text-slate-400 font-extrabold uppercase block tracking-wider text-[8px] mb-0.5">P/E Ratio</span>
-                          <span className="font-extrabold text-slate-850 dark:text-slate-205 block font-mono">{selectedStock.pe > 0 ? selectedStock.pe.toFixed(1) : '—'}</span>
+                          <span className="font-extrabold text-slate-850 dark:text-slate-205 block font-mono">{selectedStock.pe > 0 ? selectedStock.pe.toFixed(1) : 'â€”'}</span>
                         </div>
                         <div className="bg-slate-50 dark:bg-slate-900/60 p-2.5 rounded-xl border border-slate-150 dark:border-slate-800/80">
                           <span className="text-slate-400 font-extrabold uppercase block tracking-wider text-[8px] mb-0.5">ROE</span>
-                          <span className="font-extrabold text-slate-850 dark:text-slate-205 block font-mono">{deepData?.ratios?.roe ? `${deepData.ratios.roe.toFixed(1)}%` : '—'}</span>
+                          <span className="font-extrabold text-slate-850 dark:text-slate-205 block font-mono">{deepData?.ratios?.roe ? `${deepData.ratios.roe.toFixed(1)}%` : 'â€”'}</span>
                         </div>
                         <div className="bg-slate-50 dark:bg-slate-900/60 p-2.5 rounded-xl border border-slate-150 dark:border-slate-800/80">
                           <span className="text-slate-400 font-extrabold uppercase block tracking-wider text-[8px] mb-0.5">Debt/Equity</span>
-                          <span className="font-extrabold text-slate-850 dark:text-slate-205 block font-mono">{deepData?.ratios?.debtToEquity !== undefined ? (deepData.ratios.debtToEquity / 100).toFixed(2) : '—'}</span>
+                          <span className="font-extrabold text-slate-850 dark:text-slate-205 block font-mono">{deepData?.ratios?.debtToEquity !== undefined ? (deepData.ratios.debtToEquity / 100).toFixed(2) : 'â€”'}</span>
                         </div>
                         <div className="bg-slate-50 dark:bg-slate-900/60 p-2.5 rounded-xl border border-slate-150 dark:border-slate-800/80">
                           <span className="text-slate-400 font-extrabold uppercase block tracking-wider text-[8px] mb-0.5">Div Yield</span>
@@ -2682,7 +2749,7 @@ function TradingTerminalInner() {
                         <div className="bg-slate-50 dark:bg-slate-900/60 p-3 rounded-xl border border-slate-150 dark:border-slate-800/80">
                           <div className="flex justify-between items-center text-[8px] text-slate-400 font-extrabold uppercase tracking-widest mb-1.5">
                             <span>52-Week Range</span>
-                            <span className="font-mono">₹{deepData.ratios.fiftyTwoWeekLow.toFixed(0)} - ₹{deepData.ratios.fiftyTwoWeekHigh.toFixed(0)}</span>
+                            <span className="font-mono">â‚¹{deepData.ratios.fiftyTwoWeekLow.toFixed(0)} - â‚¹{deepData.ratios.fiftyTwoWeekHigh.toFixed(0)}</span>
                           </div>
                           <div className="w-full bg-slate-200 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden relative">
                             <div 
@@ -2706,10 +2773,10 @@ function TradingTerminalInner() {
                       <div className="bg-slate-50 dark:bg-slate-900/60 p-3.5 rounded-2xl border border-slate-150 dark:border-slate-800/80 text-center">
                         <span className="text-slate-400 font-black uppercase block tracking-widest text-[8px] mb-1.5">IMPLIED COMPASS CAGR</span>
                         <span className="text-2xl font-black text-blue-600 dark:text-blue-400 block tracking-tight font-mono">
-                          {impliedGrowth !== undefined ? `${impliedGrowth.toFixed(2)}%` : '—'}
+                          {impliedGrowth !== undefined ? `${impliedGrowth.toFixed(2)}%` : 'â€”'}
                         </span>
                         <p className="text-[9px] text-slate-400 mt-2 leading-relaxed font-semibold">
-                          To justify spot price <span className="font-extrabold font-mono">₹{selectedStock.price}</span>, this enterprise must compound EPS at <span className="font-extrabold text-blue-600 dark:text-blue-400 font-mono">{impliedGrowth.toFixed(2)}%</span> annually.
+                          To justify spot price <span className="font-extrabold font-mono">â‚¹{selectedStock.price}</span>, this enterprise must compound EPS at <span className="font-extrabold text-blue-600 dark:text-blue-400 font-mono">{impliedGrowth.toFixed(2)}%</span> annually.
                         </p>
                       </div>
 
@@ -2769,8 +2836,8 @@ function TradingTerminalInner() {
                                   {rows.map((r: QuarterlyItem, idx: number) => (
                                     <tr key={idx} className="hover:bg-slate-100 dark:hover:bg-slate-900/50">
                                       <td className="py-1.5 px-2 font-bold font-sans text-slate-700 dark:text-slate-350">{r.date}</td>
-                                      <td className="py-1.5 px-2 text-right">₹{(r.revenue / 10000000).toFixed(1)}Cr</td>
-                                      <td className="py-1.5 px-2 text-right text-emerald-600">₹{(r.netIncome / 10000000).toFixed(1)}Cr</td>
+                                      <td className="py-1.5 px-2 text-right">â‚¹{(r.revenue / 10000000).toFixed(1)}Cr</td>
+                                      <td className="py-1.5 px-2 text-right text-emerald-600">â‚¹{(r.netIncome / 10000000).toFixed(1)}Cr</td>
                                     </tr>
                                   ))}
                                 </tbody>
@@ -2793,8 +2860,8 @@ function TradingTerminalInner() {
                                   {rows.map((r: ProfitLossItem, idx: number) => (
                                     <tr key={idx} className="hover:bg-slate-100 dark:hover:bg-slate-900/50">
                                       <td className="py-1.5 px-2 font-bold font-sans text-slate-700 dark:text-slate-350">{r.date}</td>
-                                      <td className="py-1.5 px-2 text-right">₹{(r.revenue / 10000000).toFixed(1)}Cr</td>
-                                      <td className="py-1.5 px-2 text-right text-emerald-600">₹{(r.netIncome / 10000000).toFixed(1)}Cr</td>
+                                      <td className="py-1.5 px-2 text-right">â‚¹{(r.revenue / 10000000).toFixed(1)}Cr</td>
+                                      <td className="py-1.5 px-2 text-right text-emerald-600">â‚¹{(r.netIncome / 10000000).toFixed(1)}Cr</td>
                                     </tr>
                                   ))}
                                 </tbody>
@@ -2817,8 +2884,8 @@ function TradingTerminalInner() {
                                   {rows.map((r: BalanceSheetItem, idx: number) => (
                                     <tr key={idx} className="hover:bg-slate-100 dark:hover:bg-slate-900/50">
                                       <td className="py-1.5 px-2 font-bold font-sans text-slate-700 dark:text-slate-350">{r.date}</td>
-                                      <td className="py-1.5 px-2 text-right">₹{(r.totalAssets / 10000000).toFixed(1)}Cr</td>
-                                      <td className="py-1.5 px-2 text-right text-indigo-500">₹{(r.equity / 10000000).toFixed(1)}Cr</td>
+                                      <td className="py-1.5 px-2 text-right">â‚¹{(r.totalAssets / 10000000).toFixed(1)}Cr</td>
+                                      <td className="py-1.5 px-2 text-right text-indigo-500">â‚¹{(r.equity / 10000000).toFixed(1)}Cr</td>
                                     </tr>
                                   ))}
                                 </tbody>
@@ -2841,8 +2908,8 @@ function TradingTerminalInner() {
                                 <span className="text-slate-800 dark:text-slate-100 block">{p.symbol.replace('.NS','')}</span>
                               </div>
                               <div className="text-right font-mono">
-                                <span className="block text-slate-700 dark:text-slate-300">₹{p.price.toFixed(0)}</span>
-                                <span className="text-[7.5px] text-slate-400 block">P/E: {p.pe > 0 ? p.pe.toFixed(1) : '—'}</span>
+                                <span className="block text-slate-700 dark:text-slate-300">â‚¹{p.price.toFixed(0)}</span>
+                                <span className="text-[7.5px] text-slate-400 block">P/E: {p.pe > 0 ? p.pe.toFixed(1) : 'â€”'}</span>
                               </div>
                             </div>
                           ))}
@@ -2857,7 +2924,7 @@ function TradingTerminalInner() {
         </section>
       </main>
 
-      {/* ── Active Alerts Sidebar slider drawer ────────────────── */}
+      {/* â”€â”€ Active Alerts Sidebar slider drawer â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       {showAlertsSidebar && (
         <div className="fixed inset-y-0 right-0 z-50 w-80 bg-white dark:bg-slate-950 border-l border-slate-200 dark:border-slate-800 shadow-2xl flex flex-col animate-slide-left p-4">
           <div className="flex justify-between items-center border-b border-slate-100 dark:border-slate-850 pb-2 mb-4 shrink-0 select-none">
@@ -2889,12 +2956,15 @@ function TradingTerminalInner() {
                 >
                   <option value="price_above">Price Above (&gt;=)</option>
                   <option value="price_below">Price Below (&lt;=)</option>
-                  <option value="price_crosses">Price Crosses (≒)</option>
+                  <option value="price_crosses">Price Crosses</option>
+                  <option value="volume_spike">Volume Spike</option>
+                  <option value="rsi_above">RSI Above</option>
+                  <option value="rsi_below">RSI Below</option>
                 </select>
               </div>
             </div>
             <div className="text-[10px] font-bold">
-              <label className="text-[9px] text-slate-455 block mb-1">Target Price (₹)</label>
+              <label className="text-[9px] text-slate-455 block mb-1">Target Value</label>
               <input
                 type="number"
                 step="0.05"
@@ -2927,7 +2997,7 @@ function TradingTerminalInner() {
                   <div>
                     <span className="font-extrabold text-slate-800 dark:text-slate-150 block">{alert.symbol.replace('.NS','')}</span>
                     <span className="text-[8.5px] text-slate-450 block font-bold font-mono mt-0.5">
-                      {alert.condition === 'price_above' ? 'Crossing Above' : alert.condition === 'price_below' ? 'Crossing Below' : 'Crossing Target'} @ ₹{alert.value.toFixed(2)}
+                      {alert.condition === 'price_above' ? 'Crossing Above' : alert.condition === 'price_below' ? 'Crossing Below' : alert.condition === 'volume_spike' ? 'Volume Spike' : alert.condition === 'rsi_above' ? 'RSI Above' : alert.condition === 'rsi_below' ? 'RSI Below' : 'Crossing Target'} @ {alert.value.toFixed(2)}
                     </span>
                   </div>
                   <button
@@ -2936,7 +3006,7 @@ function TradingTerminalInner() {
                     className="p-1 hover:bg-rose-500/10 hover:text-red-500 text-slate-400 rounded-lg transition-colors cursor-pointer"
                     title="Delete trigger alert"
                   >
-                    ✕
+                    <X className="h-3.5 w-3.5" />
                   </button>
                 </div>
               ))
@@ -2945,7 +3015,7 @@ function TradingTerminalInner() {
         </div>
       )}
 
-      {/* ── Add Stock modal dialog ────────────────────────────── */}
+      {/* â”€â”€ Add Stock modal dialog â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       {showAddModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in" onClick={() => setShowAddModal(false)}>
           <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 w-full max-w-sm shadow-2xl animate-scale-up" onClick={e => e.stopPropagation()}>
@@ -3037,7 +3107,7 @@ function TradingTerminalInner() {
                 maxLength={24}
                 value={editLabel}
                 onChange={e => setEditLabel(e.target.value)}
-                placeholder="Tag name…"
+                placeholder="Tag nameâ€¦"
                 className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 focus:border-blue-500/50 rounded-xl text-xs font-semibold text-slate-100 placeholder:text-slate-600 focus:outline-none"
               />
               <div className="flex items-center gap-3">
@@ -3057,7 +3127,7 @@ function TradingTerminalInner() {
                   onClick={handleSaveCustomTag}
                   className="flex-1 py-2.5 bg-blue-500 hover:bg-blue-600 disabled:bg-blue-500/40 text-white rounded-xl text-xs font-extrabold transition-all cursor-pointer"
                 >
-                  {editSaving ? 'Saving…' : 'Save'}
+                  {editSaving ? 'Savingâ€¦' : 'Save'}
                 </button>
                 <button
                   type="button"
@@ -3092,7 +3162,7 @@ export default function TradingTerminalPage() {
       <div className="min-h-dvh bg-slate-950 flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
           <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-          <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Initialising Terminal…</span>
+          <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Initialising Terminalâ€¦</span>
         </div>
       </div>
     }>
@@ -3100,3 +3170,4 @@ export default function TradingTerminalPage() {
     </React.Suspense>
   );
 }
+

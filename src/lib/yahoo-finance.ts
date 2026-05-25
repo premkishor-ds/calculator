@@ -1,4 +1,4 @@
-import YahooFinance from 'yahoo-finance2';
+﻿import YahooFinance from 'yahoo-finance2';
 
 /** Silence yahoo-finance2 Node-version advisory on stderr during build workers. */
 const logger = {
@@ -17,3 +17,4 @@ export const yahooFinance = new YahooFinance({
   suppressNotices: ['yahooSurvey', 'ripHistorical'],
   logger,
 });
+

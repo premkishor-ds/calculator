@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+﻿import { NextRequest, NextResponse } from 'next/server';
 import { yahooFinance } from '@/lib/yahoo-finance';
 import { WATCHLIST_SYMBOLS } from '../route';
 
@@ -65,20 +65,13 @@ export async function GET(
     }
 
     const summary = summaryRes.value;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const balanceSheets = balanceSheetRes.status === 'fulfilled' ? (balanceSheetRes.value as any[]) : [];
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const financials = financialsRes.status === 'fulfilled' ? (financialsRes.value as any[]) : [];
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const cashFlows = cashFlowRes.status === 'fulfilled' ? (cashFlowRes.value as any[]) : [];
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const quarterlyFinancials = quarterlyFinancialsRes.status === 'fulfilled' ? (quarterlyFinancialsRes.value as any[]) : [];
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const chartQuotes = chartRes.status === 'fulfilled' ? ((chartRes.value as any).quotes || []) : [];
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const rawNews = newsRes.status === 'fulfilled' ? ((newsRes.value as any).news || []) : [];
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const formattedNews = rawNews.slice(0, 10).map((n: any) => {
       const pubTime = n.providerPublishTime;
       const time = pubTime instanceof Date 
@@ -95,17 +88,11 @@ export async function GET(
       };
     });
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const price = (summary.price || {}) as any;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const detail = (summary.summaryDetail || {}) as any;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const stats = (summary.defaultKeyStatistics || {}) as any;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const financialData = (summary.financialData || {}) as any;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const holders = (summary.majorHoldersBreakdown || {}) as any;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const profile = (summary.assetProfile || {}) as any;
 
     const regularPrice = price.regularMarketPrice || 0;
@@ -161,7 +148,6 @@ export async function GET(
       website: profile.website || '',
       city: profile.city || 'N/A',
       summary: profile.longBusinessSummary || 'No summary available.',
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       officers: (profile.companyOfficers || []).map((off: any) => ({
         name: off.name || 'N/A',
         title: off.title || 'N/A',
@@ -171,7 +157,6 @@ export async function GET(
     };
 
     // Format historical statements (10 years)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const balanceSheetData = balanceSheets.map((item: any) => ({
       date: item.date ? new Date(item.date).toLocaleDateString('en-IN', { year: 'numeric', month: 'short' }) : 'N/A',
       totalAssets: item.totalAssets || 0,
@@ -182,7 +167,6 @@ export async function GET(
       workingCapital: item.workingCapital || 0,
     }));
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const profitLossData = financials.map((item: any) => ({
       date: item.date ? new Date(item.date).toLocaleDateString('en-IN', { year: 'numeric', month: 'short' }) : 'N/A',
       revenue: item.totalRevenue || 0,
@@ -193,7 +177,6 @@ export async function GET(
       eps: item.basicEPS || item.dilutedEPS || 0,
     }));
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const cashFlowData = cashFlows.map((item: any) => ({
       date: item.date ? new Date(item.date).toLocaleDateString('en-IN', { year: 'numeric', month: 'short' }) : 'N/A',
       operatingCashFlow: item.operatingCashFlow || item.netCashFromOperatingActivities || 0,
@@ -205,7 +188,6 @@ export async function GET(
     }));
 
     // Format quarterly statements (last 12 quarters)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const quarterlyProfitLossData = quarterlyFinancials.map((item: any) => {
       const dateObj = item.date ? new Date(item.date) : null;
       let dateStr = 'N/A';
@@ -229,7 +211,6 @@ export async function GET(
 
     // Format chart prices (reduce data density to ~60 points for high fidelity Line SVG)
     const step = Math.max(1, Math.floor(chartQuotes.length / 60));
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const chartData = chartQuotes.filter((_: any, idx: number) => idx % step === 0).map((q: any) => ({
       date: q.date ? new Date(q.date).toLocaleDateString('en-IN', { month: 'short', day: 'numeric' }) : '',
       close: Number((q.close || q.adjclose || 0).toFixed(2)),
@@ -264,7 +245,6 @@ export async function GET(
 
     const peersData = peersQuotes.map((pRes, idx) => {
       if (pRes.status === 'rejected') return null;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const val = pRes.value as any;
       const pPrice = val.price || {};
       const pDetail = val.summaryDetail || {};

@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+﻿import { NextRequest, NextResponse } from 'next/server';
 import { yahooFinance } from '@/lib/yahoo-finance';
 
 export async function GET(request: NextRequest) {
@@ -8,9 +8,7 @@ export async function GET(request: NextRequest) {
   try {
     const result = await yahooFinance.search(q, { newsCount: 0, quotesCount: 8 });
     const quotes = (result.quotes ?? [])
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       .filter((r: any) => r.quoteType === 'EQUITY' && r.symbol)
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       .map((r: any) => ({
         symbol: r.symbol as string,
         name: (r.shortname || r.longname || r.symbol) as string,
@@ -21,3 +19,4 @@ export async function GET(request: NextRequest) {
     return NextResponse.json([]);
   }
 }
+

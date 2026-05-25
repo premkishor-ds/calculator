@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+﻿import { NextRequest, NextResponse } from 'next/server';
 import { yahooFinance } from '@/lib/yahoo-finance';
 
 import { WATCHLIST_SYMBOLS } from '../../../utils/symbols';
@@ -54,7 +54,6 @@ export async function GET(request: NextRequest) {
       return NextResponse.json([], { status: 200 }); // Return empty array instead of 502 for failed single additions
     }
     
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const stockData = validQuotes.map((qs: any) => {
       const price = qs.price || {};
       const summary = qs.summaryDetail || {};

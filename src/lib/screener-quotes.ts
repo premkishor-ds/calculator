@@ -1,8 +1,7 @@
-import { yahooFinance } from '@/lib/yahoo-finance';
+﻿import { yahooFinance } from '@/lib/yahoo-finance';
 
 export const QUOTE_BATCH_SIZE = 500;
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function mapQuoteToRow(quote: any, nameFallback = '') {
   const price = quote.regularMarketPrice ?? 0;
   const bookValue = quote.bookValue ?? 0;
@@ -39,7 +38,6 @@ export async function fetchQuoteBatch(
 ) {
   if (tickers.length === 0) return [];
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const quotes: any[] = await yahooFinance.quote(tickers, { return: 'array' });
   const rows: ReturnType<typeof mapQuoteToRow>[] = [];
 
@@ -51,3 +49,4 @@ export async function fetchQuoteBatch(
 
   return rows;
 }
+

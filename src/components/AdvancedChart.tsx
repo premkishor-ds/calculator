@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { getBackendWsUrl } from '@/lib/backend-config';
@@ -6,7 +6,7 @@ import {
   RotateCcw, MousePointer, Slash, Minus, Eraser, Trash2,
   TrendingUp, TrendingDown, RefreshCw, Settings, Play, Pause,
   SkipForward, Calendar, Eye, EyeOff, Lock, Unlock, HelpCircle,
-  Activity, Sliders, ChevronDown, Check, Plus
+  Activity, Sliders, ChevronDown, Check, Plus, Undo2, Redo2, X
 } from 'lucide-react';
 import {
   createChart,
@@ -28,7 +28,7 @@ import {
   createSeriesMarkers,
 } from 'lightweight-charts';
 
-/* ─── Types & Drawings Structures ────────────────────────────── */
+/* â”€â”€â”€ Types & Drawings Structures â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 export interface ChartPoint {
   time: number;
   date: string;
@@ -126,15 +126,51 @@ const CHART_STYLES = [
   'Histogram',
   'Heikin Ashi',
   'Renko',
+  'Kagi',
+  'Point and Figure',
   'Line Break'
 ];
 
 const STANDARD_INTERVALS = [
-  '1s', '5s', '15s', '30s',
   '1m', '3m', '5m', '10m', '15m', '30m', '45m',
   '1h', '2h', '4h',
-  'Daily', 'Weekly', 'Monthly'
+  'Daily', 'Weekly', 'Monthly', 'Yearly'
 ];
+
+const INTERVAL_OPTIONS = [
+  { label: '1m', val: '1m' },
+  { label: '3m', val: '3m' },
+  { label: '5m', val: '5m' },
+  { label: '15m', val: '15m' },
+  { label: '30m', val: '30m' },
+  { label: '45m', val: '45m' },
+  { label: '1H', val: '1h' },
+  { label: '2H', val: '2h' },
+  { label: '4H', val: '4h' },
+  { label: 'D', val: 'Daily' },
+  { label: 'W', val: 'Weekly' },
+  { label: 'M', val: 'Monthly' },
+  { label: 'Y', val: 'Yearly' },
+] as const;
+
+const INDICATOR_OPTIONS = [
+  'SMA20',
+  'SMA50',
+  'EMA20',
+  'EMA50',
+  'VWAP',
+  'RSI14',
+  'MACD',
+  'Bollinger',
+  'Stochastic',
+  'ADX',
+  'ATR',
+  'Supertrend',
+  'Ichimoku',
+  'Volume',
+  'OBV',
+  'Pivots',
+] as const;
 
 interface Props {
   symbol: string;
@@ -160,7 +196,7 @@ interface Props {
   }>;
 }
 
-/* ─── Pure helper — no hooks ─────────────────────────────────── */
+/* â”€â”€â”€ Pure helper â€” no hooks â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 function calcSMA(data: ChartPoint[], period: number): LineData<Time>[] {
   const out: LineData<Time>[] = [];
   for (let i = period - 1; i < data.length; i++) {
@@ -221,7 +257,197 @@ function calcRSI(data: ChartPoint[], period: number = 14): LineData<Time>[] {
   return out;
 }
 
-/* ─── Custom Styles Mathematics Filters ──────────────────────── */
+function calcVWAP(data: ChartPoint[]): LineData<Time>[] {
+  let cumulativeTypicalVolume = 0;
+  let cumulativeVolume = 0;
+  return data
+    .map((p) => {
+      const typical = (p.high + p.low + p.close) / 3;
+      cumulativeTypicalVolume += typical * p.volume;
+      cumulativeVolume += p.volume;
+      if (cumulativeVolume === 0) return null;
+      return { time: p.time as Time, value: parseFloat((cumulativeTypicalVolume / cumulativeVolume).toFixed(2)) };
+    })
+    .filter(Boolean) as LineData<Time>[];
+}
+
+function calcATR(data: ChartPoint[], period: number = 14): LineData<Time>[] {
+  if (data.length <= period) return [];
+  const trueRanges = data.map((p, i) => {
+    if (i === 0) return p.high - p.low;
+    return Math.max(p.high - p.low, Math.abs(p.high - data[i - 1].close), Math.abs(p.low - data[i - 1].close));
+  });
+  const out: LineData<Time>[] = [];
+  let atr = trueRanges.slice(1, period + 1).reduce((sum, value) => sum + value, 0) / period;
+  out.push({ time: data[period].time as Time, value: parseFloat(atr.toFixed(2)) });
+  for (let i = period + 1; i < data.length; i++) {
+    atr = (atr * (period - 1) + trueRanges[i]) / period;
+    out.push({ time: data[i].time as Time, value: parseFloat(atr.toFixed(2)) });
+  }
+  return out;
+}
+
+function calcOBV(data: ChartPoint[]): LineData<Time>[] {
+  if (data.length === 0) return [];
+  let obv = 0;
+  return data.map((p, i) => {
+    if (i > 0) {
+      if (p.close > data[i - 1].close) obv += p.volume;
+      else if (p.close < data[i - 1].close) obv -= p.volume;
+    }
+    return { time: p.time as Time, value: parseFloat((obv / 100000).toFixed(2)) };
+  });
+}
+
+function calcPivots(data: ChartPoint[]): LineData<Time>[] {
+  return data.map((p) => ({
+    time: p.time as Time,
+    value: parseFloat(((p.high + p.low + p.close) / 3).toFixed(2)),
+  }));
+}
+
+function calcBollingerBands(data: ChartPoint[], period = 20, multiplier = 2): Record<string, LineData<Time>[]> {
+  const middle = calcSMA(data, period);
+  const upper: LineData<Time>[] = [];
+  const lower: LineData<Time>[] = [];
+  for (let i = period - 1; i < data.length; i++) {
+    const slice = data.slice(i - period + 1, i + 1);
+    const mean = slice.reduce((sum, p) => sum + p.close, 0) / period;
+    const variance = slice.reduce((sum, p) => sum + Math.pow(p.close - mean, 2), 0) / period;
+    const deviation = Math.sqrt(variance);
+    upper.push({ time: data[i].time as Time, value: parseFloat((mean + deviation * multiplier).toFixed(2)) });
+    lower.push({ time: data[i].time as Time, value: parseFloat((mean - deviation * multiplier).toFixed(2)) });
+  }
+  return { middle, upper, lower };
+}
+
+function calcMACD(data: ChartPoint[]): Record<string, LineData<Time>[]> {
+  const ema12 = calcEMA(data, 12);
+  const ema26 = calcEMA(data, 26);
+  const ema12ByTime = new Map(ema12.map((item) => [Number(item.time), item.value]));
+  const macd: LineData<Time>[] = ema26
+    .map((item) => {
+      const fast = ema12ByTime.get(Number(item.time));
+      if (fast === undefined) return null;
+      return { time: item.time, value: parseFloat((fast - item.value).toFixed(2)) };
+    })
+    .filter(Boolean) as LineData<Time>[];
+
+  const macdAsPoints = macd.map((item) => ({
+    time: Number(item.time),
+    date: '',
+    open: item.value,
+    high: item.value,
+    low: item.value,
+    close: item.value,
+    volume: 0,
+    pe: 0,
+  }));
+  const signal = calcEMA(macdAsPoints, 9);
+  return { macd, signal };
+}
+
+function calcStochastic(data: ChartPoint[], period = 14): Record<string, LineData<Time>[]> {
+  const k: LineData<Time>[] = [];
+  for (let i = period - 1; i < data.length; i++) {
+    const slice = data.slice(i - period + 1, i + 1);
+    const highest = Math.max(...slice.map((p) => p.high));
+    const lowest = Math.min(...slice.map((p) => p.low));
+    const value = highest === lowest ? 50 : ((data[i].close - lowest) / (highest - lowest)) * 100;
+    k.push({ time: data[i].time as Time, value: parseFloat(value.toFixed(2)) });
+  }
+  const dPoints = k.map((item) => ({
+    time: Number(item.time),
+    date: '',
+    open: item.value,
+    high: item.value,
+    low: item.value,
+    close: item.value,
+    volume: 0,
+    pe: 0,
+  }));
+  return { k, d: calcSMA(dPoints, 3) };
+}
+
+function calcADX(data: ChartPoint[], period = 14): LineData<Time>[] {
+  if (data.length <= period * 2) return [];
+  const dx: LineData<Time>[] = [];
+  for (let i = period; i < data.length; i++) {
+    let plusDM = 0;
+    let minusDM = 0;
+    let tr = 0;
+    for (let j = i - period + 1; j <= i; j++) {
+      const upMove = data[j].high - data[j - 1].high;
+      const downMove = data[j - 1].low - data[j].low;
+      if (upMove > downMove && upMove > 0) plusDM += upMove;
+      if (downMove > upMove && downMove > 0) minusDM += downMove;
+      tr += Math.max(data[j].high - data[j].low, Math.abs(data[j].high - data[j - 1].close), Math.abs(data[j].low - data[j - 1].close));
+    }
+    const plusDI = tr === 0 ? 0 : (plusDM / tr) * 100;
+    const minusDI = tr === 0 ? 0 : (minusDM / tr) * 100;
+    const value = plusDI + minusDI === 0 ? 0 : (Math.abs(plusDI - minusDI) / (plusDI + minusDI)) * 100;
+    dx.push({ time: data[i].time as Time, value: parseFloat(value.toFixed(2)) });
+  }
+  const dxPoints = dx.map((item) => ({
+    time: Number(item.time),
+    date: '',
+    open: item.value,
+    high: item.value,
+    low: item.value,
+    close: item.value,
+    volume: 0,
+    pe: 0,
+  }));
+  return calcSMA(dxPoints, period);
+}
+
+function calcSupertrend(data: ChartPoint[], period = 10, multiplier = 3): LineData<Time>[] {
+  const atr = calcATR(data, period);
+  const atrByTime = new Map(atr.map((item) => [Number(item.time), item.value]));
+  const out: LineData<Time>[] = [];
+  let trendUp = true;
+  for (let i = period; i < data.length; i++) {
+    const atrValue = atrByTime.get(data[i].time);
+    if (!atrValue) continue;
+    const median = (data[i].high + data[i].low) / 2;
+    const upper = median + multiplier * atrValue;
+    const lower = median - multiplier * atrValue;
+    if (i > period) {
+      const previous = out[out.length - 1]?.value ?? lower;
+      if (data[i].close > previous) trendUp = true;
+      if (data[i].close < previous) trendUp = false;
+    }
+    out.push({ time: data[i].time as Time, value: parseFloat((trendUp ? lower : upper).toFixed(2)) });
+  }
+  return out;
+}
+
+function calcIchimoku(data: ChartPoint[]): Record<string, LineData<Time>[]> {
+  const rollingMid = (period: number): LineData<Time>[] => {
+    const out: LineData<Time>[] = [];
+    for (let i = period - 1; i < data.length; i++) {
+      const slice = data.slice(i - period + 1, i + 1);
+      const high = Math.max(...slice.map((p) => p.high));
+      const low = Math.min(...slice.map((p) => p.low));
+      out.push({ time: data[i].time as Time, value: parseFloat(((high + low) / 2).toFixed(2)) });
+    }
+    return out;
+  };
+  const conversion = rollingMid(9);
+  const base = rollingMid(26);
+  const spanB = rollingMid(52);
+  const baseByTime = new Map(base.map((item) => [Number(item.time), item.value]));
+  const spanA = conversion
+    .map((item) => {
+      const baseValue = baseByTime.get(Number(item.time));
+      if (baseValue === undefined) return null;
+      return { time: item.time, value: parseFloat(((item.value + baseValue) / 2).toFixed(2)) };
+    })
+    .filter(Boolean) as LineData<Time>[];
+  return { conversion, base, spanA, spanB };
+}
+
+/* â”€â”€â”€ Custom Styles Mathematics Filters â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 function computeHeikinAshi(points: ChartPoint[]): ChartPoint[] {
   if (points.length === 0) return [];
   const haPoints: ChartPoint[] = [];
@@ -306,19 +532,94 @@ function computeLineBreak(points: ChartPoint[], lineCount: number = 3): ChartPoi
   return breakPoints.length > 0 ? breakPoints : points;
 }
 
+function computeKagi(points: ChartPoint[], reversalPercent = 3): ChartPoint[] {
+  if (points.length < 2) return points;
+  const out: ChartPoint[] = [];
+  let direction: 1 | -1 = points[1].close >= points[0].close ? 1 : -1;
+  let pivot = points[0].close;
+  let extreme = points[0].close;
+  let syntheticTime = points[0].time;
+
+  for (const p of points.slice(1)) {
+    const reversal = Math.max(extreme * (reversalPercent / 100), 0.01);
+    if (direction === 1) {
+      if (p.close >= extreme) {
+        extreme = p.close;
+      } else if (extreme - p.close >= reversal) {
+        syntheticTime += 60;
+        out.push({ ...p, time: syntheticTime, open: pivot, high: extreme, low: p.close, close: p.close });
+        pivot = extreme;
+        extreme = p.close;
+        direction = -1;
+      }
+    } else {
+      if (p.close <= extreme) {
+        extreme = p.close;
+      } else if (p.close - extreme >= reversal) {
+        syntheticTime += 60;
+        out.push({ ...p, time: syntheticTime, open: pivot, high: p.close, low: extreme, close: p.close });
+        pivot = extreme;
+        extreme = p.close;
+        direction = 1;
+      }
+    }
+  }
+  return out.length > 0 ? out : points;
+}
+
+function computePointAndFigure(points: ChartPoint[], boxPercent = 1, reversalBoxes = 3): ChartPoint[] {
+  if (points.length === 0) return [];
+  const out: ChartPoint[] = [];
+  const first = points[0].close;
+  const boxSize = Math.max(first * (boxPercent / 100), 0.01);
+  let columnOpen = first;
+  let columnClose = first;
+  let direction: 1 | -1 = 1;
+  let syntheticTime = points[0].time;
+
+  for (const p of points.slice(1)) {
+    const movementBoxes = Math.trunc((p.close - columnClose) / boxSize);
+    if (direction === 1) {
+      if (movementBoxes > 0) {
+        columnClose += movementBoxes * boxSize;
+      } else if (movementBoxes <= -reversalBoxes) {
+        syntheticTime += 60;
+        out.push({ ...p, time: syntheticTime, open: columnOpen, high: Math.max(columnOpen, columnClose), low: Math.min(columnOpen, columnClose), close: columnClose });
+        columnOpen = columnClose;
+        columnClose += movementBoxes * boxSize;
+        direction = -1;
+      }
+    } else if (movementBoxes < 0) {
+      columnClose += movementBoxes * boxSize;
+    } else if (movementBoxes >= reversalBoxes) {
+      syntheticTime += 60;
+      out.push({ ...p, time: syntheticTime, open: columnOpen, high: Math.max(columnOpen, columnClose), low: Math.min(columnOpen, columnClose), close: columnClose });
+      columnOpen = columnClose;
+      columnClose += movementBoxes * boxSize;
+      direction = 1;
+    }
+  }
+
+  if (out.length === 0) return points;
+  const last = points[points.length - 1];
+  out.push({ ...last, time: syntheticTime + 60, open: columnOpen, high: Math.max(columnOpen, columnClose), low: Math.min(columnOpen, columnClose), close: columnClose });
+  return out;
+}
+
 function getIntervalSeconds(interval: string): number {
   const unit = interval.slice(-1);
   const val = parseInt(interval);
   if (interval === 'Daily') return 86400;
   if (interval === 'Weekly') return 604800;
   if (interval === 'Monthly') return 2592000;
+  if (interval === 'Yearly') return 31536000;
   if (unit === 's') return val;
   if (unit === 'm') return val * 60;
   if (unit === 'h') return val * 3600;
   return 300; // default 5m
 }
 
-/* ─── Component ──────────────────────────────────────────────── */
+/* â”€â”€â”€ Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 export default function AdvancedChart({
   symbol, chartRange, onRangeChange, chartMode, onModeChange, theme,
   controlledInterval, onIntervalChange, controlledStyle, onStyleChange,
@@ -346,7 +647,7 @@ export default function AdvancedChart({
 
   // Indicators states
   const [activeIndicators, setActiveIndicators] = useState<Set<string>>(new Set(['SMA20', 'EMA50']));
-  const indicatorSeriesRef = useRef<Map<string, ISeriesApi<'Line'>>>(new Map());
+  const indicatorSeriesRef = useRef<Map<string, ISeriesApi<SeriesType>[]>>(new Map());
 
   // Pine Script Sandbox states
   const [showPineModal, setShowPineModal] = useState(false);
@@ -387,9 +688,13 @@ export default function AdvancedChart({
     else setActiveIndicators(next);
   };
 
-  /* Drawings State, Math Conversions & Database Sync ─── */
+  /* Drawings State, Math Conversions & Database Sync â”€â”€â”€ */
   const svgRef = useRef<SVGSVGElement>(null);
   const [drawings, setDrawings] = useState<DrawingItem[]>([]);
+  const undoStackRef = useRef<DrawingItem[][]>([]);
+  const redoStackRef = useRef<DrawingItem[][]>([]);
+  const [, setHistoryTick] = useState(0);
+  const [historyState, setHistoryState] = useState({ canUndo: false, canRedo: false });
   const [tempDrawing, setTempDrawing] = useState<TempDrawing | null>(null);
   const [activeTool, setActiveTool] = useState<DrawingItem['type'] | 'cursor' | 'eraser'>('cursor');
   const [drawingColor, setDrawingColor] = useState<string>('#22c55e');
@@ -398,6 +703,52 @@ export default function AdvancedChart({
   const [renderableTempDrawing, setRenderableTempDrawing] = useState<any | null>(null);
 
   const getActiveSeries = (): ISeriesApi<SeriesType> | null => mainSeriesRef.current;
+
+  const commitDrawings = (updatedDrawings: DrawingItem[]) => {
+    undoStackRef.current.push(drawings);
+    redoStackRef.current = [];
+    setDrawings(updatedDrawings);
+    setHistoryTick((value) => value + 1);
+    setHistoryState({ canUndo: undoStackRef.current.length > 0, canRedo: false });
+    syncDrawingsToDB(updatedDrawings);
+  };
+
+  const undoDrawings = () => {
+    const previous = undoStackRef.current.pop();
+    if (!previous) return;
+    redoStackRef.current.push(drawings);
+    setDrawings(previous);
+    setHistoryTick((value) => value + 1);
+    setHistoryState({ canUndo: undoStackRef.current.length > 0, canRedo: redoStackRef.current.length > 0 });
+    syncDrawingsToDB(previous);
+  };
+
+  const redoDrawings = () => {
+    const next = redoStackRef.current.pop();
+    if (!next) return;
+    undoStackRef.current.push(drawings);
+    setDrawings(next);
+    setHistoryTick((value) => value + 1);
+    setHistoryState({ canUndo: undoStackRef.current.length > 0, canRedo: redoStackRef.current.length > 0 });
+    syncDrawingsToDB(next);
+  };
+
+  useEffect(() => {
+    const handleHistoryKeys = (event: KeyboardEvent) => {
+      const isUndo = (event.ctrlKey || event.metaKey) && event.code === 'KeyZ' && !event.shiftKey;
+      const isRedo = ((event.ctrlKey || event.metaKey) && event.code === 'KeyY') || ((event.ctrlKey || event.metaKey) && event.shiftKey && event.code === 'KeyZ');
+      if (isUndo) {
+        event.preventDefault();
+        undoDrawings();
+      }
+      if (isRedo) {
+        event.preventDefault();
+        redoDrawings();
+      }
+    };
+    window.addEventListener('keydown', handleHistoryKeys);
+    return () => window.removeEventListener('keydown', handleHistoryKeys);
+  }, [drawings]);
 
   // Sync to database
   const syncDrawingsToDB = async (updatedDrawings: DrawingItem[]) => {
@@ -587,7 +938,7 @@ export default function AdvancedChart({
     } else {
       setRenderableTempDrawing(null);
     }
-  }, [drawings, tempDrawing, viewportTrigger, chartMode, selectedStyle]);
+  }, [drawings, tempDrawing, viewportTrigger, chartMode, style]);
 
   /* Mouse Event Handlers for Drawings SVG Layer */
   const handleMouseDown = (e: React.MouseEvent<SVGSVGElement>) => {
@@ -612,17 +963,13 @@ export default function AdvancedChart({
 
     if (activeTool === 'horizontal') {
       const newD: DrawingItem = { type: 'horizontal', price, color: drawingColor };
-      const updated = [...drawings, newD];
-      setDrawings(updated);
-      syncDrawingsToDB(updated);
+      commitDrawings([...drawings, newD]);
       return;
     }
 
     if (activeTool === 'vertical') {
       const newD: DrawingItem = { type: 'vertical', time, color: drawingColor };
-      const updated = [...drawings, newD];
-      setDrawings(updated);
-      syncDrawingsToDB(updated);
+      commitDrawings([...drawings, newD]);
       return;
     }
 
@@ -672,9 +1019,7 @@ export default function AdvancedChart({
         color: drawingColor,
         config: tempDrawing.type === 'riskreward' ? { ratio: 2.5 } : {}
       };
-      const updated = [...drawings, newD];
-      setDrawings(updated);
-      syncDrawingsToDB(updated);
+      commitDrawings([...drawings, newD]);
     }
     setTempDrawing(null);
   };
@@ -723,9 +1068,7 @@ export default function AdvancedChart({
     });
 
     if (closest !== -1) {
-      const updated = drawings.filter((_, idx) => idx !== closest);
-      setDrawings(updated);
-      syncDrawingsToDB(updated);
+      commitDrawings(drawings.filter((_, idx) => idx !== closest));
     }
   };
 
@@ -857,7 +1200,6 @@ export default function AdvancedChart({
       });
 
     return () => { cancelled = true; };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [symbol, interval, style]);
 
   /* Replay Loop */
@@ -924,10 +1266,12 @@ export default function AdvancedChart({
       };
     }
 
-    // Apply Chart Styles (Heikin Ashi, Renko, Line Break)
+    // Apply non-time-based or transformed chart styles.
     let processed = rawPoints;
     if (style === 'Heikin Ashi') processed = computeHeikinAshi(rawPoints);
     else if (style === 'Renko') processed = computeRenko(rawPoints);
+    else if (style === 'Kagi') processed = computeKagi(rawPoints);
+    else if (style === 'Point and Figure') processed = computePointAndFigure(rawPoints);
     else if (style === 'Line Break') processed = computeLineBreak(rawPoints);
 
     // Sync Series Types
@@ -999,7 +1343,7 @@ export default function AdvancedChart({
 
     const isDark = theme === 'dark';
     
-    if (style === 'Candlestick' || style === 'Hollow Candlestick' || style === 'Heikin Ashi' || style === 'Renko' || style === 'Line Break') {
+    if (style === 'Candlestick' || style === 'Hollow Candlestick' || style === 'Heikin Ashi' || style === 'Renko' || style === 'Kagi' || style === 'Point and Figure' || style === 'Line Break') {
       const isHollow = style === 'Hollow Candlestick';
       mainSeriesRef.current = chart.addSeries(CandlestickSeries, {
         upColor: '#10b981', downColor: '#ef4444',
@@ -1042,37 +1386,84 @@ export default function AdvancedChart({
     if (!chart) return;
 
     // Clear old indicator series
-    indicatorSeriesRef.current.forEach(series => chart.removeSeries(series));
+    indicatorSeriesRef.current.forEach(seriesList => seriesList.forEach(series => chart.removeSeries(series)));
     indicatorSeriesRef.current.clear();
+
+    const addLine = (key: string, values: LineData<Time>[], color: string, lineWidth: 1 | 2 | 3 | 4 = 2) => {
+      if (values.length === 0) return;
+      const s = chart.addSeries(LineSeries, {
+        color,
+        lineWidth,
+        priceLineVisible: false,
+        crosshairMarkerVisible: false,
+        title: key,
+      });
+      s.setData(values);
+      const existing = indicatorSeriesRef.current.get(key) || [];
+      indicatorSeriesRef.current.set(key, [...existing, s]);
+    };
+
+    const addHistogram = (key: string, values: HistogramData<Time>[], color = 'rgba(59,130,246,0.35)') => {
+      if (values.length === 0) return;
+      const s = chart.addSeries(HistogramSeries, {
+        color,
+        priceLineVisible: false,
+        priceFormat: { type: 'volume' },
+      });
+      s.setData(values);
+      const existing = indicatorSeriesRef.current.get(key) || [];
+      indicatorSeriesRef.current.set(key, [...existing, s]);
+    };
 
     // Compute active indicators
     indicators.forEach(ind => {
-      let seriesColor = '#3b82f6';
-      let values: LineData<Time>[] = [];
-
       if (ind === 'SMA20') {
-        seriesColor = '#f97316';
-        values = calcSMA(points, 20);
+        addLine(ind, calcSMA(points, 20), '#f97316');
       } else if (ind === 'SMA50') {
-        seriesColor = '#10b981';
-        values = calcSMA(points, 50);
+        addLine(ind, calcSMA(points, 50), '#10b981');
+      } else if (ind === 'EMA20') {
+        addLine(ind, calcEMA(points, 20), '#38bdf8');
       } else if (ind === 'EMA50') {
-        seriesColor = '#a855f7';
-        values = calcEMA(points, 50);
+        addLine(ind, calcEMA(points, 50), '#a855f7');
+      } else if (ind === 'VWAP') {
+        addLine(ind, calcVWAP(points), '#14b8a6');
       } else if (ind === 'RSI14') {
-        seriesColor = '#f43f5e';
-        values = calcRSI(points, 14);
-      }
-
-      if (values.length > 0) {
-        const s = chart.addSeries(LineSeries, {
-          color: seriesColor,
-          lineWidth: 2,
-          priceLineVisible: false,
-          crosshairMarkerVisible: false
-        });
-        s.setData(values);
-        indicatorSeriesRef.current.set(ind, s);
+        addLine(ind, calcRSI(points, 14), '#f43f5e');
+      } else if (ind === 'MACD') {
+        const macd = calcMACD(points);
+        addLine('MACD', macd.macd, '#3b82f6');
+        addLine('MACD', macd.signal, '#f97316');
+      } else if (ind === 'Bollinger') {
+        const bands = calcBollingerBands(points);
+        addLine('Bollinger', bands.upper, '#60a5fa', 1);
+        addLine('Bollinger', bands.middle, '#94a3b8', 1);
+        addLine('Bollinger', bands.lower, '#60a5fa', 1);
+      } else if (ind === 'Stochastic') {
+        const stoch = calcStochastic(points);
+        addLine('Stochastic', stoch.k, '#eab308');
+        addLine('Stochastic', stoch.d, '#ec4899');
+      } else if (ind === 'ADX') {
+        addLine(ind, calcADX(points), '#22c55e');
+      } else if (ind === 'ATR') {
+        addLine(ind, calcATR(points), '#fb7185');
+      } else if (ind === 'Supertrend') {
+        addLine(ind, calcSupertrend(points), '#16a34a', 3);
+      } else if (ind === 'Ichimoku') {
+        const cloud = calcIchimoku(points);
+        addLine('Ichimoku', cloud.conversion, '#3b82f6', 1);
+        addLine('Ichimoku', cloud.base, '#ef4444', 1);
+        addLine('Ichimoku', cloud.spanA, '#22c55e', 1);
+        addLine('Ichimoku', cloud.spanB, '#a855f7', 1);
+      } else if (ind === 'Volume') {
+        addHistogram('Volume', points.map(p => ({
+          time: p.time as Time,
+          value: p.volume,
+          color: p.close >= p.open ? 'rgba(16,185,129,0.28)' : 'rgba(239,68,68,0.28)',
+        })));
+      } else if (ind === 'OBV') {
+        addLine(ind, calcOBV(points), '#0ea5e9');
+      } else if (ind === 'Pivots') {
+        addLine(ind, calcPivots(points), '#f59e0b');
       }
     });
   };
@@ -1199,7 +1590,7 @@ export default function AdvancedChart({
   return (
     <div className="flex flex-col h-full bg-white dark:bg-slate-950 select-none">
       
-      {/* 📋 Dynamic Timeframe, Chart Style & Replay Controls Strip */}
+      {/* ðŸ“‹ Dynamic Timeframe, Chart Style & Replay Controls Strip */}
       <div className="flex flex-wrap items-center justify-between gap-2 px-3 sm:px-4 py-2 border-b border-slate-200 dark:border-slate-800/80 shrink-0 bg-slate-50 dark:bg-slate-950">
         
         <div className="flex items-center gap-2">
@@ -1209,7 +1600,7 @@ export default function AdvancedChart({
               onClick={() => setShowStyleMenu(!showStyleMenu)}
               className="px-3 py-1.5 rounded-lg text-[11px] font-extrabold border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-850 transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
             >
-              📊 {style} <ChevronDown className="w-3 h-3" />
+              <Activity className="w-3 h-3" /> {style} <ChevronDown className="w-3 h-3" />
             </button>
             {showStyleMenu && (
               <ul className="absolute top-full left-0 mt-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden z-30 shadow-xl w-44 font-semibold text-[10px]">
@@ -1227,20 +1618,12 @@ export default function AdvancedChart({
           </div>
 
           {/* Time Intervals Selector */}
-          <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-1 rounded-xl">
-            {([
-              { label: '1 Min',   val: '1m'      },
-              { label: '5 Min',   val: '5m'      },
-              { label: '30 Min',  val: '30m'     },
-              { label: '1 Hour',  val: '1h'      },
-              { label: '1 Day',   val: 'Daily'   },
-              { label: '1 Week',  val: 'Weekly'  },
-              { label: '1 Month', val: 'Monthly' },
-            ] as const).map(({ label, val }) => (
+          <div className="flex max-w-full items-center gap-1 overflow-x-auto bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-1 rounded-xl">
+            {INTERVAL_OPTIONS.map(({ label, val }) => (
               <button
                 key={val}
                 onClick={() => changeInterval(val)}
-                className={`px-2.5 py-1 rounded-lg text-[10px] font-extrabold transition-all cursor-pointer ${
+                className={`shrink-0 px-2.5 py-1 rounded-lg text-[10px] font-extrabold transition-all cursor-pointer ${
                   interval === val
                     ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-white shadow-sm border border-slate-200 dark:border-slate-600'
                     : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
@@ -1253,7 +1636,7 @@ export default function AdvancedChart({
 
         </div>
 
-        {/* 🎬 Historical Replay Mode Controller */}
+        {/* ðŸŽ¬ Historical Replay Mode Controller */}
         <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-1 rounded-xl">
           <button
             onClick={() => {
@@ -1272,7 +1655,7 @@ export default function AdvancedChart({
             }`}
             title="Replay historical candles step-by-step"
           >
-            ⏪ Replay {replayMode && 'ON'}
+            Replay {replayMode && 'ON'}
           </button>
           
           {replayMode && (
@@ -1315,12 +1698,12 @@ export default function AdvancedChart({
         </div>
 
         {/* Dynamic Study Indicators & Custom Pine Compiler */}
-        <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-1 rounded-xl">
-          {['SMA20', 'EMA50', 'RSI14'].map(ind => (
+        <div className="flex max-w-full items-center gap-1 overflow-x-auto bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-1 rounded-xl">
+          {INDICATOR_OPTIONS.map(ind => (
             <button
               key={ind}
               onClick={() => toggleIndicator(ind)}
-              className={`px-2 py-0.5 rounded-lg text-[9px] font-extrabold cursor-pointer transition-all ${
+              className={`shrink-0 px-2 py-0.5 rounded-lg text-[9px] font-extrabold cursor-pointer transition-all ${
                 indicators.has(ind)
                   ? 'bg-blue-500/10 text-blue-600 border border-blue-500/20'
                   : 'text-slate-400 hover:text-slate-600'
@@ -1332,10 +1715,10 @@ export default function AdvancedChart({
           
           <button
             onClick={() => setShowPineModal(true)}
-            className="px-2.5 py-1 text-purple-600 dark:text-purple-400 hover:bg-purple-500/10 rounded-lg text-[10px] font-black cursor-pointer"
+            className="shrink-0 px-2.5 py-1 text-purple-600 dark:text-purple-400 hover:bg-purple-500/10 rounded-lg text-[10px] font-black cursor-pointer"
             title="Open Pine Script Study Sandbox Editor"
           >
-            ✏️ Pine Script {customPlots.length > 0 && '(*)'}
+            Pine Script {customPlots.length > 0 && '(*)'}
           </button>
         </div>
 
@@ -1350,12 +1733,15 @@ export default function AdvancedChart({
         </div>
       </div>
 
-      {/* Pine Script Sandbox modal bubble */}
+      {/* Pine Script Sandbox modal */}
       {showPineModal && (
-        <div className="absolute top-16 right-4 w-96 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-850 p-4 rounded-2xl shadow-2xl z-40">
+        <div className="fixed inset-0 z-[90] flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-850 p-4 rounded-2xl shadow-2xl">
           <div className="flex justify-between items-center mb-3">
-            <h3 className="text-xs font-black uppercase tracking-wider text-slate-800 dark:text-white">✏️ Pine Script Sandbox Compiler</h3>
-            <button onClick={() => setShowPineModal(false)} className="text-xs font-bold text-slate-400 hover:text-red-500 cursor-pointer">Close</button>
+            <h3 className="text-xs font-black uppercase tracking-wider text-slate-800 dark:text-white">Pine Script Sandbox Compiler</h3>
+            <button onClick={() => setShowPineModal(false)} className="p-1 text-slate-400 hover:text-red-500 cursor-pointer" aria-label="Close Pine Script editor">
+              <X className="h-4 w-4" />
+            </button>
           </div>
           <textarea
             value={pineScript}
@@ -1363,7 +1749,7 @@ export default function AdvancedChart({
             rows={6}
             className="w-full p-3 bg-slate-950 border border-slate-800 text-slate-100 font-mono text-[10px] leading-relaxed rounded-xl focus:outline-none mb-3"
           />
-          {pineError && <p className="text-[9px] text-red-550 dark:text-red-400 font-bold mb-3">⚠️ {pineError}</p>}
+          {pineError && <p className="text-[9px] text-red-550 dark:text-red-400 font-bold mb-3">{pineError}</p>}
           <div className="flex gap-2">
             <button
               onClick={handleCompilePineScript}
@@ -1377,6 +1763,7 @@ export default function AdvancedChart({
             >
               Clear Plots
             </button>
+          </div>
           </div>
         </div>
       )}
@@ -1411,8 +1798,7 @@ export default function AdvancedChart({
               onClick={() => {
                 if (drawings.length === 0) return;
                 if (confirm('Erase all vectors on this chart?')) {
-                  setDrawings([]);
-                  syncDrawingsToDB([]);
+                  commitDrawings([]);
                 }
               }}
               className="w-9 h-9 flex items-center justify-center rounded-xl text-slate-400 dark:text-slate-500 hover:text-red-500 hover:bg-red-550/10 cursor-pointer group"
@@ -1424,6 +1810,24 @@ export default function AdvancedChart({
                 Clear all drawings
               </div>
             </button>
+            <div className="flex flex-col gap-1">
+              <button
+                onClick={undoDrawings}
+                disabled={!historyState.canUndo}
+                className="w-9 h-9 flex items-center justify-center rounded-xl text-slate-400 dark:text-slate-500 hover:text-blue-500 hover:bg-blue-500/10 disabled:opacity-30 cursor-pointer"
+                title="Undo drawing change"
+              >
+                <Undo2 className="w-4 h-4" />
+              </button>
+              <button
+                onClick={redoDrawings}
+                disabled={!historyState.canRedo}
+                className="w-9 h-9 flex items-center justify-center rounded-xl text-slate-400 dark:text-slate-500 hover:text-blue-500 hover:bg-blue-500/10 disabled:opacity-30 cursor-pointer"
+                title="Redo drawing change"
+              >
+                <Redo2 className="w-4 h-4" />
+              </button>
+            </div>
           </div>
 
           <div className="flex flex-col items-center gap-1.5 select-none">
@@ -1452,7 +1856,7 @@ export default function AdvancedChart({
           {error && !loading && (
             <div className="absolute inset-0 z-20 flex items-center justify-center p-6">
               <div className="text-[10px] font-bold text-red-500 bg-red-500/10 border border-red-500/20 px-4 py-2 rounded-xl shadow-sm">
-                ⚠️ {error}
+                âš ï¸ {error}
               </div>
             </div>
           )}
@@ -1594,3 +1998,4 @@ export default function AdvancedChart({
     </div>
   );
 }
+

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
@@ -575,7 +575,6 @@ export default function WatchlistPage() {
   const paginatedStocks = filteredAndSortedStocks.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
   const selectedFilterOption = FILTER_OPTIONS.find(f => f.id === activeFilterField) ?? FILTER_OPTIONS[0];
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   React.useEffect(() => { setCurrentPage(1); }, [search, activeTagFilter, activeQueryFilter, showFavouritesOnly, activeFilterField, filterValue, sortField, sortDirection]);
 
   const renderHeader = (label: string, field: keyof StockData, numeric = true, sticky = false) => {
@@ -680,7 +679,7 @@ export default function WatchlistPage() {
                       }`}
                       onClick={() => { setSelectedWatchlist(wl.name); setActiveTagFilter('all'); }}
                     >
-                      <span>{wl.name === 'default' ? '🏛️ Institutional Screener' : `📁 ${wl.name}`}</span>
+                      <span>{wl.name === 'default' ? 'ðŸ›ï¸ Institutional Screener' : `ðŸ“ ${wl.name}`}</span>
                       {!wl.isDefault && wl.name !== 'default' && (
                         <button
                           type="button"
@@ -748,7 +747,7 @@ export default function WatchlistPage() {
                       : 'bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-500 hover:border-blue-400'
                   }`}
                 >
-                  <span>⚙ {selectedFilterOption.label}</span>
+                  <span>âš™ {selectedFilterOption.label}</span>
                   <ChevronDown className="w-3.5 h-3.5" />
                 </button>
                 {filterDropdownOpen && (
@@ -785,7 +784,7 @@ export default function WatchlistPage() {
                     onClick={() => { setActiveFilterField('none'); setFilterValue(''); }}
                     className="p-2 rounded-xl text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors font-bold text-sm"
                     title="Clear filter"
-                  >✕</button>
+                  >âœ•</button>
                 </div>
               )}
               <span className="text-xs text-slate-400 font-semibold ml-auto">
@@ -851,7 +850,7 @@ export default function WatchlistPage() {
                   : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
               }`}
             >
-              ★ Starred Favorites ({stocks.filter(s => s.isFavourite).length})
+              â˜… Starred Favorites ({stocks.filter(s => s.isFavourite).length})
             </button>
           </div>
         </div>
@@ -905,7 +904,7 @@ export default function WatchlistPage() {
                       onClick={e => { e.stopPropagation(); const r = customTagRaw.find(t => t.tagId === tag.id)!; setEditingTag(r); setEditLabel(r.label); setEditColor(r.color); }}
                       className="text-slate-400 hover:text-slate-600 dark:text-slate-600 dark:hover:text-slate-350 transition-colors text-xs"
                       title="Edit tag name & color"
-                    >✎</button>
+                    >âœŽ</button>
                   )}
                 </div>
               );
@@ -915,7 +914,7 @@ export default function WatchlistPage() {
 
         {/* Advanced Formula Query Filters */}
         <div className="mb-8 p-6 bg-white dark:bg-slate-900/40 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm animate-fade-in">
-          <span className="text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-widest block mb-3">🔮 Advanced Formula Query Filters</span>
+          <span className="text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-widest block mb-3">ðŸ”® Advanced Formula Query Filters</span>
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
@@ -937,7 +936,7 @@ export default function WatchlistPage() {
                   : 'bg-transparent text-slate-500 border-slate-200 dark:border-slate-850 hover:border-slate-400 dark:hover:border-slate-600'
               }`}
             >
-              🔥 High ROE Multibaggers (P/E &lt; 35 &amp; Profit Growth &gt; 20%)
+              ðŸ”¥ High ROE Multibaggers (P/E &lt; 35 &amp; Profit Growth &gt; 20%)
             </button>
             <button
               type="button"
@@ -948,7 +947,7 @@ export default function WatchlistPage() {
                   : 'bg-transparent text-slate-500 border-slate-200 dark:border-slate-850 hover:border-slate-400 dark:hover:border-slate-600'
               }`}
             >
-              🛡️ Promoter Shield (Promoter &gt; 60% &amp; Profit Growth &gt; 12%)
+              ðŸ›¡ï¸ Promoter Shield (Promoter &gt; 60% &amp; Profit Growth &gt; 12%)
             </button>
             <button
               type="button"
@@ -959,7 +958,7 @@ export default function WatchlistPage() {
                   : 'bg-transparent text-slate-500 border-slate-200 dark:border-slate-850 hover:border-slate-400 dark:hover:border-slate-600'
               }`}
             >
-              💸 Undervalued Compounders (P/E &lt; 18 &amp; Profit Growth &gt; 10%)
+              ðŸ’¸ Undervalued Compounders (P/E &lt; 18 &amp; Profit Growth &gt; 10%)
             </button>
           </div>
         </div>
@@ -977,7 +976,7 @@ export default function WatchlistPage() {
                   maxLength={24}
                   value={editLabel}
                   onChange={e => setEditLabel(e.target.value)}
-                  placeholder="Tag name…"
+                  placeholder="Tag nameâ€¦"
                   className="w-full px-4 py-2.5 bg-slate-55 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-blue-500 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-600 focus:outline-none"
                 />
                 <div className="flex items-center gap-3">
@@ -1001,7 +1000,7 @@ export default function WatchlistPage() {
                     onClick={handleSaveCustomTag}
                     className="flex-1 py-2.5 bg-blue-500 hover:bg-blue-600 disabled:bg-blue-400 text-white rounded-xl text-xs font-extrabold transition-all"
                   >
-                    {editSaving ? 'Saving…' : 'Save'}
+                    {editSaving ? 'Savingâ€¦' : 'Save'}
                   </button>
                   <button
                     type="button"
@@ -1018,7 +1017,7 @@ export default function WatchlistPage() {
 
         {apiFailed && (
           <div className="mb-6 px-4 py-3 bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-extrabold rounded-2xl flex items-center justify-between animate-pulse max-w-md">
-            <span>⚠️ MongoDB Database API Offline</span>
+            <span>âš ï¸ MongoDB Database API Offline</span>
             <span className="text-[10px] bg-red-500/25 px-2 py-0.5 rounded-full uppercase">Local Mode</span>
           </div>
         )}
@@ -1175,7 +1174,7 @@ export default function WatchlistPage() {
                                         onClick={e => { e.stopPropagation(); setTagPopoverSym(null); }}
                                         className="text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300 transition-colors"
                                         title="Close"
-                                      >×</button>
+                                      >Ã—</button>
                                     </div>
                                     <div className="flex flex-col overflow-y-auto scrollbar-thin p-2">
                                       {/* Strategic Tags Section */}
@@ -1196,7 +1195,7 @@ export default function WatchlistPage() {
                                               >
                                                 <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: isActive ? tag.dot : '#64748b' }} />
                                                 <span className="flex-1">{tag.label}</span>
-                                                {isActive && <span className="text-xs">✓</span>}
+                                                {isActive && <span className="text-xs">âœ“</span>}
                                               </button>
                                             );
                                           })}
@@ -1222,7 +1221,7 @@ export default function WatchlistPage() {
                                               >
                                                 <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: isActive ? tag.dot : '#64748b' }} />
                                                 <span className="flex-1">{tag.label}</span>
-                                                {isActive && <span className="text-xs text-blue-500">✓</span>}
+                                                {isActive && <span className="text-xs text-blue-500">âœ“</span>}
                                               </button>
                                             );
                                           })}
@@ -1236,16 +1235,16 @@ export default function WatchlistPage() {
                           </div>
                         </td>
 
-                        <td className="p-4 text-right font-bold text-slate-900 dark:text-slate-100">₹{stock.price.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                        <td className="p-4 text-right font-bold text-slate-900 dark:text-slate-100">â‚¹{stock.price.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
                         <td className={`p-4 text-right font-bold ${isPositive ? 'text-emerald-500' : 'text-red-500'}`}>
                           <span className="flex items-center justify-end gap-1">
                             {isPositive ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
                             <span>{isPositive ? '+' : ''}{stock.changePercent.toFixed(2)}%</span>
                           </span>
                         </td>
-                        <td className="p-4 text-right font-medium text-slate-700 dark:text-slate-300">₹{(stock.marketCap / 10000000).toFixed(2)}Cr</td>
+                        <td className="p-4 text-right font-medium text-slate-700 dark:text-slate-300">â‚¹{(stock.marketCap / 10000000).toFixed(2)}Cr</td>
                         <td className="p-4 text-right font-medium text-slate-700 dark:text-slate-300">{stock.pe > 0 ? stock.pe.toFixed(2) : '--'}</td>
-                        <td className="p-4 text-right font-medium text-slate-700 dark:text-slate-300">₹{stock.eps > 0 ? stock.eps.toFixed(2) : '--'}</td>
+                        <td className="p-4 text-right font-medium text-slate-700 dark:text-slate-300">â‚¹{stock.eps > 0 ? stock.eps.toFixed(2) : '--'}</td>
                         <td className="p-4 text-right font-medium text-slate-700 dark:text-slate-300">{stock.cmpBv > 0 ? stock.cmpBv.toFixed(2) : '--'}</td>
                         <td className="p-4 text-right font-medium text-slate-700 dark:text-slate-300">{stock.divYield > 0 ? `${stock.divYield.toFixed(2)}%` : '0.00%'}</td>
                         <td className="p-4 text-right font-medium text-slate-700 dark:text-slate-300">{stock.promHold > 0 ? `${stock.promHold.toFixed(2)}%` : '--'}</td>
@@ -1277,11 +1276,11 @@ export default function WatchlistPage() {
         {totalPages > 1 && (
           <div className="mt-6 flex items-center justify-between px-2 flex-wrap gap-3">
             <span className="text-xs text-slate-400 font-semibold">
-              Showing {(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, filteredAndSortedStocks.length)} of {filteredAndSortedStocks.length} stocks
+              Showing {(currentPage - 1) * PAGE_SIZE + 1}â€“{Math.min(currentPage * PAGE_SIZE, filteredAndSortedStocks.length)} of {filteredAndSortedStocks.length} stocks
             </span>
             <div className="flex items-center gap-1 flex-wrap">
-              <button onClick={() => setCurrentPage(1)} disabled={currentPage === 1} className="px-3 py-1.5 rounded-xl text-xs font-bold border border-slate-200 dark:border-slate-800 disabled:opacity-30 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">«</button>
-              <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="px-3 py-1.5 rounded-xl text-xs font-bold border border-slate-200 dark:border-slate-800 disabled:opacity-30 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">‹ Prev</button>
+              <button onClick={() => setCurrentPage(1)} disabled={currentPage === 1} className="px-3 py-1.5 rounded-xl text-xs font-bold border border-slate-200 dark:border-slate-800 disabled:opacity-30 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">Â«</button>
+              <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="px-3 py-1.5 rounded-xl text-xs font-bold border border-slate-200 dark:border-slate-800 disabled:opacity-30 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">â€¹ Prev</button>
               {Array.from({ length: totalPages }, (_, i) => i + 1)
                 .filter(p => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 1)
                 .reduce<(number | string)[]>((acc, p, i, arr) => {
@@ -1291,7 +1290,7 @@ export default function WatchlistPage() {
                 }, [])
                 .map(p =>
                   typeof p === 'string' ? (
-                    <span key={p} className="px-2 text-slate-400 text-xs">…</span>
+                    <span key={p} className="px-2 text-slate-400 text-xs">â€¦</span>
                   ) : (
                     <button
                       key={p}
@@ -1302,8 +1301,8 @@ export default function WatchlistPage() {
                     >{p}</button>
                   )
                 )}
-              <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="px-3 py-1.5 rounded-xl text-xs font-bold border border-slate-200 dark:border-slate-800 disabled:opacity-30 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">Next ›</button>
-              <button onClick={() => setCurrentPage(totalPages)} disabled={currentPage === totalPages} className="px-3 py-1.5 rounded-xl text-xs font-bold border border-slate-200 dark:border-slate-800 disabled:opacity-30 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">»</button>
+              <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="px-3 py-1.5 rounded-xl text-xs font-bold border border-slate-200 dark:border-slate-800 disabled:opacity-30 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">Next â€º</button>
+              <button onClick={() => setCurrentPage(totalPages)} disabled={currentPage === totalPages} className="px-3 py-1.5 rounded-xl text-xs font-bold border border-slate-200 dark:border-slate-800 disabled:opacity-30 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">Â»</button>
             </div>
           </div>
         )}
@@ -1330,3 +1329,4 @@ export default function WatchlistPage() {
     </div>
   );
 }
+

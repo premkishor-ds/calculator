@@ -1,5 +1,7 @@
 'use client';
 
+import Link from 'next/link';
+
 export default function OfflinePage() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col items-center justify-center gap-6 px-4 text-center">
@@ -13,12 +15,12 @@ export default function OfflinePage() {
         </p>
       </div>
       <div className="flex flex-col gap-3 w-full max-w-xs">
-        <a
+        <Link
           href="/watchlist"
           className="px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-2xl text-sm font-bold transition-colors"
         >
           Open Watchlist
-        </a>
+        </Link>
         <button
           onClick={() => window.location.reload()}
           className="px-6 py-3 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-2xl text-sm font-bold transition-colors"

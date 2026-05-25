@@ -1,5 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import { NextRequest, NextResponse } from 'next/server';
+﻿import { NextRequest, NextResponse } from 'next/server';
 import { yahooFinance } from '@/lib/yahoo-finance';
 
 // Server-side cache: key = `${symbol}:${interval}`, TTL varies by interval
@@ -8,7 +7,7 @@ const chartCache = new Map<string, { data: any; ts: number }>();
 function getCacheTTL(interval: string): number {
   // Intraday data expires faster; daily+ can be cached longer
   if (['1m', '2m', '5m'].includes(interval)) return 2 * 60 * 1000;       // 2 min
-  if (['15m', '30m', '60m', '90m'].includes(interval)) return 5 * 60 * 1000; // 5 min
+  if (['15m', '30m', '45m', '60m', '90m'].includes(interval)) return 5 * 60 * 1000; // 5 min
   return 15 * 60 * 1000; // 15 min for daily/weekly/monthly
 }
 
@@ -30,12 +29,18 @@ function resolveIntervalConfig(uiInterval: string): {
 
   switch (uiInterval) {
     case '1m':     return { yahooInterval: '1m',  period1: daysAgo(7),    isIntraday: true };
+    case '3m':     return { yahooInterval: '1m',  period1: daysAgo(7),    isIntraday: true };
     case '5m':     return { yahooInterval: '5m',  period1: daysAgo(59),   isIntraday: true };
+    case '15m':    return { yahooInterval: '15m', period1: daysAgo(59),   isIntraday: true };
     case '30m':    return { yahooInterval: '30m', period1: daysAgo(59),   isIntraday: true };
+    case '45m':    return { yahooInterval: '15m', period1: daysAgo(59),   isIntraday: true };
     case '1h':     return { yahooInterval: '60m', period1: daysAgo(729),  isIntraday: true };
+    case '2h':     return { yahooInterval: '60m', period1: daysAgo(729),  isIntraday: true };
+    case '4h':     return { yahooInterval: '60m', period1: daysAgo(729),  isIntraday: true };
     case 'Daily':  return { yahooInterval: '1d',  period1: yearsAgo(20),  isIntraday: false };
     case 'Weekly': return { yahooInterval: '1wk', period1: yearsAgo(20),  isIntraday: false };
     case 'Monthly':return { yahooInterval: '1mo', period1: yearsAgo(20),  isIntraday: false };
+    case 'Yearly': return { yahooInterval: '1mo', period1: yearsAgo(30),  isIntraday: false };
     // Legacy range-based fallbacks
     case '1d':     return { yahooInterval: '5m',  period1: daysAgo(1),    isIntraday: true };
     case '1w':     return { yahooInterval: '15m', period1: daysAgo(7),    isIntraday: true };
@@ -54,6 +59,54 @@ function formatDate(d: Date, isIntraday: boolean): string {
     return `${day} ${time}`;
   }
   return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+function aggregatePoints<T extends {
+  time: number;
+  date: string;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume: number;
+  pe: number;
+}>(points: T[], uiInterval: string, isIntraday: boolean): T[] {
+  const bucketMinutes: Record<string, number> = {
+    '3m': 3,
+    '10m': 10,
+    '45m': 45,
+    '2h': 120,
+    '4h': 240,
+  };
+  const minutes = bucketMinutes[uiInterval];
+  if (!minutes || points.length === 0) return points;
+
+  const buckets = new Map<number, T[]>();
+  for (const point of points) {
+    const bucketTime = Math.floor(point.time / (minutes * 60)) * minutes * 60;
+    const existing = buckets.get(bucketTime) || [];
+    existing.push(point);
+    buckets.set(bucketTime, existing);
+  }
+
+  return Array.from(buckets.entries())
+    .map(([bucketTime, group]) => {
+      const first = group[0];
+      const last = group[group.length - 1];
+      const bucketDate = new Date(bucketTime * 1000);
+      return {
+        ...last,
+        time: bucketTime,
+        date: formatDate(bucketDate, isIntraday),
+        open: first.open,
+        high: Number(Math.max(...group.map((item) => item.high)).toFixed(2)),
+        low: Number(Math.min(...group.map((item) => item.low)).toFixed(2)),
+        close: last.close,
+        volume: group.reduce((sum, item) => sum + item.volume, 0),
+        pe: last.pe,
+      };
+    })
+    .sort((a, b) => a.time - b.time);
 }
 
 export async function GET(
@@ -118,9 +171,7 @@ export async function GET(
         .sort((a, b) => a.date.getTime() - b.date.getTime());
     }
 
-    const maxVol = chartQuotes.length > 0 ? Math.max(...chartQuotes.map((q) => q.volume || 0)) : 1;
-
-    const points = chartQuotes
+    const rawPoints = chartQuotes
       .filter((q) => q.close != null)
       .map((q) => {
         const qDate = new Date(q.date);
@@ -144,6 +195,9 @@ export async function GET(
       })
       .filter((p, idx, arr) => arr.findLastIndex((x) => x.time === p.time) === idx)
       .sort((a, b) => a.time - b.time);
+
+    const points = aggregatePoints(rawPoints, uiInterval, isIntraday);
+    const maxVol = points.length > 0 ? Math.max(...points.map((q) => q.volume || 0)) : 1;
 
     const responseData = { interval: uiInterval, maxVolume: maxVol, points };
     chartCache.set(cacheKey, { data: responseData, ts: Date.now() });
