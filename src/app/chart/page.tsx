@@ -273,7 +273,7 @@ function TradingTerminalInner() {
     markers: any[];
   }>>(() => Array(8).fill(null).map((_, i) => ({
     symbol: i === 0 ? 'VOLTAMP.NS' : (DEFAULT_SYMBOLS[i % DEFAULT_SYMBOLS.length] || 'VOLTAMP.NS'),
-    interval: '5m',
+    interval: '1D',
     style: 'Candlestick',
     indicators: new Set(['SMA20', 'EMA50']),
     drawingsVersion: 0,
@@ -1014,8 +1014,7 @@ function TradingTerminalInner() {
     }
   };
 
-  /* ── Tabbed Bottom Drawer Selector State ──────────────────── */
-  const [dockTab, setDockTab] = useState<'paper' | 'screener' | 'heatmap' | 'options' | 'backtest' | 'ai'>('paper');
+  /* ── Tabbed Bottom Drawer Selector State (Removed) ──────────── */
 
   /* ── Keyboard Hotkeys Handlers ────────────────────────────── */
   useEffect(() => {
@@ -1746,32 +1745,12 @@ function TradingTerminalInner() {
             </div>
           </div>
 
-          {/* Bottom Dock Drawer (Height: 320px) */}
-          <div className="h-[320px] bg-white dark:bg-slate-950 border-t border-slate-200 dark:border-slate-850 flex flex-col shrink-0 overflow-hidden shadow-2xl z-30 select-none">
-            
-            {/* Drawer Tab Headers */}
-            <div className="flex items-center justify-between px-4 bg-slate-50 dark:bg-slate-950 border-b border-slate-200 dark:border-slate-850 shrink-0 overflow-x-auto scrollbar-none gap-2 py-1">
-              <div className="flex items-center gap-1 min-w-0">
-                {[
-                  { id: 'paper', label: '💼 Paper Trading' },
-                  { id: 'screener', label: '🔍 Screener' },
-                  { id: 'heatmap', label: '🌡️ Heatmap' },
-                  { id: 'options', label: '🔗 Strike Option Chain' },
-                  { id: 'backtest', label: '🧪 Strategy Tester' },
-                  { id: 'ai', label: '🤖 AI Pattern Scanner' }
-                ].map(tab => (
-                  <button
-                    key={tab.id}
-                    onClick={() => setDockTab(tab.id as any)}
-                    className={`px-3.5 py-2.5 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all shrink-0 ${
-                      dockTab === tab.id
-                        ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 border border-slate-200 dark:border-blue-500/20 shadow-sm'
-                        : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-350'
-                    }`}
-                  >
-                    {tab.label}
-                  </button>
-                ))}
+          {/* Bottom Dock Drawer (Scrollable Stacked Sections) */}
+          <div className="h-auto max-h-[500px] lg:max-h-[450px] bg-white dark:bg-slate-950 border-t border-slate-200 dark:border-slate-850 flex flex-col shrink-0 overflow-y-auto shadow-2xl z-30 select-none">
+            {/* Drawer Headers (Removed Tab Buttons) */}
+            <div className="flex items-center justify-between px-4 bg-slate-50 dark:bg-slate-950 border-b border-slate-200 dark:border-slate-850 shrink-0 overflow-x-auto scrollbar-none gap-2 py-2">
+              <div className="text-[12px] font-black uppercase tracking-wider text-slate-800 dark:text-slate-200">
+                Advanced Tools & Analysis
               </div>
 
               {/* Spot indicator */}
@@ -1787,9 +1766,12 @@ function TradingTerminalInner() {
             {/* Drawer Content Viewport */}
             <div className="flex-1 overflow-y-auto p-4 bg-slate-50/30 dark:bg-slate-950/20 min-h-0 text-slate-850 dark:text-slate-200">
               
-              {/* TAB 1: PAPER TRADING */}
-              {dockTab === 'paper' && (
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 h-full min-h-0">
+              {/* SECTION 1: PAPER TRADING */}
+              <div className="mb-8">
+                <h3 className="text-[11px] font-black uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-3 flex items-center gap-2">
+                  💼 Paper Trading
+                </h3>
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 min-h-[250px]">
                   
                   {/* Draggable ticket form on left */}
                   <form onSubmit={handlePlaceOrder} className="lg:col-span-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 p-4 rounded-xl shadow-md flex flex-col gap-3">
@@ -1941,11 +1923,14 @@ function TradingTerminalInner() {
                   </div>
 
                 </div>
-              )}
+              </div>
 
-              {/* TAB 2: WATCHLIST SCREENER */}
-              {dockTab === 'screener' && (
-                <div className="flex flex-col h-full min-h-0 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 rounded-xl overflow-hidden shadow-md">
+              {/* SECTION 2: WATCHLIST SCREENER */}
+              <div className="mb-8">
+                <h3 className="text-[11px] font-black uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-3 flex items-center gap-2">
+                  🔍 Screener
+                </h3>
+                <div className="flex flex-col bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 rounded-xl overflow-hidden shadow-md">
                   <div className="bg-slate-50/80 dark:bg-slate-900/80 px-4 py-2.5 border-b border-slate-100 dark:border-slate-800 text-[10px] font-black uppercase tracking-widest shrink-0 flex justify-between items-center">
                     <span>Watchlist Technical Screener Panel</span>
                     <span className="text-slate-400">Click headers to sort values</span>
@@ -1991,11 +1976,14 @@ function TradingTerminalInner() {
                     </table>
                   </div>
                 </div>
-              )}
+              </div>
 
-              {/* TAB 3: SECTOR HEATMAP */}
-              {dockTab === 'heatmap' && (
-                <div className="flex flex-col h-full min-h-0 space-y-3">
+              {/* SECTION 3: SECTOR HEATMAP */}
+              <div className="mb-8">
+                <h3 className="text-[11px] font-black uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-3 flex items-center gap-2">
+                  🌡️ Heatmap
+                </h3>
+                <div className="flex flex-col space-y-3">
                   <div className="text-[10px] font-black uppercase tracking-widest text-slate-400">Watchlist Heatmap Map by Sectors</div>
                   <div className="flex-1 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 min-h-0 overflow-y-auto">
                     {['Power/Engineering', 'Tech', 'Defense', 'FMCG/Chemicals', 'Healthcare'].map(sector => {
@@ -2030,11 +2018,14 @@ function TradingTerminalInner() {
                     })}
                   </div>
                 </div>
-              )}
+              </div>
 
-              {/* TAB 4: STRIKE OPTION CHAIN */}
-              {dockTab === 'options' && (
-                <div className="flex flex-col h-full min-h-0 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 rounded-xl overflow-hidden shadow-md">
+              {/* SECTION 4: STRIKE OPTION CHAIN */}
+              <div className="mb-8">
+                <h3 className="text-[11px] font-black uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-3 flex items-center gap-2">
+                  🔗 Strike Option Chain
+                </h3>
+                <div className="flex flex-col bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 rounded-xl overflow-hidden shadow-md">
                   <div className="bg-slate-50/80 dark:bg-slate-900/80 px-4 py-2.5 border-b border-slate-100 dark:border-slate-850 text-[10px] font-black uppercase tracking-widest shrink-0 flex justify-between items-center">
                     <span>Active simulated derivatives strike chain: {selectedSymbol.replace('.NS','')}</span>
                     <span className="text-slate-400">Spot price center: ₹{(livePrices[selectedSymbol] || selectedStock?.price || 0).toFixed(2)}</span>
@@ -2090,11 +2081,14 @@ function TradingTerminalInner() {
                     </table>
                   </div>
                 </div>
-              )}
+              </div>
 
-              {/* TAB 5: STRATEGY TESTER */}
-              {dockTab === 'backtest' && (
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 h-full min-h-0">
+              {/* SECTION 5: STRATEGY TESTER */}
+              <div className="mb-8">
+                <h3 className="text-[11px] font-black uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-3 flex items-center gap-2">
+                  🧪 Strategy Tester
+                </h3>
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 min-h-[200px]">
                   
                   {/* Selector options */}
                   <div className="lg:col-span-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 p-4 rounded-xl shadow-md flex flex-col gap-3 justify-between">
@@ -2169,11 +2163,14 @@ function TradingTerminalInner() {
                   </div>
 
                 </div>
-              )}
+              </div>
 
-              {/* TAB 6: AI PATTERN SCANNER */}
-              {dockTab === 'ai' && (
-                <div className="flex flex-col h-full min-h-0 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 rounded-xl overflow-hidden shadow-md">
+              {/* SECTION 6: AI PATTERN SCANNER */}
+              <div className="mb-8">
+                <h3 className="text-[11px] font-black uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-3 flex items-center gap-2">
+                  🤖 AI Pattern Scanner
+                </h3>
+                <div className="flex flex-col bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 rounded-xl overflow-hidden shadow-md min-h-[250px]">
                   <div className="bg-slate-50/80 dark:bg-slate-900/80 px-4 py-2.5 border-b border-slate-100 dark:border-slate-850 text-[10px] font-black uppercase tracking-widest shrink-0 flex justify-between items-center">
                     <span>Interactive candlestick scanner model: {selectedSymbol.replace('.NS','')}</span>
                     <button
@@ -2224,7 +2221,7 @@ function TradingTerminalInner() {
                     )}
                   </div>
                 </div>
-              )}
+              </div>
 
             </div>
           </div>

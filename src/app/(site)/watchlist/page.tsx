@@ -1120,91 +1120,6 @@ export default function WatchlistPage() {
                               <Star className={`w-4 h-4 ${stock.isFavourite ? 'fill-yellow-400 text-yellow-400' : ''}`} />
                             </button>
 
-                            {/* Tags Popover Trigger */}
-                            <div className="relative shrink-0">
-                              <button
-                                type="button"
-                                onClick={e => { e.stopPropagation(); setTagPopoverSym(tagPopoverSym === stock.symbol ? null : stock.symbol); }}
-                                className={`p-1 rounded-lg border transition-all hover:scale-105 flex items-center justify-center ${
-                                  (stock.tags ?? []).length > 0
-                                    ? 'bg-blue-500/10 border-blue-500/20 text-blue-550 dark:text-blue-400'
-                                    : 'bg-white dark:bg-slate-850 border-slate-205 dark:border-slate-700 text-slate-400 dark:text-slate-500 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10'
-                                }`}
-                                title="Manage Tags"
-                              >
-                                <Plus className="w-3.5 h-3.5" />
-                              </button>
-
-                              {/* Tag popover dropdown */}
-                              {tagPopoverSym === stock.symbol && (
-                                <div
-                                  className="absolute left-0 top-8 z-50 w-64 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl p-0 animate-fade-in max-h-96 flex flex-col"
-                                  onClick={e => e.stopPropagation()}
-                                >
-                                  <div className="flex items-center justify-between px-3 py-2 border-b border-slate-200 dark:border-slate-700">
-                                    <p className="text-[9px] font-extrabold text-slate-400 dark:text-slate-550 uppercase tracking-widest">Assign Tags</p>
-                                    <button
-                                      type="button"
-                                      onClick={e => { e.stopPropagation(); setTagPopoverSym(null); }}
-                                      className="text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300 transition-colors"
-                                      title="Close"
-                                    >×</button>
-                                  </div>
-                                  <div className="flex flex-col overflow-y-auto scrollbar-thin p-2">
-                                    {/* Strategic Tags Section */}
-                                    {allTags.some(t => !t.custom) && (
-                                      <>
-                                        <p className="text-[8px] font-bold text-slate-500 dark:text-slate-600 uppercase tracking-widest px-2 py-1 mt-1 mb-1">Strategic Tags</p>
-                                        {allTags.map((tag: TagDef) => {
-                                          if (tag.custom) return null;
-                                          const isActive = (stock.tags ?? []).includes(tag.id);
-                                          return (
-                                            <button
-                                              key={tag.id}
-                                              type="button"
-                                              onClick={e => { e.stopPropagation(); handleToggleTag(stock.symbol, tag.id, e); }}
-                                              className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs font-bold transition-all text-left ${
-                                                isActive ? tag.color + ' border shadow-sm' : 'text-slate-655 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
-                                              }`}
-                                            >
-                                              <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: isActive ? tag.dot : '#64748b' }} />
-                                              <span className="flex-1">{tag.label}</span>
-                                              {isActive && <span className="text-xs">✓</span>}
-                                            </button>
-                                          );
-                                        })}
-                                      </>
-                                    )}
-                                    
-                                    {/* Watchlist Tags Section */}
-                                    {allTags.some(t => t.custom) && (
-                                      <>
-                                        <p className="text-[8px] font-bold text-slate-500 dark:text-slate-600 uppercase tracking-widest px-2 py-1 mt-2 mb-1">Watchlist Tags</p>
-                                        {allTags.map((tag: TagDef) => {
-                                          if (!tag.custom) return null;
-                                          const isActive = (stock.tags ?? []).includes(tag.id);
-                                          return (
-                                            <button
-                                              key={tag.id}
-                                              type="button"
-                                              onClick={e => { e.stopPropagation(); handleToggleTag(stock.symbol, tag.id, e); }}
-                                              className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs font-bold transition-all text-left ${
-                                                isActive ? 'border shadow-sm' : 'text-slate-600 dark:text-slate-450 hover:bg-slate-50 dark:hover:bg-slate-800'
-                                              }`}
-                                              style={isActive ? { backgroundColor: tag.dot + '20', color: tag.dot, borderColor: tag.dot + '50' } : {}}
-                                            >
-                                              <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: isActive ? tag.dot : '#64748b' }} />
-                                              <span className="flex-1">{tag.label}</span>
-                                              {isActive && <span className="text-xs text-blue-500">✓</span>}
-                                            </button>
-                                          );
-                                        })}
-                                      </>
-                                    )}
-                                  </div>
-                                </div>
-                              )}
-                            </div>
 
                             {/* Ticker Link */}
                             <span 
@@ -1220,25 +1135,104 @@ export default function WatchlistPage() {
                         <td className="p-4 font-medium text-slate-500 dark:text-slate-400">
                           <div className="flex flex-col gap-1.5">
                             <span className="text-slate-700 dark:text-slate-350">{stock.name}</span>
-                            {/* Assigned tag pills */}
-                            {(stock.tags ?? []).length > 0 && (
-                              <div className="flex flex-wrap gap-1 max-w-xs sm:max-w-sm">
-                                {(stock.tags ?? []).map(tid => {
-                                  const td = tagMap[tid];
-                                  if (!td) return null;
-                                  return td.custom ? (
-                                    <span key={tid} className="px-2 py-0.5 rounded-full text-[9px] font-extrabold border shrink-0 transition-all hover:scale-102"
-                                      style={{ backgroundColor: td.dot + '25', color: td.dot, borderColor: td.dot + '60' }}>
-                                      {td.label}
-                                    </span>
-                                  ) : (
-                                    <span key={tid} className={`px-2 py-0.5 rounded-full text-[9px] font-extrabold border shrink-0 transition-all hover:scale-102 ${td.color}`}>
-                                      {td.label}
-                                    </span>
-                                  );
-                                })}
+                            {/* Assigned tag pills & Add Tag trigger */}
+                            <div className="flex flex-wrap items-center gap-1.5 max-w-xs sm:max-w-sm">
+                              {(stock.tags ?? []).map(tid => {
+                                const td = tagMap[tid];
+                                if (!td) return null;
+                                return td.custom ? (
+                                  <span key={tid} className="px-2 py-0.5 rounded-full text-[9px] font-extrabold border shrink-0 transition-all hover:scale-102"
+                                    style={{ backgroundColor: td.dot + '25', color: td.dot, borderColor: td.dot + '60' }}>
+                                    {td.label}
+                                  </span>
+                                ) : (
+                                  <span key={tid} className={`px-2 py-0.5 rounded-full text-[9px] font-extrabold border shrink-0 transition-all hover:scale-102 ${td.color}`}>
+                                    {td.label}
+                                  </span>
+                                );
+                              })}
+                              
+                              {/* Add Tag Pill Button */}
+                              <div className="relative shrink-0">
+                                <button
+                                  type="button"
+                                  onClick={e => { e.stopPropagation(); setTagPopoverSym(tagPopoverSym === stock.symbol ? null : stock.symbol); }}
+                                  className="px-2 py-0.5 rounded-full text-[9px] font-extrabold border border-dashed border-slate-300 dark:border-slate-600 text-slate-500 hover:text-blue-500 hover:border-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-all flex items-center gap-1"
+                                >
+                                  <Plus className="w-3 h-3" /> Add Tag
+                                </button>
+                                
+                                {/* Tag popover dropdown */}
+                                {tagPopoverSym === stock.symbol && (
+                                  <div
+                                    className="absolute left-0 top-full mt-2 z-50 w-64 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl p-0 animate-fade-in max-h-96 flex flex-col"
+                                    onClick={e => e.stopPropagation()}
+                                  >
+                                    <div className="flex items-center justify-between px-3 py-2 border-b border-slate-200 dark:border-slate-700">
+                                      <p className="text-[9px] font-extrabold text-slate-400 dark:text-slate-550 uppercase tracking-widest">Assign Tags</p>
+                                      <button
+                                        type="button"
+                                        onClick={e => { e.stopPropagation(); setTagPopoverSym(null); }}
+                                        className="text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300 transition-colors"
+                                        title="Close"
+                                      >×</button>
+                                    </div>
+                                    <div className="flex flex-col overflow-y-auto scrollbar-thin p-2">
+                                      {/* Strategic Tags Section */}
+                                      {allTags.some(t => !t.custom) && (
+                                        <>
+                                          <p className="text-[8px] font-bold text-slate-500 dark:text-slate-600 uppercase tracking-widest px-2 py-1 mt-1 mb-1">Strategic Tags</p>
+                                          {allTags.map((tag: TagDef) => {
+                                            if (tag.custom) return null;
+                                            const isActive = (stock.tags ?? []).includes(tag.id);
+                                            return (
+                                              <button
+                                                key={tag.id}
+                                                type="button"
+                                                onClick={e => { e.stopPropagation(); handleToggleTag(stock.symbol, tag.id, e); }}
+                                                className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs font-bold transition-all text-left ${
+                                                  isActive ? tag.color + ' border shadow-sm' : 'text-slate-655 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
+                                                }`}
+                                              >
+                                                <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: isActive ? tag.dot : '#64748b' }} />
+                                                <span className="flex-1">{tag.label}</span>
+                                                {isActive && <span className="text-xs">✓</span>}
+                                              </button>
+                                            );
+                                          })}
+                                        </>
+                                      )}
+                                      
+                                      {/* Watchlist Tags Section */}
+                                      {allTags.some(t => t.custom) && (
+                                        <>
+                                          <p className="text-[8px] font-bold text-slate-500 dark:text-slate-600 uppercase tracking-widest px-2 py-1 mt-2 mb-1">Watchlist Tags</p>
+                                          {allTags.map((tag: TagDef) => {
+                                            if (!tag.custom) return null;
+                                            const isActive = (stock.tags ?? []).includes(tag.id);
+                                            return (
+                                              <button
+                                                key={tag.id}
+                                                type="button"
+                                                onClick={e => { e.stopPropagation(); handleToggleTag(stock.symbol, tag.id, e); }}
+                                                className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs font-bold transition-all text-left ${
+                                                  isActive ? 'border shadow-sm' : 'text-slate-600 dark:text-slate-450 hover:bg-slate-50 dark:hover:bg-slate-800'
+                                                }`}
+                                                style={isActive ? { backgroundColor: tag.dot + '20', color: tag.dot, borderColor: tag.dot + '50' } : {}}
+                                              >
+                                                <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: isActive ? tag.dot : '#64748b' }} />
+                                                <span className="flex-1">{tag.label}</span>
+                                                {isActive && <span className="text-xs text-blue-500">✓</span>}
+                                              </button>
+                                            );
+                                          })}
+                                        </>
+                                      )}
+                                    </div>
+                                  </div>
+                                )}
                               </div>
-                            )}
+                            </div>
                           </div>
                         </td>
 
