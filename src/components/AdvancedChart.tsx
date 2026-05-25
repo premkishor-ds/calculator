@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { getBackendWsUrl } from '@/lib/backend-config';
@@ -28,7 +28,7 @@ import {
   createSeriesMarkers,
 } from 'lightweight-charts';
 
-/* â”€â”€â”€ Types & Drawings Structures â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ─── Types & Drawings Structures ────────────────────────────── */
 export interface ChartPoint {
   time: number;
   date: string;
@@ -156,8 +156,11 @@ const INTERVAL_OPTIONS = [
 const INDICATOR_OPTIONS = [
   'SMA20',
   'SMA50',
+  'EMA9',
   'EMA20',
   'EMA50',
+  'EMA100',
+  'EMA200',
   'VWAP',
   'RSI14',
   'MACD',
@@ -194,9 +197,10 @@ interface Props {
     shape: 'arrowUp' | 'arrowDown' | 'circle' | 'square';
     text?: string;
   }>;
+  onDataLoaded?: (data: ChartPoint[]) => void;
 }
 
-/* â”€â”€â”€ Pure helper â€” no hooks â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ─── Pure helper — no hooks ─────────────────────────────────── */
 function calcSMA(data: ChartPoint[], period: number): LineData<Time>[] {
   const out: LineData<Time>[] = [];
   for (let i = period - 1; i < data.length; i++) {
@@ -447,7 +451,7 @@ function calcIchimoku(data: ChartPoint[]): Record<string, LineData<Time>[]> {
   return { conversion, base, spanA, spanB };
 }
 
-/* â”€â”€â”€ Custom Styles Mathematics Filters â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ─── Custom Styles Mathematics Filters ──────────────────────── */
 function computeHeikinAshi(points: ChartPoint[]): ChartPoint[] {
   if (points.length === 0) return [];
   const haPoints: ChartPoint[] = [];
@@ -619,12 +623,12 @@ function getIntervalSeconds(interval: string): number {
   return 300; // default 5m
 }
 
-/* â”€â”€â”€ Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ─── Component ──────────────────────────────────────────────── */
 export default function AdvancedChart({
   symbol, chartRange, onRangeChange, chartMode, onModeChange, theme,
   controlledInterval, onIntervalChange, controlledStyle, onStyleChange,
   controlledIndicators, onIndicatorsChange, drawingsVersion,
-  onDrawingsChange, markers,
+  onDrawingsChange, markers, onDataLoaded
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef     = useRef<IChartApi | null>(null);
@@ -633,6 +637,7 @@ export default function AdvancedChart({
   const dataRef      = useRef<ChartPoint[]>([]); // always-current raw history
   const markersPluginRef = useRef<any>(null);
   const activeStyleRef = useRef<string>('');
+    const lastSymbolForZoomRef = useRef<string | null>(null);
 
   const [data,     setData]     = useState<ChartPoint[]>([]);
   const [loading,  setLoading]  = useState(false);
@@ -646,7 +651,7 @@ export default function AdvancedChart({
   const [showStyleMenu, setShowStyleMenu] = useState(false);
 
   // Indicators states
-  const [activeIndicators, setActiveIndicators] = useState<Set<string>>(new Set(['SMA20', 'EMA50']));
+  const [activeIndicators, setActiveIndicators] = useState<Set<string>>(new Set(['EMA9', 'EMA20', 'EMA50', 'EMA100', 'EMA200']));
   const indicatorSeriesRef = useRef<Map<string, ISeriesApi<SeriesType>[]>>(new Map());
 
   // Pine Script Sandbox states
@@ -688,7 +693,7 @@ export default function AdvancedChart({
     else setActiveIndicators(next);
   };
 
-  /* Drawings State, Math Conversions & Database Sync â”€â”€â”€ */
+  /* Drawings State, Math Conversions & Database Sync ─── */
   const svgRef = useRef<SVGSVGElement>(null);
   const [drawings, setDrawings] = useState<DrawingItem[]>([]);
   const undoStackRef = useRef<DrawingItem[][]>([]);
@@ -1144,6 +1149,8 @@ export default function AdvancedChart({
       mainSeriesRef.current = null;
       volRef.current = null;
       markersPluginRef.current = null;
+      indicatorSeriesRef.current.clear();
+      customSeriesRef.current.clear();
     };
   }, []);
 
@@ -1166,6 +1173,7 @@ export default function AdvancedChart({
       setData(cached);
       setError('');
       applyChartConfigurations(cached);
+      if (onDataLoaded) onDataLoaded(cached);
       return;
     }
 
@@ -1192,6 +1200,7 @@ export default function AdvancedChart({
         setError('');
         applyChartConfigurations(pts);
         setLoading(false);
+        if (onDataLoaded) onDataLoaded(pts);
       })
       .catch(err => {
         if (cancelled) return;
@@ -1259,14 +1268,16 @@ export default function AdvancedChart({
     const timeScale = chart.timeScale();
     const range = timeScale.getVisibleLogicalRange();
     let zoomState: { visibleCount: number; rightOffset: number } | null = null;
-    if (range) {
-      zoomState = {
+    if (range && lastSymbolForZoomRef.current === symbol) {
+        zoomState = {
         visibleCount: range.to - range.from,
         rightOffset: (dataRef.current.length || rawPoints.length) - range.to
       };
     }
 
-    // Apply non-time-based or transformed chart styles.
+    lastSymbolForZoomRef.current = symbol;
+
+      // Apply non-time-based or transformed chart styles.
     let processed = rawPoints;
     if (style === 'Heikin Ashi') processed = computeHeikinAshi(rawPoints);
     else if (style === 'Renko') processed = computeRenko(rawPoints);
@@ -1386,7 +1397,9 @@ export default function AdvancedChart({
     if (!chart) return;
 
     // Clear old indicator series
-    indicatorSeriesRef.current.forEach(seriesList => seriesList.forEach(series => chart.removeSeries(series)));
+    indicatorSeriesRef.current.forEach(seriesList => seriesList.forEach(series => {
+      try { chart.removeSeries(series); } catch (e) {}
+    }));
     indicatorSeriesRef.current.clear();
 
     const addLine = (key: string, values: LineData<Time>[], color: string, lineWidth: 1 | 2 | 3 | 4 = 2) => {
@@ -1421,10 +1434,16 @@ export default function AdvancedChart({
         addLine(ind, calcSMA(points, 20), '#f97316');
       } else if (ind === 'SMA50') {
         addLine(ind, calcSMA(points, 50), '#10b981');
+      } else if (ind === 'EMA9') {
+        addLine(ind, calcEMA(points, 9), '#fbbf24');
       } else if (ind === 'EMA20') {
         addLine(ind, calcEMA(points, 20), '#38bdf8');
       } else if (ind === 'EMA50') {
         addLine(ind, calcEMA(points, 50), '#a855f7');
+      } else if (ind === 'EMA100') {
+        addLine(ind, calcEMA(points, 100), '#f43f5e');
+      } else if (ind === 'EMA200') {
+        addLine(ind, calcEMA(points, 200), '#eab308');
       } else if (ind === 'VWAP') {
         addLine(ind, calcVWAP(points), '#14b8a6');
       } else if (ind === 'RSI14') {
@@ -1536,7 +1555,9 @@ export default function AdvancedChart({
     const chart = chartRef.current;
     if (!chart) return;
 
-    customSeriesRef.current.forEach(series => chart.removeSeries(series));
+    customSeriesRef.current.forEach(series => {
+      try { chart.removeSeries(series); } catch (e) {}
+    });
     customSeriesRef.current.clear();
 
     customPlots.forEach(plot => {
@@ -1590,7 +1611,7 @@ export default function AdvancedChart({
   return (
     <div className="flex flex-col h-full bg-white dark:bg-slate-950 select-none">
       
-      {/* ðŸ“‹ Dynamic Timeframe, Chart Style & Replay Controls Strip */}
+      {/* 📋 Dynamic Timeframe, Chart Style & Replay Controls Strip */}
       <div className="flex flex-wrap items-center justify-between gap-2 px-3 sm:px-4 py-2 border-b border-slate-200 dark:border-slate-800/80 shrink-0 bg-slate-50 dark:bg-slate-950">
         
         <div className="flex items-center gap-2">
@@ -1636,7 +1657,7 @@ export default function AdvancedChart({
 
         </div>
 
-        {/* ðŸŽ¬ Historical Replay Mode Controller */}
+        {/* 🎬 Historical Replay Mode Controller */}
         <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-1 rounded-xl">
           <button
             onClick={() => {
@@ -1856,7 +1877,7 @@ export default function AdvancedChart({
           {error && !loading && (
             <div className="absolute inset-0 z-20 flex items-center justify-center p-6">
               <div className="text-[10px] font-bold text-red-500 bg-red-500/10 border border-red-500/20 px-4 py-2 rounded-xl shadow-sm">
-                âš ï¸ {error}
+                ⚠️ {error}
               </div>
             </div>
           )}

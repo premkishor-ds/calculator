@@ -1,20 +1,8 @@
 import React from 'react';
-import { Sun, Moon, Zap } from 'lucide-react';
+import { Zap } from 'lucide-react';
 
-interface HeaderProps {
-  theme: 'dark' | 'light';
-  toggleTheme: () => void;
-}
-
-export const Header: React.FC<HeaderProps> = ({ theme, toggleTheme }) => (
+export const Header: React.FC = () => (
   <header className="relative flex flex-col items-center mb-8 text-center px-12 sm:px-16">
-    <button 
-      onClick={toggleTheme}
-      className="absolute right-0 top-0 p-2.5 sm:p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm hover:scale-105 transition-transform touch-manipulation"
-      aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-    >
-      {theme === 'dark' ? <Sun className="w-5 h-5 text-yellow-400" /> : <Moon className="w-5 h-5 text-indigo-600" />}
-    </button>
     <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 text-blue-500 text-[10px] font-bold uppercase tracking-widest mb-4 border border-blue-500/20">
       <Zap className="w-3 h-3" /> Professional Wealth Engine
     </div>

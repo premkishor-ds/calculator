@@ -157,7 +157,7 @@ function WealthDashboardContent() {
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors duration-300 font-sans">
       <div className="w-full px-4 sm:px-8 lg:px-12 py-8 sm:py-12 max-w-[1600px] mx-auto min-w-0">
         
-        <Header theme={theme} toggleTheme={toggleTheme} />
+        <Header />
         <QuickStart />
 
         {/* Global Action HUD */}

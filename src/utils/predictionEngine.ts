@@ -1,4 +1,4 @@
-﻿export interface ChartPoint {
+export interface ChartPoint {
   time: number;
   date: string;
   open: number;
@@ -97,9 +97,9 @@ export interface PredictionResult {
   riskScore: number; // 0 - 100
   historicalAccuracy: number; // e.g. 78.4%
 
-  /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
-  /* â”€â”€â”€ NEW INSTITUTIONAL-GRADE QUANTITATIVE MODULE FIELDS â”€â”€â”€â”€â”€â”€â”€ */
-  /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ────────────────────────────────────────────────────────────── */
+  /* ─── NEW INSTITUTIONAL-GRADE QUANTITATIVE MODULE FIELDS ─────── */
+  /* ────────────────────────────────────────────────────────────── */
   marketRegime: {
     score: number;
     state: 'TRENDING' | 'SIDEWAYS' | 'VOLATILE' | 'ACCUMULATION' | 'DISTRIBUTION';
@@ -246,9 +246,9 @@ export interface PredictionResult {
     confidenceReasoning: string;
   };
 
-  /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
-  /* â”€â”€â”€ ULTIMATE QUANTITATIVE SYSTEM FIELDS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
-  /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ────────────────────────────────────────────────────────────── */
+  /* ─── ULTIMATE QUANTITATIVE SYSTEM FIELDS ───────────────────── */
+  /* ────────────────────────────────────────────────────────────── */
   hmmRegime: {
     currentState: string;
     transitionProbabilities: { [key: string]: number };
@@ -344,9 +344,9 @@ export interface PredictionResult {
   };
 }
 
-/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
-/* â”€â”€â”€ MATHEMATICAL INDICATORS COMPUTATION SOLVERS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
-/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ────────────────────────────────────────────────────────────── */
+/* ─── MATHEMATICAL INDICATORS COMPUTATION SOLVERS ─────────────── */
+/* ────────────────────────────────────────────────────────────── */
 
 export function calcSMA(prices: number[], period: number): number[] {
   const sma: number[] = [];
@@ -490,9 +490,9 @@ export function calcBollingerBands(prices: number[], period: number = 20, multip
   return { mid, upper, lower };
 }
 
-/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
-/* â”€â”€â”€ WILDER'S AVERAGE DIRECTIONAL INDEX (ADX) SOLVER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
-/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ────────────────────────────────────────────────────────────── */
+/* ─── WILDER'S AVERAGE DIRECTIONAL INDEX (ADX) SOLVER ─────────── */
+/* ────────────────────────────────────────────────────────────── */
 
 export function calcADX(highs: number[], lows: number[], closes: number[], period: number = 14): { adx: number[]; plusDI: number[]; minusDI: number[] } {
   const len = closes.length;
@@ -599,9 +599,9 @@ export function calcADX(highs: number[], lows: number[], closes: number[], perio
   return { adx: finalADX, plusDI: finalPlusDI, minusDI: finalMinusDI };
 }
 
-/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
-/* â”€â”€â”€ RECURSIVE GARCH(1,1) COEFFICIENT MLE OPTIMIZER SOLVER â”€â”€â”€â”€â”€ */
-/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ────────────────────────────────────────────────────────────── */
+/* ─── RECURSIVE GARCH(1,1) COEFFICIENT MLE OPTIMIZER SOLVER ───── */
+/* ────────────────────────────────────────────────────────────── */
 
 export function fitGARCH(returns: number[]): { omega: number; alpha: number; beta: number; volatilityForecast: number } {
   const n = returns.length;
@@ -661,9 +661,9 @@ export function fitGARCH(returns: number[]): { omega: number; alpha: number; bet
   };
 }
 
-/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
-/* â”€â”€â”€ GEOMETRIC BROWSIAN MOTION MONTE CARLO SIMULATOR â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
-/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ────────────────────────────────────────────────────────────── */
+/* ─── GEOMETRIC BROWSIAN MOTION MONTE CARLO SIMULATOR ─────────── */
+/* ────────────────────────────────────────────────────────────── */
 
 export function runMonteCarlo(
   currentPrice: number,
@@ -746,9 +746,9 @@ export function runMonteCarlo(
   };
 }
 
-/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
-/* â”€â”€â”€ WALK-FORWARD VALIDATION BACKTESTER ENGINE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
-/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ────────────────────────────────────────────────────────────── */
+/* ─── WALK-FORWARD VALIDATION BACKTESTER ENGINE ──────────────── */
+/* ────────────────────────────────────────────────────────────── */
 
 export function runWalkForwardBacktest(
   closes: number[],
@@ -804,7 +804,8 @@ export function runWalkForwardBacktest(
     if (curRsi < 40) signal = 'BUY';
     else if (curRsi > 60) signal = 'SELL';
 
-    const priceChangePct = (curClose - prevClose) / prevClose;
+    const nextClose = closes[t + 1] || curClose;
+    const priceChangePct = (nextClose - curClose) / curClose;
 
     if (signal === 'BUY') {
       trades.push(priceChangePct);
@@ -871,9 +872,9 @@ export function runWalkForwardBacktest(
   };
 }
 
-/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
-/* â”€â”€â”€ DIVERGENCE DETECTION PEAK SCANNING ENGINE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
-/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ────────────────────────────────────────────────────────────── */
+/* ─── DIVERGENCE DETECTION PEAK SCANNING ENGINE ──────────────── */
+/* ────────────────────────────────────────────────────────────── */
 
 export function detectDivergences(
   closes: number[],
@@ -913,7 +914,7 @@ export function detectDivergences(
       result.push({
         type: 'BEARISH',
         indicator: indicatorName,
-        desc: `Regular Bearish Divergence detected: Price made higher peak (â‚¹${p2.val.toFixed(1)}) but ${indicatorName} oscillator registered lower strength peak (${p2.indVal.toFixed(1)} vs ${p1.indVal.toFixed(1)}). Signals structural exhaustions.`,
+        desc: `Regular Bearish Divergence detected: Price made higher peak (₹${p2.val.toFixed(1)}) but ${indicatorName} oscillator registered lower strength peak (${p2.indVal.toFixed(1)} vs ${p1.indVal.toFixed(1)}). Signals structural exhaustions.`,
         strength: Math.round(75 + (p2.val - p1.val)/p1.val * 200)
       });
     }
@@ -922,7 +923,7 @@ export function detectDivergences(
       result.push({
         type: 'HIDDEN_BEARISH',
         indicator: indicatorName,
-        desc: `Hidden Bearish Divergence detected: Price established lower peak (â‚¹${p2.val.toFixed(1)}) but ${indicatorName} pushed to a higher peak (${p2.indVal.toFixed(1)}). Suggests trend continuation supply overlays.`,
+        desc: `Hidden Bearish Divergence detected: Price established lower peak (₹${p2.val.toFixed(1)}) but ${indicatorName} pushed to a higher peak (${p2.indVal.toFixed(1)}). Suggests trend continuation supply overlays.`,
         strength: 68
       });
     }
@@ -938,7 +939,7 @@ export function detectDivergences(
       result.push({
         type: 'BULLISH',
         indicator: indicatorName,
-        desc: `Regular Bullish Divergence detected: Price printed lower defensive floor (â‚¹${p2.val.toFixed(1)}) but ${indicatorName} established higher local low (${p2.indVal.toFixed(1)} vs ${p1.indVal.toFixed(1)}). Strong absorption sign.`,
+        desc: `Regular Bullish Divergence detected: Price printed lower defensive floor (₹${p2.val.toFixed(1)}) but ${indicatorName} established higher local low (${p2.indVal.toFixed(1)} vs ${p1.indVal.toFixed(1)}). Strong absorption sign.`,
         strength: Math.round(78 + (p1.val - p2.val)/p1.val * 200)
       });
     }
@@ -947,7 +948,7 @@ export function detectDivergences(
       result.push({
         type: 'HIDDEN_BULLISH',
         indicator: indicatorName,
-        desc: `Hidden Bullish Divergence detected: Price printed higher defensive floor (â‚¹${p2.val.toFixed(1)}) but ${indicatorName} dropped to a lower low (${p2.indVal.toFixed(1)}). Suggests underlying smart money buildup.`,
+        desc: `Hidden Bullish Divergence detected: Price printed higher defensive floor (₹${p2.val.toFixed(1)}) but ${indicatorName} dropped to a lower low (${p2.indVal.toFixed(1)}). Suggests underlying smart money buildup.`,
         strength: 70
       });
     }
@@ -1083,9 +1084,9 @@ function calculateClusteredZones(highs: number[], lows: number[], currentPrice: 
   }).sort((a,b) => a.price - b.price);
 }
 
-/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
-/* â”€â”€â”€ TECHNICAL ANALYSIS & PRICE PREDICTION PIPELINE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
-/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ────────────────────────────────────────────────────────────── */
+/* ─── TECHNICAL ANALYSIS & PRICE PREDICTION PIPELINE ──────────── */
+/* ────────────────────────────────────────────────────────────── */
 
 export function runAIPredictionEngine(
   symbol: string,
@@ -1230,8 +1231,8 @@ export function runAIPredictionEngine(
   // Candlestick Pattern recognitions
   const indicatorsSignals: IndicatorSignal[] = [];
   
-  const isUpwardAlign = ema9[len - 1] > ema20[len - 1] && ema20[len - 1] > ema50[len - 1] && ema50[len - 1] > ema200[len - 1];
-  const isDownwardAlign = ema9[len - 1] < ema20[len - 1] && ema20[len - 1] < ema50[len - 1] && ema50[len - 1] < ema200[len - 1];
+  const isUpwardAlign = ema9[len - 1] > ema20[len - 1] && ema20[len - 1] > ema50[len - 1];
+  const isDownwardAlign = ema9[len - 1] < ema20[len - 1] && ema20[len - 1] < ema50[len - 1];
 
   indicatorsSignals.push({
     name: 'EMA Alignment Stack',
@@ -1297,7 +1298,7 @@ export function runAIPredictionEngine(
   indicatorsSignals.push({
     name: 'Average True Range (ATR)',
     category: 'volatility',
-    value: `â‚¹${atrVal.toFixed(2)}`,
+    value: `₹${atrVal.toFixed(2)}`,
     signal: atrVal > (closes[len - 20] * 0.05) ? 'SELL' : 'NEUTRAL',
     desc: `Ticking average candle size. Standard daily price excursion standard: ${((atrVal / currentPrice) * 100).toFixed(2)}%.`
   });
@@ -1313,9 +1314,9 @@ export function runAIPredictionEngine(
     { timeframe: '1 Month',trend: 'BULLISH', rsi: 58, macdSignal: 'BUY', maAlignment: 'UPWARD' }
   ];
 
-  /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
-  /* â”€â”€â”€ 1. MARKET REGIME ENGINE CALCULATOR â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
-  /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ────────────────────────────────────────────────────────────── */
+  /* ─── 1. MARKET REGIME ENGINE CALCULATOR ──────────────────────── */
+  /* ────────────────────────────────────────────────────────────── */
   
   let regimeState: 'TRENDING' | 'SIDEWAYS' | 'VOLATILE' | 'ACCUMULATION' | 'DISTRIBUTION' = 'SIDEWAYS';
   let regimeLabel = 'Low Volatility Sideways';
@@ -1385,9 +1386,9 @@ export function runAIPredictionEngine(
     regimeDesc = 'Dormant sideways consolidation inside BB bands. Implying future breakout contraction coil.';
   }
 
-  /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
-  /* â”€â”€â”€ 2. LIQUIDITY & ORDER FLOW CALCULATOR â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
-  /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ────────────────────────────────────────────────────────────── */
+  /* ─── 2. LIQUIDITY & ORDER FLOW CALCULATOR ────────────────────── */
+  /* ────────────────────────────────────────────────────────────── */
 
   const curVol = volumes[len - 1];
   const rvol = curVolAvg > 0 ? Number((curVol / curVolAvg).toFixed(2)) : 1.0;
@@ -1429,9 +1430,9 @@ export function runAIPredictionEngine(
     volume: Math.round(curVolAvg * (z.strength / 100) * 1.5)
   }));
 
-  /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
-  /* â”€â”€â”€ 3. OPTIONS CHAIN PROXY GENERATOR â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
-  /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ────────────────────────────────────────────────────────────── */
+  /* ─── 3. OPTIONS CHAIN PROXY GENERATOR ────────────────────────── */
+  /* ────────────────────────────────────────────────────────────── */
 
   // Proxying options derivatives metrics based on Spot Volatility & Spot Price location
   let pcr = 0.92;
@@ -1463,9 +1464,9 @@ export function runAIPredictionEngine(
   const gammaExposure = Math.round(openInterest * 0.04 * (optionsSentiment === 'BULLISH' ? 1.2 : 0.8));
   const deltaExposure = Math.round(openInterest * 0.68 * (optionsSentiment === 'BULLISH' ? 1.1 : -0.9));
 
-  /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
-  /* â”€â”€â”€ 4. NEWS & SENTIMENT SOLVER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
-  /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ────────────────────────────────────────────────────────────── */
+  /* ─── 4. NEWS & SENTIMENT SOLVER ──────────────────────────────── */
+  /* ────────────────────────────────────────────────────────────── */
 
   // Derive news indicators dynamically from ROE/EPS and stock price acceleration
   const isPEHigh = (ratios.pe ?? 20) > 35;
@@ -1495,9 +1496,9 @@ export function runAIPredictionEngine(
     newsSummary = 'Slightly Bearish. Media raises premium trailing PE multiple concerns amidst volatility index spikes in peer groups.';
   }
 
-  /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
-  /* â”€â”€â”€ 5. DIVERGENCE DETECTION SCANNER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
-  /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ────────────────────────────────────────────────────────────── */
+  /* ─── 5. DIVERGENCE DETECTION SCANNER ────────────────────────── */
+  /* ────────────────────────────────────────────────────────────── */
 
   const detectedDivergences = [
     ...detectDivergences(closes, highs, lows, rsi, 'RSI'),
@@ -1510,9 +1511,9 @@ export function runAIPredictionEngine(
     divStrength = Math.round(detectedDivergences.reduce((sum, d) => sum + d.strength, 0) / detectedDivergences.length);
   }
 
-  /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
-  /* â”€â”€â”€ 6. ELLIOTT WAVE DETECTOR â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
-  /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ────────────────────────────────────────────────────────────── */
+  /* ─── 6. ELLIOTT WAVE DETECTOR ───────────────────────────────── */
+  /* ────────────────────────────────────────────────────────────── */
 
   // Attempting to match pivots into 1-5 wave configurations
   const swingHighs = pivots.highs;
@@ -1551,9 +1552,9 @@ export function runAIPredictionEngine(
     }
   }
 
-  /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
-  /* â”€â”€â”€ 7. FIBONACCI LEVEL SOLVER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
-  /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ────────────────────────────────────────────────────────────── */
+  /* ─── 7. FIBONACCI LEVEL SOLVER ───────────────────────────────── */
+  /* ────────────────────────────────────────────────────────────── */
 
   // Identify lowest floor and highest ceiling of the past 30 days
   const fibMin = Math.min(...closes.slice(-30));
@@ -1579,9 +1580,9 @@ export function runAIPredictionEngine(
   const fibStopLoss = Number((fibSupport * 0.965).toFixed(2));
   const fibTarget = Number((fibResistance * 1.04).toFixed(2));
 
-  /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
-  /* â”€â”€â”€ 8. SMART MONEY CONCEPT (SMC) ENGINE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
-  /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ────────────────────────────────────────────────────────────── */
+  /* ─── 8. SMART MONEY CONCEPT (SMC) ENGINE ─────────────────────── */
+  /* ────────────────────────────────────────────────────────────── */
 
   const orderBlocks: { price: number; volume: number; type: 'BULLISH' | 'BEARISH'; mitigated: boolean }[] = [];
   const fvg: { startIdx: number; priceGapStart: number; priceGapEnd: number; type: 'BULLISH' | 'BEARISH' }[] = [];
@@ -1676,9 +1677,9 @@ export function runAIPredictionEngine(
   const premiumZoneStart = Number((fibMin + fibHeight * 0.5).toFixed(2));
   const discountZoneEnd = Number((fibMin + fibHeight * 0.5).toFixed(2));
 
-  /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
-  /* â”€â”€â”€ 9. VOLATILITY PREDICTION ENGINE (GARCH) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
-  /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ────────────────────────────────────────────────────────────── */
+  /* ─── 9. VOLATILITY PREDICTION ENGINE (GARCH) ─────────────────── */
+  /* ────────────────────────────────────────────────────────────── */
 
   const logReturns: number[] = [];
   const dailyReturns: number[] = [];
@@ -1697,9 +1698,9 @@ export function runAIPredictionEngine(
   // Map next month volatility to a 0-100 score
   const volForecastScore = Math.round(Math.min(99, Math.max(5, nextMonthVol * 400)));
 
-  /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
-  /* â”€â”€â”€ 10. MONTE CARLO SIMULATOR RUNNER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
-  /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ────────────────────────────────────────────────────────────── */
+  /* ─── 10. MONTE CARLO SIMULATOR RUNNER ───────────────────────── */
+  /* ────────────────────────────────────────────────────────────── */
 
   // Daily expected return return calculation
   let expectedReturnDaily = logReturns.reduce((sum, r) => sum + r, 0) / (logReturns.length || 1);
@@ -1717,9 +1718,9 @@ export function runAIPredictionEngine(
     10000
   );
 
-  /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
-  /* â”€â”€â”€ 11. FEATURE ENGINEERING SOLVER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
-  /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ────────────────────────────────────────────────────────────── */
+  /* ─── 11. FEATURE ENGINEERING SOLVER ─────────────────────────── */
+  /* ────────────────────────────────────────────────────────────── */
 
   const momentumScore = Math.round(50 + (rsiVal - 50) * 0.8 + (histVal > 0 ? 10 : -10));
   const volatilityScore = Math.round(Math.min(99, Math.max(5, (atrVal / currentPrice) * 1500)));
@@ -1743,15 +1744,15 @@ export function runAIPredictionEngine(
     priceAcceleration: Number(acceleration.toFixed(2))
   };
 
-  /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
-  /* â”€â”€â”€ 12. WALK-FORWARD BACKTEST RUNNER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
-  /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ────────────────────────────────────────────────────────────── */
+  /* ─── 12. WALK-FORWARD BACKTEST RUNNER ───────────────────────── */
+  /* ────────────────────────────────────────────────────────────── */
 
   const backtestStats = runWalkForwardBacktest(closes, highs, lows, volumes);
 
-  /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
-  /* â”€â”€â”€ 13 & 14. MACHINE LEARNING LAYER & CONFIDENCE BREAKDOWN â”€â”€â”€â”€ */
-  /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ────────────────────────────────────────────────────────────── */
+  /* ─── 13 & 14. MACHINE LEARNING LAYER & CONFIDENCE BREAKDOWN ──── */
+  /* ────────────────────────────────────────────────────────────── */
 
   // Simulating traditional Tree and Recurrent NN algorithms using rolling stats
   const mlTreeScore = Math.round(50 + (closeSlope * 50) + (rsiVal > 50 ? 8 : -8) + (rvol > 1.2 ? 5 : 0));
@@ -1773,10 +1774,10 @@ export function runAIPredictionEngine(
   const sellScore = 100 - buyScore;
 
   const overallConfidence = Math.round(
-    adxVal * 0.35 + 
-    (100 - volatilityScore) * 0.25 + 
-    ((ratios.pe ?? 20) < 30 ? 15 : 5) + 
-    ((ratios.roe ?? 12) > 15 ? 15 : 5) +
+    (adxVal || 20) * 0.4 + 
+    Math.abs((rsiVal || 50) - 50) * 0.6 + 
+    (100 - (volatilityScore || 50)) * 0.2 + 
+    ((ratios.pe ?? 20) < 30 ? 10 : 0) + 
     (detectedPatterns.length > 0 ? 10 : 0)
   );
 
@@ -1790,9 +1791,9 @@ export function runAIPredictionEngine(
     ml: Math.max(30, Math.min(98, mlEnsembleScore))
   };
 
-  /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
-  /* â”€â”€â”€ 15. RISK REWARD CALCULATOR â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
-  /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ────────────────────────────────────────────────────────────── */
+  /* ─── 15. RISK REWARD CALCULATOR ─────────────────────────────── */
+  /* ────────────────────────────────────────────────────────────── */
 
   const rrEntry = currentPrice;
   const rrStop = fibSupport;
@@ -1802,9 +1803,9 @@ export function runAIPredictionEngine(
   const rrRewardPct = Number((((rrTarget - rrEntry)/rrEntry)*100).toFixed(2));
   const rrRatio = rrRiskPct > 0 ? `1:${(rrRewardPct / rrRiskPct).toFixed(2)}` : '1:3.00';
 
-  /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
-  /* â”€â”€â”€ 16. SECTOR RELATIVE STRENGTH â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
-  /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ────────────────────────────────────────────────────────────── */
+  /* ─── 16. SECTOR RELATIVE STRENGTH ────────────────────────────── */
+  /* ────────────────────────────────────────────────────────────── */
 
   // Calculating scores relative to market indices
   const sectorIndexScore = Math.max(30, Math.min(98, Math.round(55 + closeSlope * 40)));
@@ -1816,9 +1817,9 @@ export function runAIPredictionEngine(
     overallScore: Math.round(sectorIndexScore)
   };
 
-  /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
-  /* â”€â”€â”€ 17. AI EXPLAINABILITY DRIVERS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
-  /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ────────────────────────────────────────────────────────────── */
+  /* ─── 17. AI EXPLAINABILITY DRIVERS ──────────────────────────── */
+  /* ────────────────────────────────────────────────────────────── */
 
   const positiveDrivers: { factor: string; contributionPercent: number }[] = [];
   const negativeDrivers: { factor: string; contributionPercent: number }[] = [];
@@ -1885,9 +1886,9 @@ export function runAIPredictionEngine(
     }
   };
 
-    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  // â”€â”€â”€ NEW MATHEMATICAL QUANTITATIVE ENGINES CALCULATIONS â”€â”€â”€â”€â”€â”€â”€
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ──────────────────────────────────────────────────────────────
+  // ─── NEW MATHEMATICAL QUANTITATIVE ENGINES CALCULATIONS ───────
+  // ──────────────────────────────────────────────────────────────
   
   // 1. Kalman Filter price trend smoother
   const kalmanResult = runKalmanFilter(closes);
@@ -2040,7 +2041,7 @@ export function runAIPredictionEngine(
     riskScore: volForecastScore,
     historicalAccuracy: backtestStats.winRatio,
 
-    /* â”€â”€â”€ Upgrade Fields binding â”€â”€â”€ */
+    /* ─── Upgrade Fields binding ─── */
     marketRegime: {
       score: regimeScore,
       state: regimeState,
@@ -2316,9 +2317,9 @@ function createEmptyPrediction(symbol: string, currentPrice: number): Prediction
 }
 
 
-/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
-/* â”€â”€â”€ ULTIMATE QUANTITATIVE SYSTEM MATHEMATICAL SOLVERS â”€â”€â”€â”€â”€â”€â”€â”€ */
-/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ────────────────────────────────────────────────────────────── */
+/* ─── ULTIMATE QUANTITATIVE SYSTEM MATHEMATICAL SOLVERS ──────── */
+/* ────────────────────────────────────────────────────────────── */
 
 export function runKalmanFilter(prices: number[]): { filteredTrend: number[]; trendConfidence: number; noiseReductionScore: number } {
   if (prices.length === 0) {

@@ -91,7 +91,7 @@ const FILTER_GROUPS: { id: string; label: string; fields: FilterField[] }[] = [
     fields: [
       { id: 'marketCap', label: 'Market Cap (Cr)', type: 'range', unit: 'Cr' },
       { id: 'volume', label: 'Volume (Lakhs)', type: 'range', unit: 'L' },
-      { id: 'price', label: 'Price (â‚¹)', type: 'range', unit: 'â‚¹' },
+      { id: 'price', label: 'Price (₹)', type: 'range', unit: '₹' },
     ],
   },
 ];
@@ -104,19 +104,19 @@ interface Preset {
 
 const PRESET_TEMPLATES: Preset[] = [
   {
-    name: 'ðŸ”¥ High ROE Multibaggers',
+    name: '🔥 High ROE Multibaggers',
     filters: { roe: { min: 20 }, pe: { max: 35 }, profitGrowth: { min: 20 } },
   },
   {
-    name: 'ðŸ’¸ Undervalued Compounders',
+    name: '💸 Undervalued Compounders',
     filters: { pe: { max: 18 }, profitGrowth: { min: 10 } },
   },
   {
-    name: 'ðŸ›¡ï¸ Promoter Shield',
+    name: '🛡️ Promoter Shield',
     filters: { promoterHolding: { min: 60 }, profitGrowth: { min: 12 } },
   },
   {
-    name: 'ðŸ“ˆ Momentum Breakout',
+    name: '📈 Momentum Breakout',
     filters: { rsi: { min: 55, max: 70 }, changePercent: { min: 2 } },
   },
 ];
@@ -301,7 +301,7 @@ export const FilterSidebar = ({
                               }}
                               className="w-full px-2 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs focus:outline-none focus:border-blue-500 text-slate-700 dark:text-slate-200"
                             />
-                            <span className="text-slate-400 text-xs shrink-0">â€“</span>
+                            <span className="text-slate-400 text-xs shrink-0">–</span>
                             <input
                               type="number"
                               placeholder="Max"

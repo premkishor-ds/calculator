@@ -1,6 +1,6 @@
-﻿"use client";
+"use client";
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { 
   TrendingUp, 
   TrendingDown, 
@@ -67,11 +67,17 @@ interface AIMarketIntelligenceProps {
   };
   livePrice?: number;
   liveOrderBook?: { bids: OrderBookLevel[], asks: OrderBookLevel[] };
+  isLoading?: boolean;
 }
 
-export default function AIMarketIntelligence({ data, livePrice, liveOrderBook }: AIMarketIntelligenceProps) {
+export default function AIMarketIntelligence({ data, livePrice, liveOrderBook, isLoading }: AIMarketIntelligenceProps) {
   const symbol = data.ratios.symbol || 'STOCK';
   const currentPrice = livePrice || data.ratios.price || 100;
+
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Process data points for prediction engine
   const processedPoints = useMemo(() => {
@@ -142,6 +148,37 @@ export default function AIMarketIntelligence({ data, livePrice, liveOrderBook }:
     DISTRIBUTION: 'text-purple-500 bg-purple-500/10 border-purple-500/20',
   }[aiResult.marketRegime.state];
 
+  if (!mounted || isLoading) {
+    return (
+      <div className="space-y-8 animate-pulse">
+        {/* Skeleton Header */}
+        <div className="p-6 sm:p-8 bg-white/80 dark:bg-slate-900/60 rounded-3xl border border-slate-200/50 dark:border-slate-800/50 shadow-xl">
+          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
+            <div className="space-y-4 w-full">
+              <div className="w-40 h-6 bg-slate-200 dark:bg-slate-800 rounded-full"></div>
+              <div className="w-3/4 max-w-sm h-10 bg-slate-200 dark:bg-slate-800 rounded-xl"></div>
+              <div className="w-1/2 h-4 bg-slate-200 dark:bg-slate-800 rounded"></div>
+            </div>
+            <div className="flex gap-6 p-4 rounded-2xl w-full lg:w-auto bg-slate-100 dark:bg-slate-800/50">
+              <div className="w-24 h-16 bg-slate-200 dark:bg-slate-700 rounded-xl"></div>
+              <div className="w-24 h-16 bg-slate-200 dark:bg-slate-700 rounded-xl"></div>
+              <div className="w-24 h-16 bg-slate-200 dark:bg-slate-700 rounded-xl"></div>
+            </div>
+          </div>
+        </div>
+        {/* Skeleton Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="col-span-1 space-y-8">
+            <div className="h-[400px] bg-slate-100 dark:bg-slate-900/60 rounded-3xl border border-slate-200/50 dark:border-slate-800/50"></div>
+          </div>
+          <div className="col-span-1 lg:col-span-2 space-y-8">
+             <div className="h-[400px] bg-slate-100 dark:bg-slate-900/60 rounded-3xl border border-slate-200/50 dark:border-slate-800/50"></div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-8">
       {/* SECTION 1: AI PREDICTION SUMMARY HEADER */}
@@ -168,7 +205,7 @@ export default function AIMarketIntelligence({ data, livePrice, liveOrderBook }:
           <div className="flex items-center gap-6 bg-slate-50/50 dark:bg-slate-800/30 border border-slate-200/30 dark:border-slate-800/30 p-4 rounded-2xl w-full lg:w-auto">
             <div className="text-center">
               <span className="text-[10px] text-slate-400 font-extrabold uppercase tracking-wider block">Current Price</span>
-              <span className="text-xl font-black text-slate-800 dark:text-white mt-1 block">â‚¹{currentPrice.toFixed(2)}</span>
+              <span className="text-xl font-black text-slate-800 dark:text-white mt-1 block">₹{currentPrice.toFixed(2)}</span>
             </div>
             <div className="w-px h-10 bg-slate-200 dark:bg-slate-800" />
             <div className="text-center">
@@ -296,11 +333,11 @@ export default function AIMarketIntelligence({ data, livePrice, liveOrderBook }:
                       </div>
                       <div className="flex justify-between">
                         <span>Support / Resistance</span>
-                        <span className="text-slate-800 dark:text-slate-200 font-mono">â‚¹{pat.supportPrice} / â‚¹{pat.resistancePrice}</span>
+                        <span className="text-slate-800 dark:text-slate-200 font-mono">₹{pat.supportPrice} / ₹{pat.resistancePrice}</span>
                       </div>
                       <div className="flex justify-between">
                         <span>Target Estimate</span>
-                        <span className="text-blue-500 font-extrabold font-mono">â‚¹{pat.targetPrice}</span>
+                        <span className="text-blue-500 font-extrabold font-mono">₹{pat.targetPrice}</span>
                       </div>
                       <div className="flex justify-between items-center mt-1">
                         <span>Pattern Status</span>
@@ -384,7 +421,7 @@ export default function AIMarketIntelligence({ data, livePrice, liveOrderBook }:
               <div className="space-y-3">
                 {aiResult.riseDrivers.map((drv, i) => (
                   <div key={i} className="flex items-start gap-2.5 p-3 rounded-2xl bg-emerald-500/5 border border-emerald-500/10 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:scale-[1.01] transition-transform">
-                    <span className="text-emerald-500 shrink-0 text-sm mt-0.5">âœ“</span>
+                    <span className="text-emerald-500 shrink-0 text-sm mt-0.5">✓</span>
                     <span>{drv}</span>
                   </div>
                 ))}
@@ -399,7 +436,7 @@ export default function AIMarketIntelligence({ data, livePrice, liveOrderBook }:
               <div className="space-y-3">
                 {aiResult.fallHeadwinds.map((hdw, i) => (
                   <div key={i} className="flex items-start gap-2.5 p-3 rounded-2xl bg-rose-500/5 border border-rose-500/10 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:scale-[1.01] transition-transform">
-                    <span className="text-rose-500 shrink-0 text-sm mt-0.5">âš ï¸</span>
+                    <span className="text-rose-500 shrink-0 text-sm mt-0.5">⚠️</span>
                     <span>{hdw}</span>
                   </div>
                 ))}
@@ -433,17 +470,17 @@ export default function AIMarketIntelligence({ data, livePrice, liveOrderBook }:
                 <div className="pt-3 border-t border-emerald-500/10 space-y-2 text-[10px] font-bold text-slate-550 dark:text-slate-400">
                   <div className="flex justify-between">
                     <span>Target Price</span>
-                    <span className="text-emerald-500 font-black font-mono">â‚¹{aiResult.scenarios.bullCase.targetPrice}</span>
+                    <span className="text-emerald-500 font-black font-mono">₹{aiResult.scenarios.bullCase.targetPrice}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Range Horizon</span>
-                    <span className="text-slate-700 dark:text-slate-300 font-mono">â‚¹{aiResult.scenarios.bullCase.rangeLow} - â‚¹{aiResult.scenarios.bullCase.rangeHigh}</span>
+                    <span className="text-slate-700 dark:text-slate-300 font-mono">₹{aiResult.scenarios.bullCase.rangeLow} - ₹{aiResult.scenarios.bullCase.rangeHigh}</span>
                   </div>
                   <div className="flex flex-col gap-1 mt-2">
                     <span>Key Triggers:</span>
                     {aiResult.scenarios.bullCase.triggers.slice(0, 2).map((t, idx) => (
                       <span key={idx} className="text-[9px] text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/10 rounded px-1.5 py-0.5 font-bold truncate">
-                        â€¢ {t}
+                        • {t}
                       </span>
                     ))}
                   </div>
@@ -467,17 +504,17 @@ export default function AIMarketIntelligence({ data, livePrice, liveOrderBook }:
                 <div className="pt-3 border-t border-slate-200 dark:border-slate-700/50 space-y-2 text-[10px] font-bold text-slate-550 dark:text-slate-400">
                   <div className="flex justify-between">
                     <span>Target Price</span>
-                    <span className="text-blue-500 font-black font-mono">â‚¹{aiResult.scenarios.baseCase.targetPrice}</span>
+                    <span className="text-blue-500 font-black font-mono">₹{aiResult.scenarios.baseCase.targetPrice}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Range Horizon</span>
-                    <span className="text-slate-700 dark:text-slate-300 font-mono">â‚¹{aiResult.scenarios.baseCase.rangeLow} - â‚¹{aiResult.scenarios.baseCase.rangeHigh}</span>
+                    <span className="text-slate-700 dark:text-slate-300 font-mono">₹{aiResult.scenarios.baseCase.rangeLow} - ₹{aiResult.scenarios.baseCase.rangeHigh}</span>
                   </div>
                   <div className="flex flex-col gap-1 mt-2">
                     <span>Key Triggers:</span>
                     {aiResult.scenarios.baseCase.triggers.slice(0, 2).map((t, idx) => (
                       <span key={idx} className="text-[9px] text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded px-1.5 py-0.5 font-bold truncate">
-                        â€¢ {t}
+                        • {t}
                       </span>
                     ))}
                   </div>
@@ -501,17 +538,17 @@ export default function AIMarketIntelligence({ data, livePrice, liveOrderBook }:
                 <div className="pt-3 border-t border-rose-500/10 space-y-2 text-[10px] font-bold text-slate-550 dark:text-slate-400">
                   <div className="flex justify-between">
                     <span>Target Price</span>
-                    <span className="text-rose-500 font-black font-mono">â‚¹{aiResult.scenarios.bearCase.targetPrice}</span>
+                    <span className="text-rose-500 font-black font-mono">₹{aiResult.scenarios.bearCase.targetPrice}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Range Horizon</span>
-                    <span className="text-slate-700 dark:text-slate-300 font-mono">â‚¹{aiResult.scenarios.bearCase.rangeLow} - â‚¹{aiResult.scenarios.bearCase.rangeHigh}</span>
+                    <span className="text-slate-700 dark:text-slate-300 font-mono">₹{aiResult.scenarios.bearCase.rangeLow} - ₹{aiResult.scenarios.bearCase.rangeHigh}</span>
                   </div>
                   <div className="flex flex-col gap-1 mt-2">
                     <span>Key Triggers:</span>
                     {aiResult.scenarios.bearCase.triggers.slice(0, 2).map((t, idx) => (
                       <span key={idx} className="text-[9px] text-rose-600 dark:text-rose-400 bg-rose-500/10 border border-rose-500/10 rounded px-1.5 py-0.5 font-bold truncate">
-                        â€¢ {t}
+                        • {t}
                       </span>
                     ))}
                   </div>
@@ -610,7 +647,7 @@ export default function AIMarketIntelligence({ data, livePrice, liveOrderBook }:
                       className="absolute left-0 top-0 bottom-0 bg-rose-500/10 rounded-l-xl transition-all duration-500"
                       style={{ width: `${zone.strength}%` }}
                     />
-                    <span className="text-rose-500 z-10">â‚¹{zone.price.toFixed(2)}</span>
+                    <span className="text-rose-500 z-10">₹{zone.price.toFixed(2)}</span>
                     <span className="text-slate-400 z-10 text-[9px] font-bold">STRENGTH {zone.strength}%</span>
                   </div>
                 ))}
@@ -619,7 +656,7 @@ export default function AIMarketIntelligence({ data, livePrice, liveOrderBook }:
               {/* Current Price Reference */}
               <div className="py-2.5 px-4 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700/50 rounded-2xl flex justify-between items-center text-xs font-black">
                 <span className="text-slate-500">CURRENT TACTICAL INDEX</span>
-                <span className="font-mono text-blue-500 animate-pulse">â‚¹{currentPrice.toFixed(2)}</span>
+                <span className="font-mono text-blue-500 animate-pulse">₹{currentPrice.toFixed(2)}</span>
               </div>
 
               {/* Supports (Descending) */}
@@ -631,7 +668,7 @@ export default function AIMarketIntelligence({ data, livePrice, liveOrderBook }:
                       className="absolute left-0 top-0 bottom-0 bg-emerald-500/10 rounded-l-xl transition-all duration-500"
                       style={{ width: `${zone.strength}%` }}
                     />
-                    <span className="text-emerald-500 z-10">â‚¹{zone.price.toFixed(2)}</span>
+                    <span className="text-emerald-500 z-10">₹{zone.price.toFixed(2)}</span>
                     <span className="text-slate-400 z-10 text-[9px] font-bold">STRENGTH {zone.strength}%</span>
                   </div>
                 ))}
@@ -691,15 +728,15 @@ export default function AIMarketIntelligence({ data, livePrice, liveOrderBook }:
               <div className="space-y-1.5 mt-4 text-[10px] font-bold text-slate-550 dark:text-slate-400">
                 <div className="flex justify-between">
                   <span>High Target</span>
-                  <span className="text-emerald-500 font-black font-mono">â‚¹{t.data.high.toFixed(2)}</span>
+                  <span className="text-emerald-500 font-black font-mono">₹{t.data.high.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Base Est</span>
-                  <span className="text-blue-500 font-black font-mono">â‚¹{t.data.base.toFixed(2)}</span>
+                  <span className="text-blue-500 font-black font-mono">₹{t.data.base.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Low Boundary</span>
-                  <span className="text-rose-500 font-black font-mono">â‚¹{t.data.low.toFixed(2)}</span>
+                  <span className="text-rose-500 font-black font-mono">₹{t.data.low.toFixed(2)}</span>
                 </div>
               </div>
             </div>
@@ -745,9 +782,9 @@ export default function AIMarketIntelligence({ data, livePrice, liveOrderBook }:
         </div>
       </div>
 
-      {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
-      {/* â”€â”€â”€ INSTITUTIONAL QUANTITATIVE MARKET INTELLIGENCE COCKPIT â”€â”€â”€ */}
-      {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* ────────────────────────────────────────────────────────────── */}
+      {/* ─── INSTITUTIONAL QUANTITATIVE MARKET INTELLIGENCE COCKPIT ─── */}
+      {/* ────────────────────────────────────────────────────────────── */}
       <div className="border-t border-slate-200 dark:border-slate-800 pt-8 space-y-8">
         
         {/* Cockpit Section Title Banner */}
@@ -875,7 +912,7 @@ export default function AIMarketIntelligence({ data, livePrice, liveOrderBook }:
                   <div className="space-y-0.5 text-emerald-500 font-semibold">
                     {aiResult.liquidity.marketDepth.bids.slice(0, 3).map((b, idx) => (
                       <div key={idx} className="flex justify-between">
-                        <span>â‚¹{b.price}</span>
+                        <span>₹{b.price}</span>
                         <span className="text-slate-400">{b.qty}</span>
                       </div>
                     ))}
@@ -883,7 +920,7 @@ export default function AIMarketIntelligence({ data, livePrice, liveOrderBook }:
                   <div className="space-y-0.5 text-rose-500 font-semibold">
                     {aiResult.liquidity.marketDepth.asks.slice(0, 3).map((a, idx) => (
                       <div key={idx} className="flex justify-between">
-                        <span>â‚¹{a.price}</span>
+                        <span>₹{a.price}</span>
                         <span className="text-slate-400">{a.qty}</span>
                       </div>
                     ))}
@@ -937,7 +974,7 @@ export default function AIMarketIntelligence({ data, livePrice, liveOrderBook }:
                     <div className="flex justify-between">
                       <span className="text-slate-400">Max Pain Strike</span>
                       <span className="font-mono text-slate-800 dark:text-slate-200 font-extrabold">
-                        {typeof aiResult.optionsChain.maxPain === 'number' ? `â‚¹${aiResult.optionsChain.maxPain.toFixed(2)}` : aiResult.optionsChain.maxPain}
+                        {typeof aiResult.optionsChain.maxPain === 'number' ? `₹${aiResult.optionsChain.maxPain.toFixed(2)}` : aiResult.optionsChain.maxPain}
                       </span>
                     </div>
                     <div className="flex justify-between">
@@ -999,7 +1036,7 @@ export default function AIMarketIntelligence({ data, livePrice, liveOrderBook }:
                         <span key={idx} className={`inline-flex px-1.5 py-0.5 rounded text-[8px] font-mono font-bold border ${
                           f.type === 'BULLISH' ? 'text-emerald-500 bg-emerald-500/5 border-emerald-500/10' : 'text-rose-500 bg-rose-500/5 border-rose-500/10'
                         }`}>
-                          {f.type} FVG (â‚¹{f.priceGapStart.toFixed(0)}-â‚¹{f.priceGapEnd.toFixed(0)})
+                          {f.type} FVG (₹{f.priceGapStart.toFixed(0)}-₹{f.priceGapEnd.toFixed(0)})
                         </span>
                       ))}
                     </div>
@@ -1015,7 +1052,7 @@ export default function AIMarketIntelligence({ data, livePrice, liveOrderBook }:
                       <span key={idx} className={`inline-flex px-1.5 py-0.5 rounded text-[8px] font-mono font-bold border ${
                         ob.type === 'BULLISH' ? 'text-emerald-500 bg-emerald-500/5 border-emerald-500/10' : 'text-rose-500 bg-rose-500/5 border-rose-500/10'
                       }`}>
-                        {ob.type} OB (â‚¹{ob.price.toFixed(1)})
+                        {ob.type} OB (₹{ob.price.toFixed(1)})
                       </span>
                     ))}
                   </div>
@@ -1030,7 +1067,7 @@ export default function AIMarketIntelligence({ data, livePrice, liveOrderBook }:
                 <div className="space-y-1.5 text-[9px] font-semibold text-slate-700 dark:text-slate-350 leading-relaxed max-h-16 overflow-y-auto">
                   {aiResult.divergences.detected.map((div, idx) => (
                     <div key={idx} className="flex items-start gap-1 p-1 bg-slate-50 dark:bg-slate-800 rounded">
-                      <span className={div.type.includes('BULLISH') ? 'text-emerald-500' : 'text-rose-500'}>â—</span>
+                      <span className={div.type.includes('BULLISH') ? 'text-emerald-500' : 'text-rose-500'}>●</span>
                       <span>{div.indicator}: {div.desc.slice(0, 75)}...</span>
                     </div>
                   ))}
@@ -1057,7 +1094,7 @@ export default function AIMarketIntelligence({ data, livePrice, liveOrderBook }:
               <div className="mb-4">
                 <div className="flex justify-between text-[8px] font-extrabold text-slate-400 uppercase tracking-widest mb-1.5">
                   <span>Wave Path Progress</span>
-                  <span className="text-indigo-500">Expected: â‚¹{aiResult.elliottWave.expectedTarget}</span>
+                  <span className="text-indigo-500">Expected: ₹{aiResult.elliottWave.expectedTarget}</span>
                 </div>
                 <div className="flex items-center justify-between text-[10px] font-black font-mono">
                   {[1, 2, 3, 4, 5, 'A', 'B', 'C'].map((w, idx) => {
@@ -1089,19 +1126,19 @@ export default function AIMarketIntelligence({ data, livePrice, liveOrderBook }:
               <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-[9px] font-mono font-semibold text-slate-500">
                 <div className="flex justify-between border-b border-slate-100 dark:border-slate-800 pb-0.5">
                   <span>61.8% Retracement</span>
-                  <span className="text-slate-855 dark:text-white">â‚¹{aiResult.fibonacci.retracements.find(r=>r.level===0.618)?.price || '--'}</span>
+                  <span className="text-slate-855 dark:text-white">₹{aiResult.fibonacci.retracements.find(r=>r.level===0.618)?.price || '--'}</span>
                 </div>
                 <div className="flex justify-between border-b border-slate-100 dark:border-slate-800 pb-0.5">
                   <span>161.8% Extension</span>
-                  <span className="text-slate-855 dark:text-white">â‚¹{aiResult.fibonacci.extensions.find(e=>e.level===1.618)?.price || '--'}</span>
+                  <span className="text-slate-855 dark:text-white">₹{aiResult.fibonacci.extensions.find(e=>e.level===1.618)?.price || '--'}</span>
                 </div>
                 <div className="flex justify-between border-b border-slate-100 dark:border-slate-800 pb-0.5">
                   <span>50.0% Equilibrium</span>
-                  <span className="text-slate-855 dark:text-white">â‚¹{aiResult.fibonacci.retracements.find(r=>r.level===0.5)?.price || '--'}</span>
+                  <span className="text-slate-855 dark:text-white">₹{aiResult.fibonacci.retracements.find(r=>r.level===0.5)?.price || '--'}</span>
                 </div>
                 <div className="flex justify-between border-b border-slate-100 dark:border-slate-800 pb-0.5">
                   <span>261.8% Extension</span>
-                  <span className="text-slate-855 dark:text-white">â‚¹{aiResult.fibonacci.extensions.find(e=>e.level===2.618)?.price || '--'}</span>
+                  <span className="text-slate-855 dark:text-white">₹{aiResult.fibonacci.extensions.find(e=>e.level===2.618)?.price || '--'}</span>
                 </div>
               </div>
             </div>
@@ -1158,7 +1195,7 @@ export default function AIMarketIntelligence({ data, livePrice, liveOrderBook }:
                 </div>
               </div>
               <div className="p-2 bg-slate-50 dark:bg-slate-800 rounded text-[9px] text-center font-semibold text-slate-500">
-                Expected 95% Confidence Range: <span className="font-mono text-slate-855 dark:text-white font-bold">â‚¹{aiResult.monteCarlo.expectedRangeLow} - â‚¹{aiResult.monteCarlo.expectedRangeHigh}</span> (Mean: â‚¹{aiResult.monteCarlo.expectedMeanPrice})
+                Expected 95% Confidence Range: <span className="font-mono text-slate-855 dark:text-white font-bold">₹{aiResult.monteCarlo.expectedRangeLow} - ₹{aiResult.monteCarlo.expectedRangeHigh}</span> (Mean: ₹{aiResult.monteCarlo.expectedMeanPrice})
               </div>
             </div>
           </div>
@@ -1334,16 +1371,16 @@ export default function AIMarketIntelligence({ data, livePrice, liveOrderBook }:
               <div className="grid grid-cols-3 gap-2.5 text-[9px] font-mono text-center mb-4">
                 <div className="p-1 border border-emerald-500/20 bg-emerald-500/5 rounded">
                   <span className="text-emerald-500 block font-bold uppercase text-[8px]">Target Price</span>
-                  <span className="text-emerald-500 font-black font-mono">â‚¹{aiResult.riskReward.targetPrice.toFixed(2)}</span>
+                  <span className="text-emerald-500 font-black font-mono">₹{aiResult.riskReward.targetPrice.toFixed(2)}</span>
                   <span className="text-slate-400 block text-[7px] font-sans font-medium">+{aiResult.riskReward.rewardPercent}%</span>
                 </div>
                 <div className="p-1 border border-blue-500/20 bg-blue-500/5 rounded flex flex-col justify-center">
                   <span className="text-blue-500 block font-bold uppercase text-[8px]">Entry Price</span>
-                  <span className="text-blue-500 font-black font-mono">â‚¹{aiResult.riskReward.entryPrice.toFixed(2)}</span>
+                  <span className="text-blue-500 font-black font-mono">₹{aiResult.riskReward.entryPrice.toFixed(2)}</span>
                 </div>
                 <div className="p-1 border border-rose-500/20 bg-rose-500/5 rounded">
                   <span className="text-rose-500 block font-bold uppercase text-[8px]">Stop Loss</span>
-                  <span className="text-rose-500 font-black font-mono">â‚¹{aiResult.riskReward.stopLoss.toFixed(2)}</span>
+                  <span className="text-rose-500 font-black font-mono">₹{aiResult.riskReward.stopLoss.toFixed(2)}</span>
                   <span className="text-slate-400 block text-[7px] font-sans font-medium">-{aiResult.riskReward.riskPercent}%</span>
                 </div>
               </div>
@@ -1478,12 +1515,12 @@ export default function AIMarketIntelligence({ data, livePrice, liveOrderBook }:
               <div className="space-y-2.5 text-[11px] font-bold text-slate-550 dark:text-slate-400">
                 <div className="flex justify-between border-b border-slate-100 dark:border-slate-800/60 pb-1.5">
                   <span>Current Close Price</span>
-                  <span className="text-slate-800 dark:text-slate-200 font-mono">â‚¹{currentPrice.toFixed(2)}</span>
+                  <span className="text-slate-800 dark:text-slate-200 font-mono">₹{currentPrice.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between border-b border-slate-100 dark:border-slate-800/60 pb-1.5">
                   <span>Kalman Filtered Value</span>
                   <span className="text-indigo-500 font-black font-mono">
-                    â‚¹{aiResult.kalmanFilter.filteredTrend[aiResult.kalmanFilter.filteredTrend.length - 1]?.toFixed(2) || currentPrice.toFixed(2)}
+                    ₹{aiResult.kalmanFilter.filteredTrend[aiResult.kalmanFilter.filteredTrend.length - 1]?.toFixed(2) || currentPrice.toFixed(2)}
                   </span>
                 </div>
                 <div>
@@ -1733,11 +1770,11 @@ export default function AIMarketIntelligence({ data, livePrice, liveOrderBook }:
 
               <div className="space-y-2 text-[11px] font-bold text-slate-550 dark:text-slate-400">
                 <div className="flex justify-between border-b border-slate-100 dark:border-slate-800/60 pb-1.5">
-                  <span>Systematic Risk Beta (Î²)</span>
+                  <span>Systematic Risk Beta (β)</span>
                   <span className="text-slate-800 dark:text-slate-200 font-mono font-extrabold">{aiResult.portfolioAnalytics.beta}</span>
                 </div>
                 <div className="flex justify-between border-b border-slate-100 dark:border-slate-800/60 pb-1.5">
-                  <span>Active Excess Return Alpha (Î±)</span>
+                  <span>Active Excess Return Alpha (α)</span>
                   <span className={`font-mono font-extrabold ${aiResult.portfolioAnalytics.alpha >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
                     {aiResult.portfolioAnalytics.alpha >= 0 ? '+' : ''}{aiResult.portfolioAnalytics.alpha}
                   </span>
@@ -1823,21 +1860,21 @@ export default function AIMarketIntelligence({ data, livePrice, liveOrderBook }:
               {/* Cones levels table */}
               <div className="space-y-2 text-[10px] font-mono font-bold text-slate-550 dark:text-slate-400">
                 <div className="flex justify-between border-b border-slate-100 dark:border-slate-800/60 pb-1 flex-row">
-                  <span className="text-slate-400 font-sans">68% Confidence Band (1Ïƒ)</span>
+                  <span className="text-slate-400 font-sans">68% Confidence Band (1σ)</span>
                   <span className="text-slate-800 dark:text-slate-200">
-                    â‚¹{aiResult.uncertaintyPrediction.confidenceBands68.low.toFixed(1)} â€“ â‚¹{aiResult.uncertaintyPrediction.confidenceBands68.high.toFixed(1)}
+                    ₹{aiResult.uncertaintyPrediction.confidenceBands68.low.toFixed(1)} – ₹{aiResult.uncertaintyPrediction.confidenceBands68.high.toFixed(1)}
                   </span>
                 </div>
                 <div className="flex justify-between border-b border-slate-100 dark:border-slate-800/60 pb-1 flex-row">
-                  <span className="text-slate-400 font-sans">95% Confidence Band (1.96Ïƒ)</span>
+                  <span className="text-slate-400 font-sans">95% Confidence Band (1.96σ)</span>
                   <span className="text-slate-800 dark:text-slate-200">
-                    â‚¹{aiResult.uncertaintyPrediction.confidenceBands95.low.toFixed(1)} â€“ â‚¹{aiResult.uncertaintyPrediction.confidenceBands95.high.toFixed(1)}
+                    ₹{aiResult.uncertaintyPrediction.confidenceBands95.low.toFixed(1)} – ₹{aiResult.uncertaintyPrediction.confidenceBands95.high.toFixed(1)}
                   </span>
                 </div>
                 <div className="flex justify-between border-b border-slate-100 dark:border-slate-800/60 pb-1 flex-row">
-                  <span className="text-slate-400 font-sans">99% Confidence Band (2.58Ïƒ)</span>
+                  <span className="text-slate-400 font-sans">99% Confidence Band (2.58σ)</span>
                   <span className="text-slate-800 dark:text-slate-200">
-                    â‚¹{aiResult.uncertaintyPrediction.confidenceBands99.low.toFixed(1)} â€“ â‚¹{aiResult.uncertaintyPrediction.confidenceBands99.high.toFixed(1)}
+                    ₹{aiResult.uncertaintyPrediction.confidenceBands99.low.toFixed(1)} – ₹{aiResult.uncertaintyPrediction.confidenceBands99.high.toFixed(1)}
                   </span>
                 </div>
               </div>

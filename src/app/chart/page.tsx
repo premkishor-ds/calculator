@@ -42,7 +42,7 @@ import {
 import { DEFAULT_SYMBOLS } from '@/utils/symbols';
 import { buildAllTags, DEFAULT_CUSTOM_TAGS, CUSTOM_TAG_IDS, type TagDef, type CustomTagRaw } from '@/utils/tags';
 import { getBackendApiUrl, getBackendWsUrl } from '@/lib/backend-config';
-
+import AIMarketIntelligence from '@/components/AIMarketIntelligence';
 /* Dynamically import the chart so it's client-only (no SSR) */
 const AdvancedChart = dynamic(() => import('@/components/AdvancedChart'), {
   ssr: false,
@@ -50,7 +50,7 @@ const AdvancedChart = dynamic(() => import('@/components/AdvancedChart'), {
     <div className="flex-1 flex items-center justify-center bg-slate-950 min-h-[300px]">
       <div className="flex flex-col items-center gap-3">
         <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-        <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Initialising Chart Engineâ€¦</span>
+        <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Initialising Chart Engine…</span>
       </div>
     </div>
   ),
@@ -157,28 +157,6 @@ interface NewsItem {
   date: string;
 }
 
-interface VirtualOrder {
-  _id?: string;
-  symbol: string;
-  side: 'buy' | 'sell';
-  type: 'market' | 'limit';
-  price: number;
-  quantity: number;
-  status: 'pending' | 'filled' | 'cancelled';
-  createdAt?: string;
-  filledAt?: string;
-}
-
-interface VirtualPosition {
-  _id?: string;
-  symbol: string;
-  side: 'buy' | 'sell';
-  averagePrice: number;
-  quantity: number;
-  currentPrice?: number;
-  unrealizedPnL?: number;
-  realizedPnL?: number;
-}
 
 interface ActiveAlert {
   _id: string;
@@ -242,7 +220,7 @@ const SECTORS_MAP: Record<string, string> = {
 };
 
 function TradingTerminalInner() {
-  /* â”€â”€ Core Theme & Workspace States â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ── Core Theme & Workspace States ────────────────────────── */
   const [theme, setTheme] = useState<'dark' | 'light'>('light');
   const [watchlistStocks, setWatchlistStocks] = useState<StockQuote[]>([]);
   const [livePrices, setLivePrices] = useState<Record<string, number>>({});
@@ -274,22 +252,20 @@ function TradingTerminalInner() {
     drawingsVersion: number;
     markers: any[];
   }>>(() => Array(8).fill(null).map((_, i) => ({
-    symbol: i === 0 ? 'VOLTAMP.NS' : (DEFAULT_SYMBOLS[i % DEFAULT_SYMBOLS.length] || 'VOLTAMP.NS'),
+    symbol: i === 0 ? '' : (DEFAULT_SYMBOLS[i % DEFAULT_SYMBOLS.length] || ''),
     interval: 'Daily',
     style: 'Candlestick',
-    indicators: new Set(['SMA20', 'EMA50']),
+    indicators: new Set(['EMA9', 'EMA20', 'EMA50', 'EMA100', 'EMA200']),
     drawingsVersion: 0,
     markers: []
   })));
 
   const searchParams = useSearchParams();
   const [selectedSymbol, setSelectedSymbol] = useState<string>(() => {
-    if (typeof window !== 'undefined') {
-      const paramSym = new URLSearchParams(window.location.search).get('symbol');
+      const paramSym = searchParams?.get('symbol');
       if (paramSym) return paramSym;
-    }
-    return 'VOLTAMP.NS';
-  });
+      return '';
+    });
 
   // Track whether the URL param symbol has been honoured already
   const urlSymbolHonouredRef = useRef(false);
@@ -341,49 +317,23 @@ function TradingTerminalInner() {
     }
   };
 
-  /* â”€â”€ Alerts & Sidebar Panel States â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ── Alerts & Sidebar Panel States ────────────────────────── */
   const [showAlertsSidebar, setShowAlertsSidebar] = useState(false);
   const [alertsList, setAlertsList] = useState<ActiveAlert[]>([]);
   const [newAlertCondition, setNewAlertCondition] = useState<ActiveAlert['condition']>('price_above');
   const [newAlertValue, setNewAlertValue] = useState('');
 
-  /* â”€â”€ Workspace templates States â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ── Workspace templates States ──────────────────────────── */
   const [savedTemplates, setSavedTemplates] = useState<WorkspaceTemplate[]>([]);
   const [newTemplateName, setNewTemplateName] = useState('');
   const [showTemplatesDropdown, setShowTemplatesDropdown] = useState(false);
 
-  /* â”€â”€ Paper Trading Panel States â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
-  const [virtualBalance, setVirtualBalance] = useState(1000000);
-  const [positions, setPositions] = useState<VirtualPosition[]>([]);
-  const [orders, setOrders] = useState<VirtualOrder[]>([]);
-  const [orderTicket, setOrderTicket] = useState<{
-    side: 'buy' | 'sell';
-    type: 'market' | 'limit';
-    price: string;
-    quantity: string;
-  }>({
-    side: 'buy',
-    type: 'market',
-    price: '',
-    quantity: '10'
-  });
 
-  // Calculate live portfolio equity
-  const totalEquity = useMemo(() => {
-    const cash = virtualBalance;
-    const positionsPnL = positions.reduce((acc, pos) => {
-      const livePrice = livePrices[pos.symbol] || pos.averagePrice;
-      const factor = pos.side === 'buy' ? 1 : -1;
-      return acc + (livePrice - pos.averagePrice) * pos.quantity * factor;
-    }, 0);
-    return cash + positionsPnL;
-  }, [virtualBalance, positions, livePrices]);
-
-  /* â”€â”€ Watchlist Screener States â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ── Watchlist Screener States ────────────────────────────── */
   const [screenerSortField, setScreenerSortField] = useState<'symbol' | 'price' | 'changePercent' | 'sma20' | 'sma50' | 'rsi14'>('symbol');
   const [screenerSortDirection, setScreenerSortDirection] = useState<'asc' | 'desc'>('asc');
 
-  /* â”€â”€ Backtester States â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ── Backtester States ────────────────────────────────────── */
   const [strategyType, setStrategyType] = useState<'emacross' | 'rsi'>('emacross');
   const [backtestRunning, setBacktestRunning] = useState(false);
   const [backtestResults, setBacktestResults] = useState<{
@@ -394,7 +344,7 @@ function TradingTerminalInner() {
     trades: any[];
   } | null>(null);
 
-  /* â”€â”€ AI Pattern Scanner States â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ── AI Pattern Scanner States ───────────────────────────── */
   const [aiPatterns, setAiPatterns] = useState<Array<{
     timeStr: string;
     pattern: string;
@@ -404,7 +354,7 @@ function TradingTerminalInner() {
   }>>([]);
   const [aiScanning, setAiScanning] = useState(false);
 
-  /* â”€â”€ Socket Connection & Simulated Feeds â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ── Socket Connection & Simulated Feeds ──────────────────── */
   const wsRef = useRef<WebSocket | null>(null);
 
   useEffect(() => {
@@ -438,13 +388,7 @@ function TradingTerminalInner() {
             }
             return s;
           }));
-        } else if (msg.type === 'portfolio_update') {
-          setVirtualBalance(msg.balance);
-          fetchPositionsAndOrders();
-        } else if (msg.type === 'order_filled') {
-          showToast(`Order filled for ${msg.order.quantity} shares of ${msg.order.symbol.split('.')[0]}!`, 'success');
-          setVirtualBalance(msg.balance);
-          fetchPositionsAndOrders();
+
         } else if (msg.type === 'alert_triggered') {
           showToast(`ALERT TRIGGERED: ${msg.alert.symbol.split('.')[0]} crosses price point ${msg.alert.value}!`, 'info');
           fetchAlerts();
@@ -463,21 +407,7 @@ function TradingTerminalInner() {
     };
   }, [showToast]);
 
-  /* â”€â”€ Fetch Helper Methods â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
-  const fetchPositionsAndOrders = useCallback(async () => {
-    try {
-      const posRes = await fetch(`${BACKEND_API_URL}/trading/positions`);
-      if (posRes.ok) {
-        const data = await posRes.json();
-        setPositions(data);
-      }
-      const ordRes = await fetch(`${BACKEND_API_URL}/trading/orders`);
-      if (ordRes.ok) {
-        const data = await ordRes.json();
-        setOrders(data);
-      }
-    } catch {}
-  }, []);
+  /* ── Fetch Helper Methods ────────────────────────────────── */
 
   const fetchAlerts = useCallback(async () => {
     try {
@@ -500,81 +430,12 @@ function TradingTerminalInner() {
   }, []);
 
   useEffect(() => {
-    fetchPositionsAndOrders();
     fetchAlerts();
     fetchWorkspaceLayouts();
-  }, [fetchPositionsAndOrders, fetchAlerts, fetchWorkspaceLayouts]);
+  }, [fetchAlerts, fetchWorkspaceLayouts]);
 
-  /* â”€â”€ Paper Trading Submissions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
-  const handlePlaceOrder = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const qtyVal = parseInt(orderTicket.quantity);
-    if (!selectedSymbol || isNaN(qtyVal) || qtyVal <= 0) {
-      showToast('Please enter a valid stock quantity', 'error');
-      return;
-    }
-    const orderData = {
-      symbol: selectedSymbol,
-      side: orderTicket.side,
-      type: orderTicket.type,
-      quantity: qtyVal,
-      price: orderTicket.type === 'limit' ? parseFloat(orderTicket.price) : 0
-    };
 
-    try {
-      const res = await fetch(`${BACKEND_API_URL}/trading/orders`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(orderData)
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setVirtualBalance(data.balance);
-        showToast(
-          orderTicket.type === 'market' 
-            ? `Successfully filled market order for ${qtyVal} shares!`
-            : `Working limit order placed for ${qtyVal} shares!`,
-          'success'
-        );
-        fetchPositionsAndOrders();
-      } else {
-        const err = await res.json();
-        showToast(err.error || 'Failed to execute virtual order', 'error');
-      }
-    } catch {
-      showToast('Virtual execution ledger offline', 'error');
-    }
-  };
-
-  const handleCancelOrder = async (id: string) => {
-    try {
-      const res = await fetch(`${BACKEND_API_URL}/trading/orders/${id}`, {
-        method: 'DELETE'
-      });
-      if (res.ok) {
-        showToast('Limit order cancelled successfully', 'info');
-        fetchPositionsAndOrders();
-      }
-    } catch {}
-  };
-
-  const handleResetPortfolio = async () => {
-    if (!window.confirm('Reset virtual portfolio to â‚¹1,000,000 cash ledger?')) return;
-    try {
-      const res = await fetch(`${BACKEND_API_URL}/trading/portfolio/reset`, {
-        method: 'POST'
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setVirtualBalance(data.balance);
-        setPositions([]);
-        setOrders([]);
-        showToast('Virtual ledger reset successfully!', 'success');
-      }
-    } catch {}
-  };
-
-  /* â”€â”€ Alerts Side Panel Submissions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ── Alerts Side Panel Submissions ────────────────────────── */
   const handleCreateAlert = async (e: React.FormEvent) => {
     e.preventDefault();
     const val = parseFloat(newAlertValue);
@@ -617,7 +478,7 @@ function TradingTerminalInner() {
     } catch {}
   };
 
-  /* â”€â”€ Cloud Workspace Templates â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ── Cloud Workspace Templates ───────────────────────────── */
   const handleSaveWorkspaceLayout = async (e: React.FormEvent) => {
     e.preventDefault();
     const name = newTemplateName.trim();
@@ -672,10 +533,10 @@ function TradingTerminalInner() {
       // Pad remaining cell configurations if needed
       while (restoredConfigs.length < 8) {
         restoredConfigs.push({
-          symbol: 'VOLTAMP.NS',
+          symbol: '',
           interval: '5m',
           style: 'Candlestick',
-          indicators: new Set(['SMA20', 'EMA50']),
+          indicators: new Set(['EMA9', 'EMA20', 'EMA50', 'EMA100', 'EMA200']),
           drawingsVersion: 0,
           markers: []
         });
@@ -704,7 +565,7 @@ function TradingTerminalInner() {
     } catch {}
   };
 
-  /* â”€â”€ Screener Calculations on active watchlist â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ── Screener Calculations on active watchlist ────────────── */
   const watchlistScreenerData = useMemo(() => {
     return watchlistStocks.map(stock => {
       // Deterministic indicators computed on-the-fly from daily price
@@ -745,7 +606,7 @@ function TradingTerminalInner() {
     }
   };
 
-  /* â”€â”€ Strategy Backtest Loop â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ── Strategy Backtest Loop ───────────────────────────────── */
   const handleRunBacktest = async () => {
     if (!selectedSymbol) return;
     try {
@@ -942,7 +803,7 @@ function TradingTerminalInner() {
     }
   };
 
-  /* â”€â”€ Candlestick AI Scanner â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ── Candlestick AI Scanner ────────────────────────────────── */
   const handleScanPatterns = async () => {
     if (!selectedSymbol) return;
     try {
@@ -972,7 +833,7 @@ function TradingTerminalInner() {
         if (body <= 0.06 * range && range > 0) {
           found.push({
             timeStr: p.date,
-            pattern: 'âš–ï¸ Doji Line',
+            pattern: '⚖️ Doji Line',
             sentiment: 'Neutral',
             reliability: 'Low',
             close: p.close
@@ -984,7 +845,7 @@ function TradingTerminalInner() {
                  (p.high - Math.max(p.open, p.close) <= 0.15 * body)) {
           found.push({
             timeStr: p.date,
-            pattern: 'ðŸ”¨ Bullish Hammer',
+            pattern: '🔨 Bullish Hammer',
             sentiment: 'Bullish',
             reliability: 'Medium',
             close: p.close
@@ -994,7 +855,7 @@ function TradingTerminalInner() {
         else if (p.close > p.open && prev.close < prev.open && p.open <= prev.close && p.close >= prev.open) {
           found.push({
             timeStr: p.date,
-            pattern: 'ðŸŸ¢ Bullish Engulfing',
+            pattern: '🟢 Bullish Engulfing',
             sentiment: 'Bullish',
             reliability: 'High',
             close: p.close
@@ -1002,7 +863,7 @@ function TradingTerminalInner() {
         } else if (p.close < p.open && prev.close > prev.open && p.open >= prev.close && p.close <= prev.open) {
           found.push({
             timeStr: p.date,
-            pattern: 'ðŸ”´ Bearish Engulfing',
+            pattern: '🔴 Bearish Engulfing',
             sentiment: 'Bearish',
             reliability: 'High',
             close: p.close
@@ -1019,9 +880,9 @@ function TradingTerminalInner() {
     }
   };
 
-  /* â”€â”€ Tabbed Bottom Drawer Selector State (Removed) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ── Tabbed Bottom Drawer Selector State (Removed) ──────────── */
 
-  /* â”€â”€ Keyboard Hotkeys Handlers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ── Keyboard Hotkeys Handlers ────────────────────────────── */
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const activeElement = document.activeElement?.tagName;
@@ -1071,7 +932,9 @@ function TradingTerminalInner() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [activeGridIndex, showToast]);
 
-  /* â”€â”€ Static tags filtering logic â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ── Static tags filtering logic ────────────────────────── */
+  type WatchlistSortOption = 'default' | 'nameAsc' | 'nameDesc' | 'priceDesc' | 'priceAsc' | 'changePctDesc' | 'changePctAsc' | 'changeAbsDesc' | 'changeAbsAsc';
+  const [watchlistSort, setWatchlistSort] = useState<WatchlistSortOption>('default');
   const [searchQuery, setSearchQuery] = useState('');
   const [watchlistLoading, setWatchlistLoading] = useState(true);
   const [chartRange, setChartRange] = useState('1Y');
@@ -1106,6 +969,7 @@ function TradingTerminalInner() {
   const suggestTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [deepData, setDeepData] = useState<any>(null);
+  const [gridDataCache, setGridDataCache] = useState<Record<number, any[]>>({});
   const [deepLoading, setDeepLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'technicals' | 'fundamentals' | 'profile' | 'proscons' | 'strategy'>('technicals');
 
@@ -1387,7 +1251,7 @@ function TradingTerminalInner() {
     const stock = watchlistStocks.find(s => s.symbol === sym);
     if (!stock) return;
     const current = stock.tags ?? [];
-    const next = current.includes(tagId) ? current.filter(t => t !== tagId) : [...current, tagId];
+    const next = current.includes(tagId) ? [] : [tagId];
     setWatchlistStocks(prev => prev.map(s => s.symbol === sym ? { ...s, tags: next } : s));
     if (!apiFailed) {
       try {
@@ -1474,13 +1338,31 @@ function TradingTerminalInner() {
   }, [selectedSymbol]);
 
   const filteredWatchlist = useMemo(() => {
-    return watchlistStocks.filter(s => {
+    let filtered = watchlistStocks.filter(s => {
       const matchesSearch = s.symbol.toLowerCase().includes(searchQuery.toLowerCase()) ||
                             s.name.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesTag = activeTagFilter === 'all' ? true : (s.tags ?? []).includes(activeTagFilter);
       return matchesSearch && matchesTag;
     });
-  }, [watchlistStocks, searchQuery, activeTagFilter]);
+
+    if (watchlistSort !== 'default') {
+      filtered = [...filtered].sort((a, b) => {
+        switch (watchlistSort) {
+          case 'nameAsc': return a.name.localeCompare(b.name);
+          case 'nameDesc': return b.name.localeCompare(a.name);
+          case 'priceDesc': return (b.price || 0) - (a.price || 0);
+          case 'priceAsc': return (a.price || 0) - (b.price || 0);
+          case 'changePctDesc': return (b.changePercent || 0) - (a.changePercent || 0);
+          case 'changePctAsc': return (a.changePercent || 0) - (b.changePercent || 0);
+          case 'changeAbsDesc': return (b.change || 0) - (a.change || 0);
+          case 'changeAbsAsc': return (a.change || 0) - (b.change || 0);
+          default: return 0;
+        }
+      });
+    }
+
+    return filtered;
+  }, [watchlistStocks, searchQuery, activeTagFilter, watchlistSort]);
 
   // Load theme config
   useEffect(() => {
@@ -1502,7 +1384,7 @@ function TradingTerminalInner() {
   return (
     <div className="min-h-dvh lg:h-dvh lg:overflow-hidden bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans" onClick={() => setTagPopoverSym(null)}>
       
-      {/* â”€â”€ Header â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* ── Header ────────────────────────────────────────────── */}
       <header className="flex flex-wrap items-center justify-between gap-3 px-4 sm:px-6 py-2.5 bg-white dark:bg-slate-950 border-b border-slate-200 dark:border-slate-850 shadow-sm shrink-0 z-40">
         <div className="flex items-center gap-3 sm:gap-4 min-w-0">
           <Link href="/watchlist" className="group p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-all text-slate-400 hover:text-slate-900 dark:hover:text-white touch-manipulation shrink-0">
@@ -1525,7 +1407,7 @@ function TradingTerminalInner() {
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500" />
           <input
             type="text"
-            placeholder="Search ticker (e.g. INFY, TATAMOTORS)â€¦"
+            placeholder="Search ticker (e.g. INFY, TATAMOTORS)…"
             value={terminalSearch}
             onChange={e => setTerminalSearch(e.target.value)}
             disabled={terminalSearching}
@@ -1578,7 +1460,7 @@ function TradingTerminalInner() {
         </div>
       </header>
 
-      {/* â”€â”€ Main Viewport Panel Grid & Drawer â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* ── Main Viewport Panel Grid & Drawer ─────────────────── */}
       <main className="flex-1 flex flex-col lg:grid lg:grid-cols-12 lg:overflow-hidden min-h-0 relative">
         
         {/* Mobile View Toggle Tabs */}
@@ -1598,7 +1480,7 @@ function TradingTerminalInner() {
         </div>
 
         {/* LEFT VIEWPORT CANVAS & bottom docking drawer */}
-        <section className={`lg:col-span-9 flex-col lg:min-h-0 lg:overflow-hidden bg-slate-50 dark:bg-slate-900/40 ${mobileViewTab === 'chart' ? 'flex flex-1 min-h-0' : 'hidden lg:flex'}`}>
+        <section className={`lg:col-span-9 flex-col lg:min-h-0 lg:overflow-y-auto bg-slate-50 dark:bg-slate-900/40 ${mobileViewTab === 'chart' ? 'flex flex-1 min-h-0' : 'hidden lg:flex'}`}>
           
           {/* Cockpit State Synchroniser Toolbar */}
           <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-2 bg-white dark:bg-slate-950 border-b border-slate-200 dark:border-slate-850 shrink-0 select-none z-30 shadow-sm">
@@ -1707,8 +1589,8 @@ function TradingTerminalInner() {
           </div>
 
           {/* Grid Canvas Area */}
-          <div className="min-h-[60dvh] lg:min-h-0 flex-1 relative">
-            <div className={`grid gap-2 p-2 w-full h-full bg-slate-100 dark:bg-slate-900/60 lg:overflow-y-auto ${
+          <div className="min-h-[70vh] lg:min-h-[800px] shrink-0 relative">
+            <div className={`grid gap-2 p-2 w-full h-full bg-slate-100 dark:bg-slate-900/60 ${
               gridLayout === 1 ? 'grid-cols-1 grid-rows-1' :
               gridLayout === 2 ? 'grid-cols-1 md:grid-cols-2 grid-rows-1' :
               gridLayout === 4 ? 'grid-cols-2 grid-rows-2' :
@@ -1758,6 +1640,7 @@ function TradingTerminalInner() {
                         drawingsVersion={config.drawingsVersion}
                         onDrawingsChange={() => handleGridDrawingsChange(idx)}
                         markers={config.markers}
+                        onDataLoaded={(pts) => setGridDataCache(prev => ({ ...prev, [idx]: pts }))}
                       />
                     </div>
                   </div>
@@ -1766,556 +1649,32 @@ function TradingTerminalInner() {
             </div>
           </div>
 
-          {/* Bottom Dock Drawer (Scrollable Stacked Sections) */}
-          <div className="h-auto lg:max-h-[450px] bg-white dark:bg-slate-950 border-t border-slate-200 dark:border-slate-850 flex flex-col shrink-0 lg:overflow-y-auto shadow-2xl z-30 select-none">
-            {/* Drawer Headers (Removed Tab Buttons) */}
-            <div className="flex items-center justify-between px-4 bg-slate-50 dark:bg-slate-950 border-b border-slate-200 dark:border-slate-850 shrink-0 overflow-x-auto scrollbar-none gap-2 py-2">
-              <div className="text-[12px] font-black uppercase tracking-wider text-slate-800 dark:text-slate-200">
-                Advanced Tools & Analysis
+          {/* AI Market Intelligence Section */}
+          {selectedStock && (
+            <div className="shrink-0 p-6 bg-slate-50/50 dark:bg-slate-950/50 border-t border-slate-200 dark:border-slate-850 shadow-inner mt-4">
+              <div className="max-w-7xl mx-auto">
+                <AIMarketIntelligence 
+                  data={{
+                    ...(deepData || {
+                      ratios: { symbol: selectedStock.symbol, price: livePrices[selectedSymbol] || selectedStock.price || 500 },
+                      profile: {},
+                      balanceSheet: [],
+                      profitLoss: [],
+                      cashFlow: [],
+                      quarterlyProfitLoss: [],
+                      chartData: [],
+                      peers: [],
+                      pros: [],
+                      cons: []
+                    }),
+                    chartData: gridDataCache[activeGridIndex]?.length > 0 ? gridDataCache[activeGridIndex] : (deepData?.chartData || [])
+                  }}
+                  livePrice={livePrices[selectedSymbol] || selectedStock.price || 500} 
+                  isLoading={deepLoading}
+                />
               </div>
-
-              {/* Spot indicator */}
-              {selectedStock && (
-                <div className="hidden md:flex items-center gap-2 text-[10px] font-extrabold uppercase shrink-0">
-                  <span className="text-slate-400">Spot Ticker:</span>
-                  <span className="text-slate-850 dark:text-slate-200">{selectedStock.symbol.replace('.NS','')}</span>
-                  <span className="font-mono text-blue-550 dark:text-blue-400 font-black">â‚¹{(livePrices[selectedStock.symbol] || selectedStock.price).toFixed(2)}</span>
-                </div>
-              )}
             </div>
-
-            {/* Drawer Content Viewport */}
-            <div className="flex-1 lg:overflow-y-auto p-4 bg-slate-50/30 dark:bg-slate-950/20 min-h-0 text-slate-850 dark:text-slate-200">
-              
-              {/* SECTION 1: PAPER TRADING */}
-              <div className="mb-8">
-                <h3 className="text-[11px] font-black uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-3 flex items-center gap-2">
-                  ðŸ’¼ Paper Trading
-                </h3>
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 min-h-[250px]">
-                  
-                  {/* Draggable ticket form on left */}
-                  <form onSubmit={handlePlaceOrder} className="lg:col-span-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 p-4 rounded-xl shadow-md flex flex-col gap-3">
-                    <div className="flex justify-between items-center border-b border-slate-100 dark:border-slate-800/50 pb-2">
-                      <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">Virtual Ticket</span>
-                      <span className="text-[10px] font-extrabold bg-blue-500/10 text-blue-600 dark:text-blue-400 px-2 py-0.5 rounded-full">{selectedSymbol.replace('.NS','')}</span>
-                    </div>
-
-                    {/* Side Select */}
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setOrderTicket(prev => ({ ...prev, side: 'buy' }))}
-                        className={`flex-1 py-1.5 text-[10px] font-black rounded-lg uppercase transition-all ${
-                          orderTicket.side === 'buy'
-                            ? 'bg-emerald-500 text-white shadow-md'
-                            : 'bg-slate-100 dark:bg-slate-800 text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-750'
-                        }`}
-                      >
-                        BUY
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setOrderTicket(prev => ({ ...prev, side: 'sell' }))}
-                        className={`flex-1 py-1.5 text-[10px] font-black rounded-lg uppercase transition-all ${
-                          orderTicket.side === 'sell'
-                            ? 'bg-rose-500 text-white shadow-md'
-                            : 'bg-slate-100 dark:bg-slate-800 text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-750'
-                        }`}
-                      >
-                        SELL
-                      </button>
-                    </div>
-
-                    {/* Type Select */}
-                    <div className="flex gap-2 text-[10px] font-extrabold">
-                      <label className="flex-1 flex items-center justify-center gap-1.5 p-1.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg cursor-pointer">
-                        <input type="radio" checked={orderTicket.type === 'market'} onChange={() => setOrderTicket(prev => ({ ...prev, type: 'market' }))} className="accent-blue-500" />
-                        Market
-                      </label>
-                      <label className="flex-1 flex items-center justify-center gap-1.5 p-1.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg cursor-pointer">
-                        <input type="radio" checked={orderTicket.type === 'limit'} onChange={() => setOrderTicket(prev => ({ ...prev, type: 'limit' }))} className="accent-blue-500" />
-                        Limit
-                      </label>
-                    </div>
-
-                    {/* Inputs */}
-                    <div className="grid grid-cols-2 gap-2 text-[10px] font-bold">
-                      <div>
-                        <label className="text-[9px] text-slate-450 block mb-1">Quantity</label>
-                        <input
-                          type="number"
-                          value={orderTicket.quantity}
-                          onChange={e => setOrderTicket(prev => ({ ...prev, quantity: e.target.value }))}
-                          className="w-full px-2.5 py-1.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-805 rounded-lg font-bold"
-                          min="1"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-[9px] text-slate-450 block mb-1">Limit Price (â‚¹)</label>
-                        <input
-                          type="number"
-                          step="0.05"
-                          value={orderTicket.type === 'market' ? (livePrices[selectedSymbol] || selectedStock?.price || 0) : orderTicket.price}
-                          disabled={orderTicket.type === 'market'}
-                          onChange={e => setOrderTicket(prev => ({ ...prev, price: e.target.value }))}
-                          placeholder="Price..."
-                          className="w-full px-2.5 py-1.5 bg-slate-55 dark:bg-slate-950 border border-slate-200 dark:border-slate-805 rounded-lg disabled:opacity-50 disabled:bg-slate-100 dark:disabled:bg-slate-900 font-bold"
-                        />
-                      </div>
-                    </div>
-
-                    <button
-                      type="submit"
-                      className={`w-full py-2 rounded-xl text-xs font-black uppercase text-white shadow-md transition-all ${
-                        orderTicket.side === 'buy' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-rose-600 hover:bg-rose-700'
-                      }`}
-                    >
-                      EXECUTE PAPER ORDER
-                    </button>
-                  </form>
-
-                  {/* Portfolio status & Holdings ledger in center / right */}
-                  <div className="lg:col-span-8 flex flex-col gap-3 min-h-0">
-                    <div className="grid grid-cols-3 gap-3 text-xs shrink-0 select-none">
-                      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 p-3 rounded-xl shadow-sm text-center">
-                        <span className="text-[8px] font-black uppercase tracking-wider text-slate-400 block mb-1">VIRTUAL CASH BALANCE</span>
-                        <span className="text-sm font-black text-slate-800 dark:text-slate-150 font-mono">â‚¹{virtualBalance.toLocaleString('en-IN')}</span>
-                      </div>
-                      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 p-3 rounded-xl shadow-sm text-center">
-                        <span className="text-[8px] font-black uppercase tracking-wider text-slate-400 block mb-1">TOTAL ACCOUNT EQUITY</span>
-                        <span className="text-sm font-black text-blue-600 dark:text-blue-400 font-mono">â‚¹{totalEquity.toLocaleString('en-IN')}</span>
-                      </div>
-                      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 p-3 rounded-xl shadow-sm text-center flex flex-col justify-center items-center">
-                        <button
-                          type="button"
-                          onClick={handleResetPortfolio}
-                          className="px-4 py-1.5 bg-rose-500/10 border border-rose-500/20 hover:bg-rose-500/20 text-rose-500 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all"
-                        >
-                          Reset Ledger
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Positions holdings table */}
-                    <div className="flex-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-xl overflow-hidden flex flex-col min-h-0 shadow-sm">
-                      <div className="bg-slate-50 dark:bg-slate-900/60 px-4 py-2 border-b border-slate-100 dark:border-slate-800 text-[9px] font-black uppercase tracking-widest shrink-0">
-                        Active Holdings Ledger
-                      </div>
-                      <div className="flex-1 overflow-y-auto p-3 min-h-0 text-[10px]">
-                        {positions.length === 0 ? (
-                          <span className="text-slate-400 block text-center py-6 font-semibold">No open virtual holdings. Place an order on the left ticket!</span>
-                        ) : (
-                          <table className="w-full text-left border-collapse whitespace-nowrap">
-                            <thead>
-                              <tr className="border-b border-slate-100 dark:border-slate-800 text-slate-400 font-black">
-                                <th className="py-1 px-2">Ticker</th>
-                                <th className="py-1 px-2">Side</th>
-                                <th className="py-1 px-2 text-right">Quantity</th>
-                                <th className="py-1 px-2 text-right">Avg Price</th>
-                                <th className="py-1 px-2 text-right">Live Price</th>
-                                <th className="py-1 px-2 text-right">Unrealized P&L</th>
-                              </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100 dark:divide-slate-800/50 font-bold font-mono">
-                              {positions.map(pos => {
-                                const live = livePrices[pos.symbol] || pos.averagePrice;
-                                const pnl = (live - pos.averagePrice) * pos.quantity * (pos.side === 'buy' ? 1 : -1);
-                                return (
-                                  <tr key={pos._id || pos.symbol} className="hover:bg-slate-50 dark:hover:bg-slate-800/20">
-                                    <td className="py-2 px-2 text-slate-800 dark:text-slate-100 font-sans font-black">{pos.symbol.replace('.NS','')}</td>
-                                    <td className="py-2 px-2">
-                                      <span className={`px-1.5 py-0.2 text-[8px] rounded uppercase ${pos.side === 'buy' ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-500 border border-rose-500/20'}`}>{pos.side}</span>
-                                    </td>
-                                    <td className="py-2 px-2 text-right">{pos.quantity}</td>
-                                    <td className="py-2 px-2 text-right">â‚¹{pos.averagePrice.toFixed(2)}</td>
-                                    <td className="py-2 px-2 text-right">â‚¹{live.toFixed(2)}</td>
-                                    <td className={`py-2 px-2 text-right font-black ${pnl >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-500 dark:text-rose-455'}`}>
-                                      â‚¹{pnl.toFixed(2)}
-                                    </td>
-                                  </tr>
-                                );
-                              })}
-                            </tbody>
-                          </table>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Orders history and pending order controls */}
-                    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-xl overflow-hidden flex flex-col max-h-56 shadow-sm">
-                      <div className="bg-slate-50 dark:bg-slate-900/60 px-4 py-2 border-b border-slate-100 dark:border-slate-800 text-[9px] font-black uppercase tracking-widest shrink-0 flex items-center justify-between">
-                        <span>Order History</span>
-                        <span className="text-slate-400">{orders.filter(order => order.status === 'pending').length} pending</span>
-                      </div>
-                      <div className="overflow-y-auto p-3 text-[10px]">
-                        {orders.length === 0 ? (
-                          <span className="text-slate-400 block text-center py-5 font-semibold">No virtual orders yet.</span>
-                        ) : (
-                          <table className="w-full text-left border-collapse whitespace-nowrap">
-                            <thead>
-                              <tr className="border-b border-slate-100 dark:border-slate-800 text-slate-400 font-black">
-                                <th className="py-1 px-2">Ticker</th>
-                                <th className="py-1 px-2">Side</th>
-                                <th className="py-1 px-2">Type</th>
-                                <th className="py-1 px-2 text-right">Qty</th>
-                                <th className="py-1 px-2 text-right">Price</th>
-                                <th className="py-1 px-2 text-right">Status</th>
-                                <th className="py-1 px-2 text-right">Action</th>
-                              </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100 dark:divide-slate-800/50 font-bold font-mono">
-                              {orders.slice(0, 20).map(order => (
-                                <tr key={order._id || `${order.symbol}-${order.createdAt}`} className="hover:bg-slate-50 dark:hover:bg-slate-800/20">
-                                  <td className="py-2 px-2 text-slate-800 dark:text-slate-100 font-sans font-black">{order.symbol.replace('.NS','')}</td>
-                                  <td className="py-2 px-2">
-                                    <span className={`px-1.5 py-0.2 text-[8px] rounded uppercase ${order.side === 'buy' ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-500 border border-rose-500/20'}`}>{order.side}</span>
-                                  </td>
-                                  <td className="py-2 px-2 uppercase">{order.type}</td>
-                                  <td className="py-2 px-2 text-right">{order.quantity}</td>
-                                  <td className="py-2 px-2 text-right">₹{Number(order.price || 0).toFixed(2)}</td>
-                                  <td className="py-2 px-2 text-right">
-                                    <span className={`px-1.5 py-0.5 rounded uppercase text-[8px] ${
-                                      order.status === 'filled'
-                                        ? 'bg-blue-500/10 text-blue-500'
-                                        : order.status === 'pending'
-                                          ? 'bg-amber-500/10 text-amber-500'
-                                          : 'bg-slate-500/10 text-slate-400'
-                                    }`}>
-                                      {order.status}
-                                    </span>
-                                  </td>
-                                  <td className="py-2 px-2 text-right">
-                                    {order.status === 'pending' && order._id ? (
-                                      <button
-                                        type="button"
-                                        onClick={() => handleCancelOrder(order._id!)}
-                                        className="px-2 py-1 rounded-md bg-rose-500/10 text-rose-500 hover:bg-rose-500/20 font-black uppercase text-[8px]"
-                                      >
-                                        Cancel
-                                      </button>
-                                    ) : (
-                                      <span className="text-slate-500">-</span>
-                                    )}
-                                  </td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                </div>
-              </div>
-
-              {/* SECTION 2: WATCHLIST SCREENER */}
-              <div className="mb-8 hidden lg:block">
-                <h3 className="text-[11px] font-black uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-3 flex items-center gap-2">
-                  ðŸ” Screener
-                </h3>
-                <div className="flex flex-col bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 rounded-xl overflow-hidden shadow-md">
-                  <div className="bg-slate-50/80 dark:bg-slate-900/80 px-4 py-2.5 border-b border-slate-100 dark:border-slate-800 text-[10px] font-black uppercase tracking-widest shrink-0 flex justify-between items-center">
-                    <span>Watchlist Technical Screener Panel</span>
-                    <span className="text-slate-400">Click headers to sort values</span>
-                  </div>
-                  <div className="flex-1 overflow-y-auto p-3 text-[10px] min-h-0">
-                    <table className="w-full text-left border-collapse whitespace-nowrap">
-                      <thead>
-                        <tr className="border-b border-slate-150 dark:border-slate-805 text-slate-400 font-black">
-                          <th className="py-1 px-3 cursor-pointer select-none" onClick={() => toggleScreenerSort('symbol')}>Symbol {screenerSortField === 'symbol' ? (screenerSortDirection === 'asc' ? 'â–²' : 'â–¼') : ''}</th>
-                          <th className="py-1 px-3 text-right cursor-pointer select-none" onClick={() => toggleScreenerSort('price')}>Price {screenerSortField === 'price' ? (screenerSortDirection === 'asc' ? 'â–²' : 'â–¼') : ''}</th>
-                          <th className="py-1 px-3 text-right cursor-pointer select-none" onClick={() => toggleScreenerSort('changePercent')}>Change% {screenerSortField === 'changePercent' ? (screenerSortDirection === 'asc' ? 'â–²' : 'â–¼') : ''}</th>
-                          <th className="py-1 px-3 text-right cursor-pointer select-none" onClick={() => toggleScreenerSort('sma20')}>SMA 20 {screenerSortField === 'sma20' ? (screenerSortDirection === 'asc' ? 'â–²' : 'â–¼') : ''}</th>
-                          <th className="py-1 px-3 text-right cursor-pointer select-none" onClick={() => toggleScreenerSort('sma50')}>SMA 50 {screenerSortField === 'sma50' ? (screenerSortDirection === 'asc' ? 'â–²' : 'â–¼') : ''}</th>
-                          <th className="py-1 px-3 text-right cursor-pointer select-none" onClick={() => toggleScreenerSort('rsi14')}>RSI (14) {screenerSortField === 'rsi14' ? (screenerSortDirection === 'asc' ? 'â–²' : 'â–¼') : ''}</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-bold font-mono">
-                        {sortedScreenerData.map(stock => {
-                          const isBullish = stock.rsi14 >= 60;
-                          const isBearish = stock.rsi14 <= 40;
-                          return (
-                            <tr
-                              key={stock.symbol}
-                              onClick={() => {
-                                selectSymbolRoot(stock.symbol);
-                                if (window.innerWidth < 1024) setMobileViewTab('chart');
-                              }}
-                              className="hover:bg-slate-50 dark:hover:bg-slate-800/35 cursor-pointer"
-                            >
-                              <td className="py-2.5 px-3 font-sans text-slate-800 dark:text-slate-100 font-black">{stock.symbol.replace('.NS','')}</td>
-                              <td className="py-2.5 px-3 text-right">â‚¹{stock.price.toFixed(2)}</td>
-                              <td className={`py-2.5 px-3 text-right ${stock.changePercent >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500 dark:text-red-455'}`}>
-                                {stock.changePercent >= 0 ? '+' : ''}{stock.changePercent.toFixed(2)}%
-                              </td>
-                              <td className="py-2.5 px-3 text-right">â‚¹{stock.sma20.toFixed(2)}</td>
-                              <td className="py-2.5 px-3 text-right">â‚¹{stock.sma50.toFixed(2)}</td>
-                              <td className={`py-2.5 px-3 text-right font-black ${
-                                isBullish ? 'text-emerald-500' : isBearish ? 'text-rose-500' : 'text-slate-700 dark:text-slate-350'
-                              }`}>
-                                {stock.rsi14.toFixed(1)} {isBullish ? 'ðŸ‚' : isBearish ? 'ðŸ»' : ''}
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </div>
-
-              {/* SECTION 3: SECTOR HEATMAP */}
-              <div className="mb-8 hidden lg:block">
-                <h3 className="text-[11px] font-black uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-3 flex items-center gap-2">
-                  ðŸŒ¡ï¸ Heatmap
-                </h3>
-                <div className="flex flex-col space-y-3">
-                  <div className="text-[10px] font-black uppercase tracking-widest text-slate-400">Watchlist Heatmap Map by Sectors</div>
-                  <div className="flex-1 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 min-h-0 overflow-y-auto">
-                    {['Power/Engineering', 'Tech', 'Defense', 'FMCG/Chemicals', 'Healthcare'].map(sector => {
-                      const sectorStocks = watchlistStocks.filter(s => SECTORS_MAP[s.symbol] === sector);
-                      return (
-                        <div key={sector} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 p-3 rounded-xl flex flex-col gap-2 shadow-sm min-w-[130px]">
-                          <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider block border-b border-slate-100 dark:border-slate-800 pb-1 truncate">{sector}</span>
-                          <div className="flex-1 grid grid-cols-2 gap-1.5 min-h-0 overflow-y-auto">
-                            {sectorStocks.map(s => {
-                              const pos = s.changePercent >= 0;
-                              const intensity = Math.min(90, Math.max(15, Math.abs(s.changePercent) * 20));
-                              // Beautiful green vs red gradients representing daily moves
-                              const bgStyle = pos 
-                                ? { backgroundColor: `rgba(16, 185, 129, ${intensity / 100})` }
-                                : { backgroundColor: `rgba(239, 68, 68, ${intensity / 100})` };
-                              return (
-                                <div
-                                  key={s.symbol}
-                                  onClick={() => {
-                                    selectSymbolRoot(s.symbol);
-                                    if (window.innerWidth < 1024) setMobileViewTab('chart');
-                                  }}
-                                  style={bgStyle}
-                                  className="h-10 rounded-lg flex flex-col justify-center items-center cursor-pointer transition-transform hover:scale-105 border border-black/10 select-none"
-                                  title={`${s.name}: ${s.changePercent}%`}
-                                >
-                                  <span className="text-[9px] font-black text-white drop-shadow-sm">{s.symbol.replace('.NS','')}</span>
-                                  <span className="text-[8px] text-white/80 font-mono font-bold drop-shadow-sm">{s.changePercent >= 0 ? '+' : ''}{s.changePercent.toFixed(1)}%</span>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-
-              {/* SECTION 4: STRIKE OPTION CHAIN */}
-              <div className="mb-8">
-                <h3 className="text-[11px] font-black uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-3 flex items-center gap-2">
-                  ðŸ”— Strike Option Chain
-                </h3>
-                <div className="flex flex-col bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 rounded-xl overflow-hidden shadow-md">
-                  <div className="bg-slate-50/80 dark:bg-slate-900/80 px-4 py-2.5 border-b border-slate-100 dark:border-slate-850 text-[10px] font-black uppercase tracking-widest shrink-0 flex justify-between items-center">
-                    <span>Active simulated derivatives strike chain: {selectedSymbol.replace('.NS','')}</span>
-                    <span className="text-slate-400">Spot price center: â‚¹{(livePrices[selectedSymbol] || selectedStock?.price || 0).toFixed(2)}</span>
-                  </div>
-                  <div className="flex-1 overflow-y-auto p-3 text-[10px] min-h-0">
-                    <table className="w-full text-center border-collapse whitespace-nowrap">
-                      <thead>
-                        <tr className="border-b border-slate-150 dark:border-slate-800/80 text-slate-400 font-black">
-                          <th className="py-1 px-2 text-emerald-500 font-extrabold uppercase" colSpan={3}>CALL Option (CE)</th>
-                          <th className="py-1 px-2 font-black border-x border-slate-100 dark:border-slate-800">Strike</th>
-                          <th className="py-1 px-2 text-rose-500 font-extrabold uppercase" colSpan={3}>PUT Option (PE)</th>
-                        </tr>
-                        <tr className="border-b border-slate-100 dark:border-slate-805 text-slate-400 text-[8px] font-black">
-                          <th className="py-1 px-2 text-right">OI (contracts)</th>
-                          <th className="py-1 px-2 text-right">Bid</th>
-                          <th className="py-1 px-2 text-right">Ask</th>
-                          <th className="py-1 px-2 border-x border-slate-100 dark:border-slate-800 font-sans">Price</th>
-                          <th className="py-1 px-2 text-right">Bid</th>
-                          <th className="py-1 px-2 text-right">Ask</th>
-                          <th className="py-1 px-2 text-right">OI (contracts)</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100 dark:divide-slate-800/50 font-bold font-mono">
-                        {(() => {
-                          const spot = livePrices[selectedSymbol] || selectedStock?.price || 500;
-                          const strikesCount = 7;
-                          const step = spot > 5000 ? 100 : spot > 1000 ? 50 : spot > 200 ? 10 : 5;
-                          const baseStrike = Math.round(spot / step) * step;
-                          
-                          return Array.from({ length: strikesCount }).map((_, i) => {
-                            const offset = i - 3;
-                            const strike = baseStrike + offset * step;
-                            const ceBid = Math.max(0.5, (spot - strike) * 0.12 + 15 + Math.sin(strike + spot) * 5);
-                            const peBid = Math.max(0.5, (strike - spot) * 0.12 + 15 + Math.cos(strike + spot) * 5);
-                            
-                            const inCE = spot >= strike;
-                            const inPE = spot <= strike;
-
-                            return (
-                              <tr key={strike} className="hover:bg-slate-50 dark:hover:bg-slate-800/20">
-                                <td className="py-2 px-2 text-right text-slate-400 font-medium">{Math.floor((strike * 31) % 1500) + 120}k</td>
-                                <td className={`py-2 px-2 text-right ${inCE ? 'bg-emerald-500/5 text-emerald-600 dark:text-emerald-400' : ''}`}>â‚¹{ceBid.toFixed(2)}</td>
-                                <td className={`py-2 px-2 text-right ${inCE ? 'bg-emerald-500/5 text-emerald-600 dark:text-emerald-400' : ''}`}>â‚¹{(ceBid + 0.35).toFixed(2)}</td>
-                                <td className="py-2 px-2 border-x border-slate-105 dark:border-slate-800 font-sans text-slate-800 dark:text-white font-extrabold text-[10px] bg-slate-50/50 dark:bg-slate-900/40">â‚¹{strike}</td>
-                                <td className={`py-2 px-2 text-right ${inPE ? 'bg-rose-500/5 text-rose-500 dark:text-rose-455' : ''}`}>â‚¹{peBid.toFixed(2)}</td>
-                                <td className={`py-2 px-2 text-right ${inPE ? 'bg-rose-500/5 text-rose-500 dark:text-rose-455' : ''}`}>â‚¹{(peBid + 0.35).toFixed(2)}</td>
-                                <td className="py-2 px-2 text-right text-slate-400 font-medium">{Math.floor((strike * 23) % 1500) + 95}k</td>
-                              </tr>
-                            );
-                          });
-                        })()}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </div>
-
-              {/* SECTION 5: STRATEGY TESTER */}
-              <div className="mb-8">
-                <h3 className="text-[11px] font-black uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-3 flex items-center gap-2">
-                  ðŸ§ª Strategy Tester
-                </h3>
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 min-h-[200px]">
-                  
-                  {/* Selector options */}
-                  <div className="lg:col-span-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 p-4 rounded-xl shadow-md flex flex-col gap-3 justify-between">
-                    <div>
-                      <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block border-b border-slate-100 dark:border-slate-800 pb-1.5 mb-3">Backtester options</span>
-                      <div className="space-y-3">
-                        <div>
-                          <label className="text-[9px] text-slate-450 block mb-1 font-bold">Select Active Strategy</label>
-                          <select
-                            value={strategyType}
-                            onChange={e => setStrategyType(e.target.value as any)}
-                            className="w-full px-2.5 py-1.5 bg-slate-50 dark:bg-slate-950 border border-slate-205 dark:border-slate-800 rounded-lg text-[10px] font-extrabold"
-                          >
-                            <option value="emacross">EMA Crossover (9 vs 21 Period)</option>
-                            <option value="rsi">RSI Oversold/Overbought (30 vs 70)</option>
-                          </select>
-                        </div>
-                        <div>
-                          <label className="text-[9px] text-slate-450 block mb-1 font-bold">Trading Terminal Grid Destination</label>
-                          <span className="text-[10px] font-black text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-850 px-3 py-1.5 rounded-lg block">
-                            Slot #{activeGridIndex + 1}: {selectedSymbol.split('.')[0]}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <button
-                      type="button"
-                      disabled={backtestRunning}
-                      onClick={handleRunBacktest}
-                      className="w-full py-2 bg-gradient-to-r from-blue-500 to-indigo-650 hover:from-blue-600 hover:to-indigo-700 disabled:opacity-50 text-white rounded-xl text-xs font-black uppercase shadow-md flex items-center justify-center gap-1.5 transition-all cursor-pointer"
-                    >
-                      {backtestRunning ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5" />}
-                      RUN STRATEGY BACKTEST
-                    </button>
-                  </div>
-
-                  {/* Results cards */}
-                  <div className="lg:col-span-8 flex flex-col gap-3 min-h-0 overflow-y-auto">
-                    {backtestResults ? (
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs shrink-0 select-none">
-                        <div className="bg-white dark:bg-slate-900 border border-slate-205 dark:border-slate-800 p-3 rounded-xl shadow-sm text-center">
-                          <span className="text-[8px] font-black uppercase tracking-wider text-slate-400 block mb-1">NET PROFIT / LOSS</span>
-                          <span className={`text-base font-black font-mono block ${backtestResults.netProfit >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
-                            {backtestResults.netProfit >= 0 ? '+' : ''}{backtestResults.netProfit}%
-                          </span>
-                        </div>
-                        <div className="bg-white dark:bg-slate-900 border border-slate-205 dark:border-slate-800 p-3 rounded-xl shadow-sm text-center">
-                          <span className="text-[8px] font-black uppercase tracking-wider text-slate-400 block mb-1">TRADES EXECUTED</span>
-                          <span className="text-base font-black text-slate-800 dark:text-slate-150 font-mono block">{backtestResults.totalTrades}</span>
-                        </div>
-                        <div className="bg-white dark:bg-slate-900 border border-slate-205 dark:border-slate-800 p-3 rounded-xl shadow-sm text-center">
-                          <span className="text-[8px] font-black uppercase tracking-wider text-slate-400 block mb-1">WINNING RATE</span>
-                          <span className="text-base font-black text-indigo-500 dark:text-indigo-400 font-mono block">{backtestResults.winRate}%</span>
-                        </div>
-                        <div className="bg-white dark:bg-slate-900 border border-slate-205 dark:border-slate-800 p-3 rounded-xl shadow-sm text-center">
-                          <span className="text-[8px] font-black uppercase tracking-wider text-slate-400 block mb-1">PROFIT FACTOR</span>
-                          <span className={`text-base font-black font-mono block ${backtestResults.profitFactor >= 1.5 ? 'text-emerald-500' : 'text-slate-700 dark:text-slate-350'}`}>
-                            {backtestResults.profitFactor}x
-                          </span>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="flex-1 flex flex-col justify-center items-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl py-8">
-                        <Scale className="w-8 h-8 text-slate-400 animate-pulse mb-2" />
-                        <span className="text-[10px] font-black uppercase tracking-wider text-slate-455">Backtest calculations uncomputed</span>
-                        <p className="text-[9px] text-slate-400 mt-1 max-w-[280px] text-center leading-relaxed font-semibold">
-                          Click "Run Strategy Backtest" to evaluate performance on 1-year historical candles and overlay buy/sell markers.
-                        </p>
-                      </div>
-                    )}
-                  </div>
-
-                </div>
-              </div>
-
-              {/* SECTION 6: AI PATTERN SCANNER */}
-              <div className="mb-8">
-                <h3 className="text-[11px] font-black uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-3 flex items-center gap-2">
-                  ðŸ¤– AI Pattern Scanner
-                </h3>
-                <div className="flex flex-col bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 rounded-xl overflow-hidden shadow-md min-h-[250px]">
-                  <div className="bg-slate-50/80 dark:bg-slate-900/80 px-4 py-2.5 border-b border-slate-100 dark:border-slate-850 text-[10px] font-black uppercase tracking-widest shrink-0 flex justify-between items-center">
-                    <span>Interactive candlestick scanner model: {selectedSymbol.replace('.NS','')}</span>
-                    <button
-                      onClick={handleScanPatterns}
-                      disabled={aiScanning}
-                      className="px-3 py-1 bg-blue-500 hover:bg-blue-600 disabled:opacity-50 text-white rounded-lg text-[9px] font-black uppercase tracking-wider transition-all flex items-center gap-1 cursor-pointer"
-                    >
-                      {aiScanning ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'Scan Candles'}
-                    </button>
-                  </div>
-                  <div className="flex-1 overflow-y-auto p-3 text-[10px] min-h-0">
-                    {aiPatterns.length === 0 ? (
-                      <div className="flex flex-col justify-center items-center py-6">
-                        <Sparkles className="w-8 h-8 text-blue-500 animate-pulse mb-2" />
-                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Scanner Idle</span>
-                      </div>
-                    ) : (
-                      <table className="w-full text-left border-collapse whitespace-nowrap">
-                        <thead>
-                          <tr className="border-b border-slate-100 dark:border-slate-800 text-slate-400 font-black">
-                            <th className="py-1 px-3">Date/Time</th>
-                            <th className="py-1 px-3">Candle Pattern Formation</th>
-                            <th className="py-1 px-3">Stance Sentiment</th>
-                            <th className="py-1 px-3">Model Reliability</th>
-                            <th className="py-1 px-3 text-right">Close Price</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800/50 font-bold font-mono">
-                          {aiPatterns.map((p, idx) => (
-                            <tr key={idx} className="hover:bg-slate-50 dark:hover:bg-slate-800/20">
-                              <td className="py-2 px-3 font-sans text-slate-400 font-semibold">{p.timeStr}</td>
-                              <td className="py-2 px-3 text-slate-800 dark:text-white font-black">{p.pattern}</td>
-                              <td className="py-2 px-3">
-                                <span className={`px-2 py-0.2 text-[8px] rounded uppercase ${
-                                  p.sentiment === 'Bullish' ? 'bg-emerald-500/10 text-emerald-500' :
-                                  p.sentiment === 'Bearish' ? 'bg-rose-500/10 text-rose-500' :
-                                  'bg-slate-100 dark:bg-slate-800 text-slate-400'
-                                }`}>
-                                  {p.sentiment}
-                                </span>
-                              </td>
-                              <td className="py-2 px-3 text-slate-450">{p.reliability}</td>
-                              <td className="py-2 px-3 text-right">â‚¹{p.close.toFixed(2)}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-            </div>
-          </div>
+          )}
 
         </section>
 
@@ -2334,7 +1693,7 @@ function TradingTerminalInner() {
                     : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-300 border border-transparent'
                 }`}
               >
-                ðŸ“‹ Watchlist
+                📋 Watchlist
               </button>
               <button
                 type="button"
@@ -2345,7 +1704,7 @@ function TradingTerminalInner() {
                     : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-300 border border-transparent'
                 }`}
               >
-                ðŸ›ï¸ Fundamentals
+                🏛️ Fundamentals
               </button>
             </div>
             <button
@@ -2353,7 +1712,7 @@ function TradingTerminalInner() {
               onClick={() => setSidebarSize(sidebarSize === 'wide' ? 'normal' : 'wide')}
               className="hidden lg:flex px-2 py-1 text-[9px] font-extrabold text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 bg-slate-100 dark:bg-slate-905 border border-slate-200 dark:border-slate-800 rounded-lg items-center gap-1 transition-all"
             >
-              <span>{sidebarSize === 'wide' ? 'Narrow âž”' : 'Â« Wide'}</span>
+              <span>{sidebarSize === 'wide' ? 'Narrow ➔' : '« Wide'}</span>
             </button>
           </div>
 
@@ -2417,7 +1776,7 @@ function TradingTerminalInner() {
                               : 'bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-850 text-slate-500 hover:border-slate-300 dark:hover:border-slate-800'
                           }`}
                         >
-                          <span className="truncate max-w-[80px]">{wl.name === 'default' ? 'ðŸ›ï¸ Institutional' : wl.name}</span>
+                          <span className="truncate max-w-[80px]">{wl.name === 'default' ? '🏛️ Institutional' : wl.name}</span>
                           {!wl.isDefault && wl.name !== 'default' && (
                             <button
                               type="button"
@@ -2434,7 +1793,7 @@ function TradingTerminalInner() {
                               }}
                               className="text-slate-400 hover:text-red-500 transition-colors ml-0.5 shrink-0"
                             >
-                              âœ•
+                              ✕
                             </button>
                           )}
                         </div>
@@ -2453,16 +1812,34 @@ function TradingTerminalInner() {
                     <Plus className="w-2.5 h-2.5" /> ADD
                   </button>
                 </h2>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 dark:text-slate-500" />
-                  <input
-                    id="watchlist-filter-input"
-                    type="text"
-                    placeholder="Filter stocks (Press Space)â€¦"
-                    value={searchQuery}
-                    onChange={e => setSearchQuery(e.target.value)}
-                    className="w-full pl-9 pr-4 py-2 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-blue-500/50 rounded-xl text-xs font-bold text-slate-800 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-600 focus:outline-none transition-all"
-                  />
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 dark:text-slate-500" />
+                    <input
+                      id="watchlist-filter-input"
+                      type="text"
+                      placeholder="Filter stocks (Press Space)…"
+                      value={searchQuery}
+                      onChange={e => setSearchQuery(e.target.value)}
+                      className="w-full pl-9 pr-4 py-2 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-blue-500/50 rounded-xl text-xs font-bold text-slate-800 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-600 focus:outline-none transition-all"
+                    />
+                  </div>
+                  <select
+                    value={watchlistSort}
+                    onChange={e => setWatchlistSort(e.target.value as any)}
+                    className="px-2 py-2 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-400 focus:outline-none cursor-pointer shrink-0"
+                    title="Sort Watchlist"
+                  >
+                    <option value="default">Default</option>
+                    <option value="nameAsc">Name (A-Z)</option>
+                    <option value="nameDesc">Name (Z-A)</option>
+                    <option value="priceDesc">Price (High-Low)</option>
+                    <option value="priceAsc">Price (Low-High)</option>
+                    <option value="changePctDesc">% Change (High-Low)</option>
+                    <option value="changePctAsc">% Change (Low-High)</option>
+                    <option value="changeAbsDesc">Change (High-Low)</option>
+                    <option value="changeAbsAsc">Change (Low-High)</option>
+                  </select>
                 </div>
 
                 {/* Tag Filters */}
@@ -2510,7 +1887,7 @@ function TradingTerminalInner() {
                             type="button"
                             onClick={e => { e.stopPropagation(); const r = customTagRaw.find(t => t.tagId === tag.id)!; setEditingTag(r); setEditLabel(r.label); setEditColor(r.color); }}
                             className="text-slate-400 hover:text-slate-650 transition-colors text-[9px] leading-none"
-                          >âœŽ</button>
+                          >✎</button>
                         )}
                       </div>
                     );
@@ -2582,11 +1959,14 @@ function TradingTerminalInner() {
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
                           <div className="text-right">
-                            <div className="text-xs font-black text-slate-900 dark:text-white font-mono">â‚¹{(livePrices[stock.symbol] || stock.price).toFixed(0)}</div>
-                            <span className={`inline-block text-[9px] font-extrabold px-1.5 py-0.5 rounded mt-0.5 ${
+                            <div className="text-xs font-black text-slate-900 dark:text-white font-mono">₹{(livePrices[stock.symbol] || stock.price).toFixed(0)}</div>
+                            <span className={`inline-flex items-center gap-1 text-[9px] font-extrabold px-1.5 py-0.5 rounded mt-0.5 ${
                               positive ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-red-500/10 text-red-500 dark:text-red-400'
                             }`}>
-                              {positive ? '+' : ''}{stock.changePercent.toFixed(1)}%
+                              <span>{positive ? '+' : ''}{stock.changePercent.toFixed(1)}%</span>
+                              <span className="opacity-60 font-semibold border-l border-current pl-1 ml-0.5">
+                                {positive ? '+' : ''}{stock.change.toFixed(1)}
+                              </span>
                             </span>
                           </div>
                           
@@ -2627,7 +2007,7 @@ function TradingTerminalInner() {
                                       >
                                         <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: isActive ? tag.dot : '#64748b' }} />
                                         {tag.label}
-                                        {isActive && <span className="ml-auto text-[8px]">âœ“</span>}
+                                        {isActive && <span className="ml-auto text-[8px]">✓</span>}
                                       </button>
                                     ) : (
                                       <button
@@ -2638,7 +2018,7 @@ function TradingTerminalInner() {
                                       >
                                         <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: isActive ? tag.dot : '#64748b' }} />
                                         {tag.label}
-                                        {isActive && <span className="ml-auto text-[8px]">âœ“</span>}
+                                        {isActive && <span className="ml-auto text-[8px]">✓</span>}
                                       </button>
                                     );
                                   })}
@@ -2692,10 +2072,10 @@ function TradingTerminalInner() {
                   {/* Sub-tab selection row */}
                   <div className="flex items-center border-b border-slate-100 dark:border-slate-900 bg-slate-50 dark:bg-slate-950 px-2 py-1 shrink-0 overflow-x-auto scrollbar-none gap-0.5">
                     {[
-                      { id: 'overview', label: 'ðŸ›ï¸ Overview' },
-                      { id: 'dcf', label: 'ðŸŽ¯ DCF Target' },
-                      { id: 'financials', label: 'ðŸ“‹ Statement Tables' },
-                      { id: 'news', label: 'ðŸ“° News & Peers' }
+                      { id: 'overview', label: '🏛️ Overview' },
+                      { id: 'dcf', label: '🎯 DCF Target' },
+                      { id: 'financials', label: '📋 Statement Tables' },
+                      { id: 'news', label: '📰 News & Peers' }
                     ].map(tab => (
                       <button
                         key={tab.id}
@@ -2718,26 +2098,26 @@ function TradingTerminalInner() {
                       <div className="grid grid-cols-2 gap-3">
                         <div className="bg-slate-50 dark:bg-slate-900/60 p-2.5 rounded-xl border border-slate-150 dark:border-slate-800/80">
                           <span className="text-slate-400 font-extrabold uppercase block tracking-wider text-[8px] mb-0.5">Sector</span>
-                          <span className="font-extrabold text-slate-800 dark:text-slate-200 block truncate">{deepData?.profile?.sector || 'â€”'}</span>
+                          <span className="font-extrabold text-slate-800 dark:text-slate-200 block truncate">{deepData?.profile?.sector || '—'}</span>
                         </div>
                         <div className="bg-slate-50 dark:bg-slate-900/60 p-2.5 rounded-xl border border-slate-150 dark:border-slate-800/80">
                           <span className="text-slate-400 font-extrabold uppercase block tracking-wider text-[8px] mb-0.5">Industry</span>
-                          <span className="font-extrabold text-slate-800 dark:text-slate-200 block truncate">{deepData?.profile?.industry || 'â€”'}</span>
+                          <span className="font-extrabold text-slate-800 dark:text-slate-200 block truncate">{deepData?.profile?.industry || '—'}</span>
                         </div>
                       </div>
 
                       <div className="grid grid-cols-2 gap-3">
                         <div className="bg-slate-50 dark:bg-slate-900/60 p-2.5 rounded-xl border border-slate-150 dark:border-slate-800/80">
                           <span className="text-slate-400 font-extrabold uppercase block tracking-wider text-[8px] mb-0.5">P/E Ratio</span>
-                          <span className="font-extrabold text-slate-850 dark:text-slate-205 block font-mono">{selectedStock.pe > 0 ? selectedStock.pe.toFixed(1) : 'â€”'}</span>
+                          <span className="font-extrabold text-slate-850 dark:text-slate-205 block font-mono">{selectedStock.pe > 0 ? selectedStock.pe.toFixed(1) : '—'}</span>
                         </div>
                         <div className="bg-slate-50 dark:bg-slate-900/60 p-2.5 rounded-xl border border-slate-150 dark:border-slate-800/80">
                           <span className="text-slate-400 font-extrabold uppercase block tracking-wider text-[8px] mb-0.5">ROE</span>
-                          <span className="font-extrabold text-slate-850 dark:text-slate-205 block font-mono">{deepData?.ratios?.roe ? `${deepData.ratios.roe.toFixed(1)}%` : 'â€”'}</span>
+                          <span className="font-extrabold text-slate-850 dark:text-slate-205 block font-mono">{deepData?.ratios?.roe ? `${deepData.ratios.roe.toFixed(1)}%` : '—'}</span>
                         </div>
                         <div className="bg-slate-50 dark:bg-slate-900/60 p-2.5 rounded-xl border border-slate-150 dark:border-slate-800/80">
                           <span className="text-slate-400 font-extrabold uppercase block tracking-wider text-[8px] mb-0.5">Debt/Equity</span>
-                          <span className="font-extrabold text-slate-850 dark:text-slate-205 block font-mono">{deepData?.ratios?.debtToEquity !== undefined ? (deepData.ratios.debtToEquity / 100).toFixed(2) : 'â€”'}</span>
+                          <span className="font-extrabold text-slate-850 dark:text-slate-205 block font-mono">{deepData?.ratios?.debtToEquity !== undefined ? (deepData.ratios.debtToEquity / 100).toFixed(2) : '—'}</span>
                         </div>
                         <div className="bg-slate-50 dark:bg-slate-900/60 p-2.5 rounded-xl border border-slate-150 dark:border-slate-800/80">
                           <span className="text-slate-400 font-extrabold uppercase block tracking-wider text-[8px] mb-0.5">Div Yield</span>
@@ -2749,7 +2129,7 @@ function TradingTerminalInner() {
                         <div className="bg-slate-50 dark:bg-slate-900/60 p-3 rounded-xl border border-slate-150 dark:border-slate-800/80">
                           <div className="flex justify-between items-center text-[8px] text-slate-400 font-extrabold uppercase tracking-widest mb-1.5">
                             <span>52-Week Range</span>
-                            <span className="font-mono">â‚¹{deepData.ratios.fiftyTwoWeekLow.toFixed(0)} - â‚¹{deepData.ratios.fiftyTwoWeekHigh.toFixed(0)}</span>
+                            <span className="font-mono">₹{deepData.ratios.fiftyTwoWeekLow.toFixed(0)} - ₹{deepData.ratios.fiftyTwoWeekHigh.toFixed(0)}</span>
                           </div>
                           <div className="w-full bg-slate-200 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden relative">
                             <div 
@@ -2773,10 +2153,10 @@ function TradingTerminalInner() {
                       <div className="bg-slate-50 dark:bg-slate-900/60 p-3.5 rounded-2xl border border-slate-150 dark:border-slate-800/80 text-center">
                         <span className="text-slate-400 font-black uppercase block tracking-widest text-[8px] mb-1.5">IMPLIED COMPASS CAGR</span>
                         <span className="text-2xl font-black text-blue-600 dark:text-blue-400 block tracking-tight font-mono">
-                          {impliedGrowth !== undefined ? `${impliedGrowth.toFixed(2)}%` : 'â€”'}
+                          {impliedGrowth !== undefined ? `${impliedGrowth.toFixed(2)}%` : '—'}
                         </span>
                         <p className="text-[9px] text-slate-400 mt-2 leading-relaxed font-semibold">
-                          To justify spot price <span className="font-extrabold font-mono">â‚¹{selectedStock.price}</span>, this enterprise must compound EPS at <span className="font-extrabold text-blue-600 dark:text-blue-400 font-mono">{impliedGrowth.toFixed(2)}%</span> annually.
+                          To justify spot price <span className="font-extrabold font-mono">₹{selectedStock.price}</span>, this enterprise must compound EPS at <span className="font-extrabold text-blue-600 dark:text-blue-400 font-mono">{impliedGrowth.toFixed(2)}%</span> annually.
                         </p>
                       </div>
 
@@ -2836,8 +2216,8 @@ function TradingTerminalInner() {
                                   {rows.map((r: QuarterlyItem, idx: number) => (
                                     <tr key={idx} className="hover:bg-slate-100 dark:hover:bg-slate-900/50">
                                       <td className="py-1.5 px-2 font-bold font-sans text-slate-700 dark:text-slate-350">{r.date}</td>
-                                      <td className="py-1.5 px-2 text-right">â‚¹{(r.revenue / 10000000).toFixed(1)}Cr</td>
-                                      <td className="py-1.5 px-2 text-right text-emerald-600">â‚¹{(r.netIncome / 10000000).toFixed(1)}Cr</td>
+                                      <td className="py-1.5 px-2 text-right">₹{(r.revenue / 10000000).toFixed(1)}Cr</td>
+                                      <td className="py-1.5 px-2 text-right text-emerald-600">₹{(r.netIncome / 10000000).toFixed(1)}Cr</td>
                                     </tr>
                                   ))}
                                 </tbody>
@@ -2860,8 +2240,8 @@ function TradingTerminalInner() {
                                   {rows.map((r: ProfitLossItem, idx: number) => (
                                     <tr key={idx} className="hover:bg-slate-100 dark:hover:bg-slate-900/50">
                                       <td className="py-1.5 px-2 font-bold font-sans text-slate-700 dark:text-slate-350">{r.date}</td>
-                                      <td className="py-1.5 px-2 text-right">â‚¹{(r.revenue / 10000000).toFixed(1)}Cr</td>
-                                      <td className="py-1.5 px-2 text-right text-emerald-600">â‚¹{(r.netIncome / 10000000).toFixed(1)}Cr</td>
+                                      <td className="py-1.5 px-2 text-right">₹{(r.revenue / 10000000).toFixed(1)}Cr</td>
+                                      <td className="py-1.5 px-2 text-right text-emerald-600">₹{(r.netIncome / 10000000).toFixed(1)}Cr</td>
                                     </tr>
                                   ))}
                                 </tbody>
@@ -2884,8 +2264,8 @@ function TradingTerminalInner() {
                                   {rows.map((r: BalanceSheetItem, idx: number) => (
                                     <tr key={idx} className="hover:bg-slate-100 dark:hover:bg-slate-900/50">
                                       <td className="py-1.5 px-2 font-bold font-sans text-slate-700 dark:text-slate-350">{r.date}</td>
-                                      <td className="py-1.5 px-2 text-right">â‚¹{(r.totalAssets / 10000000).toFixed(1)}Cr</td>
-                                      <td className="py-1.5 px-2 text-right text-indigo-500">â‚¹{(r.equity / 10000000).toFixed(1)}Cr</td>
+                                      <td className="py-1.5 px-2 text-right">₹{(r.totalAssets / 10000000).toFixed(1)}Cr</td>
+                                      <td className="py-1.5 px-2 text-right text-indigo-500">₹{(r.equity / 10000000).toFixed(1)}Cr</td>
                                     </tr>
                                   ))}
                                 </tbody>
@@ -2908,8 +2288,8 @@ function TradingTerminalInner() {
                                 <span className="text-slate-800 dark:text-slate-100 block">{p.symbol.replace('.NS','')}</span>
                               </div>
                               <div className="text-right font-mono">
-                                <span className="block text-slate-700 dark:text-slate-300">â‚¹{p.price.toFixed(0)}</span>
-                                <span className="text-[7.5px] text-slate-400 block">P/E: {p.pe > 0 ? p.pe.toFixed(1) : 'â€”'}</span>
+                                <span className="block text-slate-700 dark:text-slate-300">₹{p.price.toFixed(0)}</span>
+                                <span className="text-[7.5px] text-slate-400 block">P/E: {p.pe > 0 ? p.pe.toFixed(1) : '—'}</span>
                               </div>
                             </div>
                           ))}
@@ -2924,7 +2304,7 @@ function TradingTerminalInner() {
         </section>
       </main>
 
-      {/* â”€â”€ Active Alerts Sidebar slider drawer â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* ── Active Alerts Sidebar slider drawer ────────────────── */}
       {showAlertsSidebar && (
         <div className="fixed inset-y-0 right-0 z-50 w-80 bg-white dark:bg-slate-950 border-l border-slate-200 dark:border-slate-800 shadow-2xl flex flex-col animate-slide-left p-4">
           <div className="flex justify-between items-center border-b border-slate-100 dark:border-slate-850 pb-2 mb-4 shrink-0 select-none">
@@ -3015,7 +2395,7 @@ function TradingTerminalInner() {
         </div>
       )}
 
-      {/* â”€â”€ Add Stock modal dialog â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* ── Add Stock modal dialog ────────────────────────────── */}
       {showAddModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in" onClick={() => setShowAddModal(false)}>
           <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 w-full max-w-sm shadow-2xl animate-scale-up" onClick={e => e.stopPropagation()}>
@@ -3107,7 +2487,7 @@ function TradingTerminalInner() {
                 maxLength={24}
                 value={editLabel}
                 onChange={e => setEditLabel(e.target.value)}
-                placeholder="Tag nameâ€¦"
+                placeholder="Tag name…"
                 className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 focus:border-blue-500/50 rounded-xl text-xs font-semibold text-slate-100 placeholder:text-slate-600 focus:outline-none"
               />
               <div className="flex items-center gap-3">
@@ -3127,7 +2507,7 @@ function TradingTerminalInner() {
                   onClick={handleSaveCustomTag}
                   className="flex-1 py-2.5 bg-blue-500 hover:bg-blue-600 disabled:bg-blue-500/40 text-white rounded-xl text-xs font-extrabold transition-all cursor-pointer"
                 >
-                  {editSaving ? 'Savingâ€¦' : 'Save'}
+                  {editSaving ? 'Saving…' : 'Save'}
                 </button>
                 <button
                   type="button"
@@ -3162,7 +2542,7 @@ export default function TradingTerminalPage() {
       <div className="min-h-dvh bg-slate-950 flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
           <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-          <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Initialising Terminalâ€¦</span>
+          <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Initialising Terminal…</span>
         </div>
       </div>
     }>

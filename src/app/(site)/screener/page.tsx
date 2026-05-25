@@ -45,14 +45,14 @@ export default function ScreenerPage() {
         setStocks([]);
         setTotalInDb(0);
         if (meta.syncing) {
-          setError('Daily market sync in progress. This may take a few minutesâ€¦');
+          setError('Daily market sync in progress. This may take a few minutes…');
         } else if (meta.status === 'failed' && meta.errorMessage) {
           setError(meta.errorMessage);
         } else if (meta.errorMessage) {
           setError(meta.errorMessage);
         } else {
           setError(
-            'No snapshot in database yet. Click â€œSync nowâ€ (runs on the server; first sync can take 10â€“20 min) or wait for the daily cron job.'
+            'No snapshot in database yet. Click “Sync now” (runs on the server; first sync can take 10–20 min) or wait for the daily cron job.'
           );
         }
         return;
@@ -104,13 +104,13 @@ export default function ScreenerPage() {
             </h1>
             <p className="text-sm text-slate-500 dark:text-slate-400 mt-2 font-medium">
               {loading
-                ? 'Loading from MongoDBâ€¦'
+                ? 'Loading from MongoDB…'
                 : `Showing ${stocks.length.toLocaleString()} of ${totalInDb.toLocaleString()} stocks (${exchangeLabel})`}
               {asOfDate && !loading && (
-                <span className="text-slate-400"> â€” snapshot {asOfDate}</span>
+                <span className="text-slate-400"> — snapshot {asOfDate}</span>
               )}
               {universeSize > 0 && !loading && (
-                <span className="text-slate-400"> â€” universe {universeSize.toLocaleString()}</span>
+                <span className="text-slate-400"> — universe {universeSize.toLocaleString()}</span>
               )}
             </p>
             {error && <p className="text-sm text-amber-600 dark:text-amber-400 mt-1">{error}</p>}
@@ -123,7 +123,7 @@ export default function ScreenerPage() {
               aria-label="Exchange"
               disabled={loading || syncing}
             >
-              <option value="all">All â€” NSE + BSE</option>
+              <option value="all">All — NSE + BSE</option>
               <option value="nse">NSE only</option>
               <option value="bse">BSE only</option>
             </select>
@@ -134,7 +134,7 @@ export default function ScreenerPage() {
               className="flex items-center gap-1.5 px-3 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-xl text-sm font-bold disabled:opacity-50"
             >
               <RefreshCw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} />
-              {syncing ? 'Syncingâ€¦' : 'Sync now'}
+              {syncing ? 'Syncing…' : 'Sync now'}
             </button>
             <button
               type="button"
