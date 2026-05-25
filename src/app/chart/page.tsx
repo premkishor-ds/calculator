@@ -2011,7 +2011,7 @@ function TradingTerminalInner() {
               </div>
 
               {/* SECTION 2: WATCHLIST SCREENER */}
-              <div className="mb-8">
+              <div className="mb-8 hidden lg:block">
                 <h3 className="text-[11px] font-black uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-3 flex items-center gap-2">
                   ðŸ” Screener
                 </h3>
@@ -2067,7 +2067,7 @@ function TradingTerminalInner() {
               </div>
 
               {/* SECTION 3: SECTOR HEATMAP */}
-              <div className="mb-8">
+              <div className="mb-8 hidden lg:block">
                 <h3 className="text-[11px] font-black uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-3 flex items-center gap-2">
                   ðŸŒ¡ï¸ Heatmap
                 </h3>
