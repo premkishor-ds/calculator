@@ -254,6 +254,8 @@ function TradingTerminalInner() {
     setTimeout(() => setToast(null), 4000);
   }, []);
 
+  const [mobileViewTab, setMobileViewTab] = useState<'chart' | 'list'>('chart');
+
   // Sync state selectors
   const [gridLayout, setGridLayout] = useState<1 | 2 | 4 | 6 | 8>(1);
   const [activeGridIndex, setActiveGridIndex] = useState<number>(0);
@@ -273,7 +275,7 @@ function TradingTerminalInner() {
     markers: any[];
   }>>(() => Array(8).fill(null).map((_, i) => ({
     symbol: i === 0 ? 'VOLTAMP.NS' : (DEFAULT_SYMBOLS[i % DEFAULT_SYMBOLS.length] || 'VOLTAMP.NS'),
-    interval: '1D',
+    interval: 'Daily',
     style: 'Candlestick',
     indicators: new Set(['SMA20', 'EMA50']),
     drawingsVersion: 0,
@@ -1574,10 +1576,26 @@ function TradingTerminalInner() {
       </header>
 
       {/* ── Main Viewport Panel Grid & Drawer ─────────────────── */}
-      <main className="flex-1 flex flex-col lg:grid lg:grid-cols-12 lg:overflow-hidden min-h-0">
+      <main className="flex-1 flex flex-col lg:grid lg:grid-cols-12 lg:overflow-hidden min-h-0 relative">
         
+        {/* Mobile View Toggle Tabs */}
+        <div className="lg:hidden flex border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 shrink-0 p-2 gap-2">
+          <button 
+            onClick={() => setMobileViewTab('chart')} 
+            className={`flex-1 py-2 text-[11px] font-extrabold rounded-lg transition-all flex items-center justify-center gap-1.5 ${mobileViewTab === 'chart' ? 'bg-blue-500/10 border border-blue-500/20 text-blue-600 dark:text-blue-400' : 'text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-900 border border-transparent'}`}
+          >
+            <Activity className="w-3.5 h-3.5" /> Chart View
+          </button>
+          <button 
+            onClick={() => setMobileViewTab('list')} 
+            className={`flex-1 py-2 text-[11px] font-extrabold rounded-lg transition-all flex items-center justify-center gap-1.5 ${mobileViewTab === 'list' ? 'bg-blue-500/10 border border-blue-500/20 text-blue-600 dark:text-blue-400' : 'text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-900 border border-transparent'}`}
+          >
+            <Grid className="w-3.5 h-3.5" /> List View
+          </button>
+        </div>
+
         {/* LEFT VIEWPORT CANVAS & bottom docking drawer */}
-        <section className="lg:col-span-9 flex flex-col min-h-[50dvh] lg:min-h-0 lg:overflow-hidden bg-slate-50 dark:bg-slate-900/40">
+        <section className={`lg:col-span-9 flex-col lg:min-h-0 lg:overflow-hidden bg-slate-50 dark:bg-slate-900/40 ${mobileViewTab === 'chart' ? 'flex flex-1 min-h-0' : 'hidden lg:flex'}`}>
           
           {/* Cockpit State Synchroniser Toolbar */}
           <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-2 bg-white dark:bg-slate-950 border-b border-slate-200 dark:border-slate-850 shrink-0 select-none z-30 shadow-sm">
@@ -1954,7 +1972,10 @@ function TradingTerminalInner() {
                           return (
                             <tr
                               key={stock.symbol}
-                              onClick={() => selectSymbolRoot(stock.symbol)}
+                              onClick={() => {
+                                selectSymbolRoot(stock.symbol);
+                                if (window.innerWidth < 1024) setMobileViewTab('chart');
+                              }}
                               className="hover:bg-slate-50 dark:hover:bg-slate-800/35 cursor-pointer"
                             >
                               <td className="py-2.5 px-3 font-sans text-slate-800 dark:text-slate-100 font-black">{stock.symbol.replace('.NS','')}</td>
@@ -2002,7 +2023,10 @@ function TradingTerminalInner() {
                               return (
                                 <div
                                   key={s.symbol}
-                                  onClick={() => selectSymbolRoot(s.symbol)}
+                                  onClick={() => {
+                                    selectSymbolRoot(s.symbol);
+                                    if (window.innerWidth < 1024) setMobileViewTab('chart');
+                                  }}
                                   style={bgStyle}
                                   className="h-10 rounded-lg flex flex-col justify-center items-center cursor-pointer transition-transform hover:scale-105 border border-black/10 select-none"
                                   title={`${s.name}: ${s.changePercent}%`}
@@ -2229,7 +2253,7 @@ function TradingTerminalInner() {
         </section>
 
         {/* RIGHT WATCHLIST & FUNDAMENTALS SIDEBAR PANEL */}
-        <section className="lg:col-span-3 bg-white dark:bg-slate-950 flex flex-col overflow-hidden max-h-[45dvh] lg:max-h-none lg:min-h-0 safe-bottom border-t lg:border-t-0 lg:border-l border-slate-200 dark:border-slate-850 shadow-xl transition-all duration-300">
+        <section className={`lg:col-span-3 bg-white dark:bg-slate-950 flex-col overflow-hidden lg:max-h-none lg:min-h-0 safe-bottom border-t lg:border-t-0 lg:border-l border-slate-200 dark:border-slate-850 shadow-xl transition-all duration-300 ${mobileViewTab === 'list' ? 'flex flex-1 min-h-0 max-h-none' : 'hidden lg:flex'}`}>
           
           {/* Sidebar Mode Panel tabs */}
           <div className="px-4 py-2 border-b border-slate-100 dark:border-slate-850 bg-slate-50 dark:bg-slate-900/40 flex items-center justify-between shrink-0 select-none">
@@ -2451,7 +2475,10 @@ function TradingTerminalInner() {
                     return (
                       <div
                         key={stock.symbol}
-                        onClick={() => selectSymbolRoot(stock.symbol)}
+                        onClick={() => {
+                          selectSymbolRoot(stock.symbol);
+                          if (window.innerWidth < 1024) setMobileViewTab('chart');
+                        }}
                         className={`w-full text-left px-4 py-3 flex items-center justify-between gap-3 transition-all border-l-4 touch-manipulation cursor-pointer group/item ${
                           active ? 'bg-slate-50 dark:bg-slate-900 border-blue-550 dark:border-blue-500 shadow-sm' : 'hover:bg-slate-100/50 dark:hover:bg-slate-905 border-transparent'
                         }`}
