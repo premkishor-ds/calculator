@@ -1819,6 +1819,10 @@ export function runAIPredictionEngine(
 
   const backtestStats = runWalkForwardBacktest(points);
 
+  // Run Strategy Optimizer for Mass Backtest of Top 10 Strategies
+  const optimizer = new StrategyOptimizer(points);
+  const topStrategies = optimizer.runMassiveGridBacktest();
+
   /* ────────────────────────────────────────────────────────────── */
   /* ─── 13 & 14. MACHINE LEARNING LAYER & CONFIDENCE BREAKDOWN ──── */
   /* ────────────────────────────────────────────────────────────── */
@@ -2317,7 +2321,8 @@ export function runAIPredictionEngine(
       rollingAccuracy: rollingAcc,
       modelStabilityScore: stability,
       modelDegradationScore: degradation
-    }
+    },
+    topStrategies
   };
 }
 
