@@ -70,12 +70,6 @@ export default function RootLayout({
             __html: `(function(){try{var s=localStorage.getItem('theme');var d=s?s==='dark':window.matchMedia('(prefers-color-scheme: dark)').matches;if(d)document.documentElement.classList.add('dark');}catch(e){}})();`,
           }}
         />
-        {/* Register Service Worker */}
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('/sw.js',{scope:'/'}).catch(function(e){console.warn('SW registration failed:',e);});});}`
-          }}
-        />
         {/* Advanced JSON-LD for AEO & GEO */}
         <script
           type="application/ld+json"

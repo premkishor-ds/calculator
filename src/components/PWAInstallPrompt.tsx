@@ -12,6 +12,13 @@ export default function PWAInstallPrompt() {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
+    // Register Service Worker asynchronously
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch((e) => {
+        console.warn('SW registration failed:', e);
+      });
+    }
+
     // Don't show if already installed or dismissed within 7 days
     const dismissed = localStorage.getItem('pwa-install-dismissed');
     if (dismissed && Date.now() - Number(dismissed) < 7 * 24 * 60 * 60 * 1000) return;
