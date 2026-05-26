@@ -1,4 +1,4 @@
-﻿import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { yahooFinance } from '@/lib/yahoo-finance';
 
 import { WATCHLIST_SYMBOLS } from '../../../utils/symbols';
@@ -27,19 +27,19 @@ export async function GET(request: NextRequest) {
     }
 
     // Generate unique cache key based on requested symbols
-    const cacheKey = targetSymbols.sort().join(',');
+    const cacheKey = [...targetSymbols].sort().join(',');
     const cached = memoryCache.get(cacheKey);
     if (cached && (Date.now() - cached.timestamp < CACHE_TTL_MS)) {
       return NextResponse.json(cached.data);
     }
 
     const quotes = await Promise.all(
-      targetSymbols.map(async (rawSymbol) => {
+      [...targetSymbols].map(async (rawSymbol) => {
         try {
           const trimmed = rawSymbol.trim();
           const symbol = (trimmed.includes('.') ? trimmed : `${trimmed}.NS`).toUpperCase();
           return await yahooFinance.quoteSummary(symbol, {
-            modules: ['price', 'summaryDetail', 'defaultKeyStatistics', 'financialData']
+            modules: ['price', 'summaryDetail', 'defaultKeyStatistics', 'financialData', 'majorHoldersBreakdown']
           });
         } catch {
           return null;
@@ -64,7 +64,10 @@ export async function GET(request: NextRequest) {
       const bv = stats.bookValue || 0;
       const cmpBv = bv > 0 ? Number((regularPrice / bv).toFixed(2)) : 0;
       const rawDivYield = summary.dividendYield || 0;
-      const promHold = (stats.heldPercentInsiders || 0) * 100;
+      const holders = (qs.majorHoldersBreakdown || {}) as any;
+      // insidersPercentHeld from majorHoldersBreakdown is more accurate than heldPercentInsiders
+      // for Indian NSE stocks (approximates promoter holding)
+      const promHold = (holders.insidersPercentHeld || holders.insiderPercentHeld || stats.heldPercentInsiders || 0) * 100;
       
       // Get earnings / revenue growth
       const profitGrowth = (financial.earningsGrowth || stats.earningsQuarterlyGrowth || 0) * 100;

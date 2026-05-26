@@ -1,7 +1,6 @@
 import { ActiveFilters } from '@/components/screener/FilterSidebar';
 import { getBackendApiUrl } from '@/lib/backend-config';
 
-const BACKEND_API_URL = getBackendApiUrl();
 
 async function fetchWithRetry(url: string, init?: RequestInit, retries = 2): Promise<Response> {
   let lastErr: unknown;
@@ -41,7 +40,7 @@ export function filtersToSearchParams(
 ): URLSearchParams {
   const params = new URLSearchParams();
   params.set('exchange', exchange);
-  params.set('limit', '10000');
+  params.set('limit', '2000');
 
   for (const [id, val] of Object.entries(filters)) {
     if (!val) continue;
@@ -55,12 +54,14 @@ export function filtersToSearchParams(
 }
 
 export async function fetchScreenerMeta() {
+  const BACKEND_API_URL = getBackendApiUrl();
   const res = await fetchWithRetry(`${BACKEND_API_URL}/screener/meta`);
   if (!res.ok) throw new Error('Failed to load screener metadata');
   return res.json();
 }
 
 export async function fetchScreenerStocks(filters: ActiveFilters, exchange: string) {
+  const BACKEND_API_URL = getBackendApiUrl();
   const params = filtersToSearchParams(filters, exchange);
   const res = await fetchWithRetry(`${BACKEND_API_URL}/screener?${params.toString()}`);
   if (!res.ok) throw new Error('Failed to load screener data');
@@ -68,6 +69,7 @@ export async function fetchScreenerStocks(filters: ActiveFilters, exchange: stri
 }
 
 export async function triggerScreenerSync(force = false) {
+  const BACKEND_API_URL = getBackendApiUrl();
   const res = await fetchWithRetry(`${BACKEND_API_URL}/screener/sync?force=${force}`, {
     method: 'POST',
   });
@@ -78,4 +80,3 @@ export async function triggerScreenerSync(force = false) {
   return res.json();
 }
 
-export { BACKEND_API_URL };

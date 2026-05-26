@@ -185,7 +185,8 @@ interface WorkspaceTemplate {
   updatedAt: string;
 }
 
-const BACKEND_API_URL = getBackendApiUrl();
+// Lazy getter — evaluated client-side so localhost/prod resolution works correctly after hydration
+function getApiUrl() { return getBackendApiUrl(); }
 const WS_URL = getBackendWsUrl();
 
 const SECTORS_MAP: Record<string, string> = {
@@ -225,11 +226,13 @@ function TradingTerminalInner() {
   const [watchlistStocks, setWatchlistStocks] = useState<StockQuote[]>([]);
   const [livePrices, setLivePrices] = useState<Record<string, number>>({});
   
-  // Floating Toast State
+  // Floating Toast State — useRef tracks timer to prevent stacking multiple timers
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const showToast = useCallback((message: string, type: 'success' | 'error' | 'info' = 'success') => {
+    clearTimeout(toastTimerRef.current);
     setToast({ message, type });
-    setTimeout(() => setToast(null), 4000);
+    toastTimerRef.current = setTimeout(() => setToast(null), 4000);
   }, []);
 
   const [mobileViewTab, setMobileViewTab] = useState<'chart' | 'list'>('chart');
@@ -411,7 +414,7 @@ function TradingTerminalInner() {
 
   const fetchAlerts = useCallback(async () => {
     try {
-      const res = await fetch(`${BACKEND_API_URL}/alerts`);
+      const res = await fetch(`${getApiUrl()}/alerts`);
       if (res.ok) {
         const data = await res.json();
         setAlertsList(data);
@@ -421,7 +424,7 @@ function TradingTerminalInner() {
 
   const fetchWorkspaceLayouts = useCallback(async () => {
     try {
-      const res = await fetch(`${BACKEND_API_URL}/workspace/layouts`);
+      const res = await fetch(`${getApiUrl()}/workspace/layouts`);
       if (res.ok) {
         const data = await res.json();
         setSavedTemplates(data);
@@ -444,7 +447,7 @@ function TradingTerminalInner() {
       return;
     }
     try {
-      const res = await fetch(`${BACKEND_API_URL}/alerts`, {
+      const res = await fetch(`${getApiUrl()}/alerts`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -468,7 +471,7 @@ function TradingTerminalInner() {
 
   const handleDeleteAlert = async (id: string) => {
     try {
-      const res = await fetch(`${BACKEND_API_URL}/alerts/${id}`, {
+      const res = await fetch(`${getApiUrl()}/alerts/${id}`, {
         method: 'DELETE'
       });
       if (res.ok) {
@@ -494,7 +497,7 @@ function TradingTerminalInner() {
     }));
 
     try {
-      const res = await fetch(`${BACKEND_API_URL}/workspace/layouts`, {
+      const res = await fetch(`${getApiUrl()}/workspace/layouts`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -555,7 +558,7 @@ function TradingTerminalInner() {
     e.stopPropagation();
     if (!window.confirm(`Delete workspace template '${name}'?`)) return;
     try {
-      const res = await fetch(`${BACKEND_API_URL}/workspace/layouts/${encodeURIComponent(name)}`, {
+      const res = await fetch(`${getApiUrl()}/workspace/layouts/${encodeURIComponent(name)}`, {
         method: 'DELETE'
       });
       if (res.ok) {
@@ -1023,7 +1026,7 @@ function TradingTerminalInner() {
 
   const fetchWatchlists = useCallback(async () => {
     try {
-      const res = await fetch(`${BACKEND_API_URL}/watchlists`);
+      const res = await fetch(`${getApiUrl()}/watchlists`);
       if (res.ok) {
         const data = await res.json();
         setWatchlists(data);
@@ -1045,7 +1048,7 @@ function TradingTerminalInner() {
         setWatchlistLoading(true);
         setApiFailed(false);
 
-        const backendRes = await fetch(`${BACKEND_API_URL}/stocks?watchlist=${encodeURIComponent(selectedWatchlist)}`);
+        const backendRes = await fetch(`${getApiUrl()}/stocks?watchlist=${encodeURIComponent(selectedWatchlist)}`);
         if (!backendRes.ok) throw new Error();
         
         const backendStocks = (await backendRes.json()) as BackendStock[];
@@ -1167,7 +1170,7 @@ function TradingTerminalInner() {
       let savedStock = { ...stock, isFavourite: false, tags: [] as string[] };
       if (!apiFailed) {
         try {
-          const backendRes = await fetch(`${BACKEND_API_URL}/stocks`, {
+          const backendRes = await fetch(`${getApiUrl()}/stocks`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ symbol: stock.symbol, name: stock.name, isFavourite: false, watchlist: selectedWatchlist })
@@ -1210,7 +1213,7 @@ function TradingTerminalInner() {
       let savedStock = { ...stock, isFavourite: false };
       if (!apiFailed) {
         try {
-          const backendPostRes = await fetch(`${BACKEND_API_URL}/stocks`, {
+          const backendPostRes = await fetch(`${getApiUrl()}/stocks`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -1255,7 +1258,7 @@ function TradingTerminalInner() {
     setWatchlistStocks(prev => prev.map(s => s.symbol === sym ? { ...s, tags: next } : s));
     if (!apiFailed) {
       try {
-        await fetch(`${BACKEND_API_URL}/stocks/${encodeURIComponent(sym)}?watchlist=${encodeURIComponent(selectedWatchlist)}`, {
+        await fetch(`${getApiUrl()}/stocks/${encodeURIComponent(sym)}?watchlist=${encodeURIComponent(selectedWatchlist)}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ tags: next, watchlist: selectedWatchlist })
@@ -1271,7 +1274,7 @@ function TradingTerminalInner() {
     try {
       const nextFavStatus = !currentFavStatus;
       if (!apiFailed) {
-        const res = await fetch(`${BACKEND_API_URL}/stocks/${encodeURIComponent(symbolToToggle)}?watchlist=${encodeURIComponent(selectedWatchlist)}`, {
+        const res = await fetch(`${getApiUrl()}/stocks/${encodeURIComponent(symbolToToggle)}?watchlist=${encodeURIComponent(selectedWatchlist)}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ isFavourite: nextFavStatus, watchlist: selectedWatchlist })
@@ -1294,7 +1297,7 @@ function TradingTerminalInner() {
     if (!confirm(`Are you sure you want to delete ${symbolToDelete.split('.')[0]} from this watchlist?`)) return;
     try {
       if (!apiFailed) {
-        const res = await fetch(`${BACKEND_API_URL}/stocks/${encodeURIComponent(symbolToDelete)}?watchlist=${encodeURIComponent(selectedWatchlist)}`, {
+        const res = await fetch(`${getApiUrl()}/stocks/${encodeURIComponent(symbolToDelete)}?watchlist=${encodeURIComponent(selectedWatchlist)}`, {
           method: 'DELETE'
         });
         if (!res.ok) throw new Error();
@@ -1731,7 +1734,7 @@ function TradingTerminalInner() {
                         if (!newWatchlistName.trim()) return;
                         setWlError('');
                         try {
-                          const res = await fetch(`${BACKEND_API_URL}/watchlists`, {
+                          const res = await fetch(`${getApiUrl()}/watchlists`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ name: newWatchlistName.trim() })
@@ -1784,7 +1787,7 @@ function TradingTerminalInner() {
                                 e.stopPropagation();
                                 if (!window.confirm(`Delete watchlist "${wl.name}"?`)) return;
                                 try {
-                                  const res = await fetch(`${BACKEND_API_URL}/watchlists/${encodeURIComponent(wl.name)}`, { method: 'DELETE' });
+                                  const res = await fetch(`${getApiUrl()}/watchlists/${encodeURIComponent(wl.name)}`, { method: 'DELETE' });
                                   if (res.ok) {
                                     setWatchlists(prev => prev.filter(w => w.name !== wl.name));
                                     if (selectedWatchlist === wl.name) setSelectedWatchlist('default');

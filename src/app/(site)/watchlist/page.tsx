@@ -1,6 +1,6 @@
-﻿"use client";
+"use client";
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
   TrendingUp, 
@@ -69,7 +69,6 @@ interface WatchlistObj {
   isDefault?: boolean;
 }
 
-const BACKEND_API_URL = getBackendApiUrl();
 
 export default function WatchlistPage() {
   const router = useRouter();
@@ -113,12 +112,13 @@ export default function WatchlistPage() {
   const [creatingWatchlist, setCreatingWatchlist] = useState<boolean>(false);
   const [wlError, setWlError] = useState<string>('');
 
-  // Toast notifications state
+  // Toast notifications state — useRef tracks the active timer to prevent multiple stacking timers
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const showToast = useCallback((message: string, type: 'success' | 'error' | 'info' = 'success') => {
+    clearTimeout(toastTimerRef.current);
     setToast({ message, type });
-    const timer = setTimeout(() => setToast(null), 3000);
-    return () => clearTimeout(timer);
+    toastTimerRef.current = setTimeout(() => setToast(null), 3000);
   }, []);
 
   // Tags State
@@ -137,6 +137,8 @@ export default function WatchlistPage() {
 
   // Fetch watchlists list
   const fetchWatchlists = useCallback(async () => {
+    // Resolve URL client-side (avoids SSR always picking PROD_API)
+    const BACKEND_API_URL = getBackendApiUrl();
     try {
       const res = await fetch(`${BACKEND_API_URL}/watchlists`);
       if (res.ok) {
@@ -148,12 +150,14 @@ export default function WatchlistPage() {
     }
   }, []);
 
-  // Fetch stocks from the Mongoose backend and merge with live Yahoo Finance quotes
   const fetchStocksFromAPI = useCallback(async () => {
     try {
       setLoading(true);
       setError('');
       setApiFailed(false);
+
+      // Resolve URL client-side (avoids SSR always picking PROD_API)
+      const BACKEND_API_URL = getBackendApiUrl();
 
       // 1. Try to fetch stocks from Express backend API
       let backendStocks: BackendStock[] = [];
@@ -187,22 +191,55 @@ export default function WatchlistPage() {
       const symbols = backendStocks.map(s => s.symbol);
 
       // 2. Fetch live metrics from Next.js Yahoo Finance API
-      const liveRes = await fetch(`/api/watchlist?symbols=${encodeURIComponent(symbols.join(','))}`);
-      if (!liveRes.ok) throw new Error('Live data fetch failed');
-      const liveData = await liveRes.json();
+      // If the live data fetch fails, show stocks with placeholder zero values
+      let liveData: LiveStock[] = [];
+      try {
+        const liveRes = await fetch(`/api/watchlist?symbols=${encodeURIComponent(symbols.join(','))}`);
+        if (liveRes.ok) {
+          liveData = await liveRes.json();
+        } else {
+          console.warn('Live data fetch returned non-OK status, using placeholder values');
+        }
+      } catch (liveErr) {
+        console.warn('Live data fetch failed, using placeholder values:', liveErr);
+      }
 
       // 3. Merge Live Quote metrics with Backend details
-      const mergedData = liveData.map((liveStock: LiveStock) => {
-        const backendStock = backendStocks.find(
-          (s: BackendStock) => s.symbol.toUpperCase() === liveStock.symbol.toUpperCase()
-        );
-        return {
-          ...liveStock,
-          name: backendStock ? backendStock.name : liveStock.name,
-          isFavourite: backendStock ? !!backendStock.isFavourite : false,
-          tags: backendStock ? (backendStock.tags || []) : []
-        };
-      });
+      // If live data is empty, create placeholder entries from backendStocks
+      let mergedData: StockData[];
+      if (liveData.length > 0) {
+        mergedData = liveData.map((liveStock: LiveStock) => {
+          const backendStock = backendStocks.find(
+            (s: BackendStock) => s.symbol.toUpperCase() === liveStock.symbol.toUpperCase()
+          );
+          return {
+            ...liveStock,
+            name: backendStock ? backendStock.name : liveStock.name,
+            isFavourite: backendStock ? !!backendStock.isFavourite : false,
+            tags: backendStock ? (backendStock.tags || []) : []
+          };
+        });
+      } else {
+        // Fallback: show stocks with zero metrics so the list is still visible
+        mergedData = backendStocks.map((s: BackendStock) => ({
+          symbol: s.symbol,
+          name: s.name,
+          price: 0,
+          change: 0,
+          changePercent: 0,
+          marketCap: 0,
+          volume: 0,
+          pe: 0,
+          eps: 0,
+          cmpBv: 0,
+          divYield: 0,
+          promHold: 0,
+          profitGrowth: 0,
+          salesGrowth: 0,
+          isFavourite: !!s.isFavourite,
+          tags: s.tags || []
+        }));
+      }
 
       setStocks(mergedData);
     } catch (err: unknown) {
@@ -243,6 +280,8 @@ export default function WatchlistPage() {
     setWlError('');
     const cleanName = newWatchlistName.trim();
     if (!cleanName) return;
+    // Resolve URL client-side
+    const BACKEND_API_URL = getBackendApiUrl();
 
     try {
       setCreatingWatchlist(true);
@@ -273,6 +312,8 @@ export default function WatchlistPage() {
   const handleDeleteWatchlist = async (nameToDelete: string, e: React.MouseEvent) => {
     e.stopPropagation();
     if (!window.confirm(`Are you sure you want to delete the watchlist "${nameToDelete}"? This will permanently delete all stocks inside it.`)) return;
+    // Resolve URL client-side
+    const BACKEND_API_URL = getBackendApiUrl();
 
     try {
       const res = await fetch(`${BACKEND_API_URL}/watchlists/${encodeURIComponent(nameToDelete)}`, {
@@ -305,6 +346,8 @@ export default function WatchlistPage() {
     setStocks(prev => prev.map(s => s.symbol === sym ? { ...s, tags: next } : s));
     
     if (!apiFailed) {
+      // Resolve URL client-side
+      const BACKEND_API_URL = getBackendApiUrl();
       try {
         await fetch(`${BACKEND_API_URL}/stocks/${encodeURIComponent(sym)}?watchlist=${encodeURIComponent(selectedWatchlist)}`, {
           method: 'PATCH',
@@ -354,6 +397,8 @@ export default function WatchlistPage() {
     setAddError('');
     const cleanSym = newSymbol.trim().toUpperCase();
     if (!cleanSym) return;
+    // Resolve URL client-side
+    const BACKEND_API_URL = getBackendApiUrl();
 
     // Check formatting, append .NS if not specified for Indian stocks by default
     const formattedSym = cleanSym.includes('.') ? cleanSym : `${cleanSym}.NS`;
@@ -424,6 +469,8 @@ export default function WatchlistPage() {
 
   // Toggle Favourite Status
   const handleToggleFavourite = async (symbolToToggle: string, currentFavStatus: boolean) => {
+    // Resolve URL client-side
+    const BACKEND_API_URL = getBackendApiUrl();
     try {
       const nextFavStatus = !currentFavStatus;
 
@@ -462,6 +509,8 @@ export default function WatchlistPage() {
   // Delete stock from active watchlist
   const handleDeleteStock = async (symToDelete: string) => {
     if (!confirm(`Are you sure you want to delete ${symToDelete.split('.')[0]} from the active watchlist?`)) return;
+    // Resolve URL client-side
+    const BACKEND_API_URL = getBackendApiUrl();
 
     try {
       // 1. Call backend if online
@@ -486,6 +535,8 @@ export default function WatchlistPage() {
   // Reset active watchlist back to standard institutional defaults
   const handleResetWatchlist = async () => {
     if (!window.confirm(`Are you sure you want to restore the default institutional-grade stock watchlist for the current workspace?`)) return;
+    // Resolve URL client-side
+    const BACKEND_API_URL = getBackendApiUrl();
 
     try {
       setLoading(true);
@@ -601,7 +652,7 @@ export default function WatchlistPage() {
   // CSV Export utility
   const handleExportCSV = () => {
     if (stocks.length === 0) return;
-    const headers = ["Ticker", "Company Name", "Price (INR)", "Change (%)", "Market Cap (Cr)", "P/E", "ROE (%)", "Debt-to-Equity"];
+    const headers = ["Ticker", "Company Name", "Price (INR)", "Change (%)", "Market Cap (Cr)", "P/E", "Profit Growth (%)", "CMP/Book Value"];
     const rows = filteredAndSortedStocks.map(s => [
       s.symbol.replace('.NS', ''),
       s.name,
