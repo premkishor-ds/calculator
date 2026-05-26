@@ -1592,7 +1592,7 @@ function TradingTerminalInner() {
           </div>
 
           {/* Grid Canvas Area */}
-          <div className="min-h-[70vh] lg:min-h-[800px] shrink-0 relative">
+          <div className="h-[480px] lg:h-[800px] shrink-0 relative">
             <div className={`grid gap-2 p-2 w-full h-full bg-slate-100 dark:bg-slate-900/60 ${
               gridLayout === 1 ? 'grid-cols-1 grid-rows-1' :
               gridLayout === 2 ? 'grid-cols-1 md:grid-cols-2 grid-rows-1' :
