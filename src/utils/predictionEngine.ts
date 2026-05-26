@@ -1,3 +1,5 @@
+import { StrategyOptimizer, StrategyResult } from './strategyOptimizer';
+
 export interface ChartPoint {
   time: number;
   date: string;
@@ -248,6 +250,7 @@ export interface PredictionResult {
     rewardPercent: number;
     ratio: string;
   };
+  topStrategies?: StrategyResult[];
   relativeStrength: {
     niftyScore: number;
     bankNiftyScore: number;
@@ -2385,7 +2388,8 @@ function createEmptyPrediction(symbol: string, currentPrice: number): Prediction
     uncertaintyPrediction: { confidenceBands68: { low: currentPrice, high: currentPrice }, confidenceBands95: { low: currentPrice, high: currentPrice }, confidenceBands99: { low: currentPrice, high: currentPrice } },
     explainableAI: { rsiContribution: 0, volumeContribution: 0, momentumContribution: 0, sentimentContribution: 0, patternContribution: 0, mlContribution: 0, topPositiveFactors: [], topNegativeFactors: [] },
     executionKelly: { entryPrice: currentPrice, stopLoss: currentPrice, suggestedPositionSize: 'Data unavailable', kellyFraction: 0, riskRewardRatio: 1.0, riskPercent: 0, rewardPercent: 0, capitalAllocationPercent: 0 },
-    predictionQualityMonitor: { predictionAccuracy: 70, predictionDrift: 2.5, falsePositiveRate: 5.0, falseNegativeRate: 5.0, rollingAccuracy: 70, modelStabilityScore: 80, modelDegradationScore: 10 }
+    predictionQualityMonitor: { predictionAccuracy: 70, predictionDrift: 2.5, falsePositiveRate: 5.0, falseNegativeRate: 5.0, rollingAccuracy: 70, modelStabilityScore: 80, modelDegradationScore: 10 },
+    topStrategies: []
   };
 }
 

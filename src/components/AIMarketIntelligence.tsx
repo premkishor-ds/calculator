@@ -2017,8 +2017,52 @@ export default function AIMarketIntelligence({ data, livePrice, liveOrderBook, i
           </div>
 
         </div>
-
       </div>
+
+      {/* NEW CARD: STRATEGY OPTIMIZER */}
+      {aiResult.topStrategies && aiResult.topStrategies.length > 0 && (
+        <div className="p-6 bg-white/80 dark:bg-slate-900/60 backdrop-blur-md rounded-3xl border border-slate-200/50 dark:border-slate-800/50 shadow-xl mb-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Zap className="w-5 h-5 text-amber-500" />
+            <h3 className="text-sm font-black uppercase text-slate-800 dark:text-white tracking-widest">
+              Top Validated Quantitative Strategies
+            </h3>
+          </div>
+          <p className="text-xs text-slate-500 mb-4 font-medium leading-relaxed">
+            These automated trading algorithms have been backtested against the historical data arrays using a strict 1.5% fixed-risk portfolio limit and ATR-trailing stop loss logic.
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {aiResult.topStrategies.slice(0, 6).map((strat: any, i: number) => (
+              <div key={i} className="p-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl hover:border-amber-500/50 transition-colors">
+                <div className="flex justify-between items-start mb-2">
+                  <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200">{strat.strategyName}</h4>
+                  <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-400">
+                    {strat.bestMarketCondition}
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 gap-2 mt-3">
+                  <div>
+                    <span className="block text-[9px] font-bold text-slate-400 uppercase">Win Rate</span>
+                    <span className="font-mono text-sm font-black text-emerald-500">{strat.winRate.toFixed(1)}%</span>
+                  </div>
+                  <div>
+                    <span className="block text-[9px] font-bold text-slate-400 uppercase">CAGR (Ann Return)</span>
+                    <span className="font-mono text-sm font-black text-blue-500">{strat.cagr.toFixed(1)}%</span>
+                  </div>
+                  <div>
+                    <span className="block text-[9px] font-bold text-slate-400 uppercase">Profit Factor</span>
+                    <span className="font-mono text-xs font-black text-slate-700 dark:text-slate-300">{strat.profitFactor.toFixed(2)}x</span>
+                  </div>
+                  <div>
+                    <span className="block text-[9px] font-bold text-slate-400 uppercase">Max Drawdown</span>
+                    <span className="font-mono text-xs font-black text-rose-500">-{strat.maxDrawdown.toFixed(1)}%</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* COMPLIANCE DISCLAIMER WARNING BANNER */}
       <div className="p-5 bg-amber-500/5 dark:bg-amber-950/10 border border-amber-500/15 rounded-3xl flex items-start gap-3.5">
