@@ -208,6 +208,20 @@ export interface PredictionResult {
     winRatio: number;
     profitFactor: number;
     maxDrawdown: number;
+    totalTrades: number;
+    winningTrades: number;
+    losingTrades: number;
+    totalProfitPercent: number;
+    totalLossPercent: number;
+    tradeDetails: {
+      type: 'LONG' | 'SHORT';
+      entryDate: string;
+      entryPrice: number;
+      exitDate: string;
+      exitPrice: number;
+      profitPercent: number;
+      profitPrice: number;
+    }[];
   };
   mlLayer: {
     traditionalScore: number;
@@ -228,6 +242,8 @@ export interface PredictionResult {
     entryPrice: number;
     stopLoss: number;
     targetPrice: number;
+    targets: number[];
+    exitPrice: number;
     riskPercent: number;
     rewardPercent: number;
     ratio: string;
@@ -755,10 +771,7 @@ export function runMonteCarlo(
 /* ────────────────────────────────────────────────────────────── */
 
 export function runWalkForwardBacktest(
-  closes: number[],
-  highs: number[],
-  lows: number[],
-  volumes: number[]
+  points: ChartPoint[]
 ): {
   accuracy: number;
   precision: number;
@@ -769,8 +782,22 @@ export function runWalkForwardBacktest(
   winRatio: number;
   profitFactor: number;
   maxDrawdown: number;
+  totalTrades: number;
+  winningTrades: number;
+  losingTrades: number;
+  totalProfitPercent: number;
+  totalLossPercent: number;
+  tradeDetails: {
+    type: 'LONG' | 'SHORT';
+    entryDate: string;
+    entryPrice: number;
+    exitDate: string;
+    exitPrice: number;
+    profitPercent: number;
+    profitPrice: number;
+  }[];
 } {
-  const len = closes.length;
+  const len = points.length;
   if (len < 60) {
     return {
       accuracy: 72.3,
@@ -781,9 +808,17 @@ export function runWalkForwardBacktest(
       sortinoRatio: 2.48,
       winRatio: 61.2,
       profitFactor: 1.82,
-      maxDrawdown: 9.6
+      maxDrawdown: 9.6,
+      totalTrades: 0,
+      winningTrades: 0,
+      losingTrades: 0,
+      totalProfitPercent: 0,
+      totalLossPercent: 0,
+      tradeDetails: []
     };
   }
+
+  const closes = points.map(p => p.close);
 
   const trainSize = Math.floor(len * 0.6);
   const testSize = len - trainSize;
@@ -794,13 +829,13 @@ export function runWalkForwardBacktest(
   let falseNegatives = 0;
 
   const trades: number[] = [];
+  const tradeDetails: any[] = [];
   let totalProfits = 0;
   let totalLosses = 0;
 
   const rsi = calcRSI(closes, 14);
 
-  for (let t = trainSize; t < len; t++) {
-    const prevClose = closes[t - 1];
+  for (let t = trainSize; t < len - 1; t++) {
     const curClose = closes[t];
     const curRsi = rsi[t];
 
@@ -808,11 +843,23 @@ export function runWalkForwardBacktest(
     if (curRsi < 40) signal = 'BUY';
     else if (curRsi > 60) signal = 'SELL';
 
-    const nextClose = closes[t + 1] || curClose;
+    if (signal === 'NEUTRAL') continue;
+
+    const nextClose = closes[t + 1];
     const priceChangePct = (nextClose - curClose) / curClose;
+    const priceChangeAbs = nextClose - curClose;
 
     if (signal === 'BUY') {
       trades.push(priceChangePct);
+      tradeDetails.push({
+        type: 'LONG',
+        entryDate: points[t].date,
+        entryPrice: curClose,
+        exitDate: points[t+1].date,
+        exitPrice: nextClose,
+        profitPercent: Number((priceChangePct * 100).toFixed(2)),
+        profitPrice: Number(priceChangeAbs.toFixed(2))
+      });
       if (priceChangePct > 0) {
         truePositives++;
         totalProfits += priceChangePct;
@@ -822,6 +869,15 @@ export function runWalkForwardBacktest(
       }
     } else if (signal === 'SELL') {
       trades.push(-priceChangePct);
+      tradeDetails.push({
+        type: 'SHORT',
+        entryDate: points[t].date,
+        entryPrice: curClose,
+        exitDate: points[t+1].date,
+        exitPrice: nextClose,
+        profitPercent: Number((-priceChangePct * 100).toFixed(2)),
+        profitPrice: Number((-priceChangeAbs).toFixed(2))
+      });
       if (priceChangePct < 0) {
         trueNegatives++;
         totalProfits += Math.abs(priceChangePct);
@@ -872,7 +928,13 @@ export function runWalkForwardBacktest(
     sortinoRatio: Number(Math.min(5.1, Math.max(0.6, annSortino)).toFixed(2)),
     winRatio: Math.max(45, winRatio > 100 ? 60 : winRatio),
     profitFactor: Math.min(4.8, Math.max(0.8, profitFactor)),
-    maxDrawdown: Number(Math.min(30, Math.max(1.8, maxDrawdown)).toFixed(1))
+    maxDrawdown: Number(Math.min(30, Math.max(1.8, maxDrawdown)).toFixed(1)),
+    totalTrades: tradeDetails.length,
+    winningTrades: truePositives + trueNegatives,
+    losingTrades: falsePositives + falseNegatives,
+    totalProfitPercent: Number((totalProfits * 100).toFixed(2)),
+    totalLossPercent: Number((totalLosses * 100).toFixed(2)),
+    tradeDetails
   };
 }
 
@@ -1752,7 +1814,7 @@ export function runAIPredictionEngine(
   /* ─── 12. WALK-FORWARD BACKTEST RUNNER ───────────────────────── */
   /* ────────────────────────────────────────────────────────────── */
 
-  const backtestStats = runWalkForwardBacktest(closes, highs, lows, volumes);
+  const backtestStats = runWalkForwardBacktest(points);
 
   /* ────────────────────────────────────────────────────────────── */
   /* ─── 13 & 14. MACHINE LEARNING LAYER & CONFIDENCE BREAKDOWN ──── */
@@ -1802,6 +1864,11 @@ export function runAIPredictionEngine(
   const rrEntry = currentPrice;
   const rrStop = fibSupport;
   const rrTarget = fibTarget;
+  
+  const target1 = rrTarget;
+  const target2 = Number((rrEntry + (rrTarget - rrEntry) * 1.5).toFixed(2));
+  const target3 = Number((rrEntry + (rrTarget - rrEntry) * 2.0).toFixed(2));
+  const exitPrice = target3;
   
   const rrRiskPct = Number((((rrEntry - rrStop)/rrEntry)*100).toFixed(2));
   const rrRewardPct = Number((((rrTarget - rrEntry)/rrEntry)*100).toFixed(2));
@@ -2135,6 +2202,8 @@ export function runAIPredictionEngine(
       entryPrice: rrEntry,
       stopLoss: rrStop,
       targetPrice: rrTarget,
+      targets: [target1, target2, target3],
+      exitPrice: exitPrice,
       riskPercent: rrRiskPct,
       rewardPercent: rrRewardPct,
       ratio: rrRatio
@@ -2296,10 +2365,10 @@ function createEmptyPrediction(symbol: string, currentPrice: number): Prediction
     volatilityForecast: { garchModel: { omega: 0.0001, alpha: 0.05, beta: 0.90 }, score: 40, nextDay: 0.02, nextWeek: 0.04, nextMonth: 0.09 },
     monteCarlo: { simulationsCount: 10000, probUp5Percent: 50, probUp10Percent: 20, probDown5Percent: 30, probDown10Percent: 10, expectedRangeLow: currentPrice * 0.95, expectedRangeHigh: currentPrice * 1.05, expectedMeanPrice: currentPrice, paths: [] },
     features: { logReturns: 0, dailyReturns: 0, rollingReturns20d: 0, momentumScore: 50, volatilityScore: 40, trendStrengthScore: 50, distanceFromEMA9: 0, atrPercent: 2.0, relativeStrength: 1.0, priceVelocity: 0, priceAcceleration: 0 },
-    backtest: { accuracy: 70, precision: 72, recall: 68, f1Score: 70, sharpeRatio: 1.8, sortinoRatio: 2.1, winRatio: 57, profitFactor: 1.5, maxDrawdown: 10.5 },
+    backtest: { accuracy: 70, precision: 72, recall: 68, f1Score: 70, sharpeRatio: 1.8, sortinoRatio: 2.1, winRatio: 57, profitFactor: 1.5, maxDrawdown: 10.5, totalTrades: 0, winningTrades: 0, losingTrades: 0, totalProfitPercent: 0, totalLossPercent: 0, tradeDetails: [] },
     mlLayer: { traditionalScore: 50, timeSeriesScore: 50, ensembleScore: 50, weights: { technical: 30, pattern: 25, ml: 25, sentiment: 10, fundamental: 10 } },
     confidenceBreakdown: { technical: 50, pattern: 50, momentum: 50, fundamental: 50, volume: 50, sentiment: 50, ml: 50 },
-    riskReward: { entryPrice: currentPrice, stopLoss: currentPrice * 0.95, targetPrice: currentPrice * 1.10, riskPercent: 5.0, rewardPercent: 10.0, ratio: '1:2.00' },
+    riskReward: { entryPrice: currentPrice, stopLoss: currentPrice * 0.95, targetPrice: currentPrice * 1.10, targets: [currentPrice * 1.10, currentPrice * 1.15, currentPrice * 1.20], exitPrice: currentPrice * 1.20, riskPercent: 5.0, rewardPercent: 10.0, ratio: '1:2.00' },
     relativeStrength: { niftyScore: 50, bankNiftyScore: 50, sectorIndexScore: 50, industryPeersScore: 50, overallScore: 50 },
     explainability: { positiveDrivers: [], negativeDrivers: [], reasoning: 'Establishing math anchors...', confidenceReasoning: 'Insufficient historical bars.' },
     hmmRegime: { currentState: 'Sideways Market', transitionProbabilities: { 'Sideways': 100 } },

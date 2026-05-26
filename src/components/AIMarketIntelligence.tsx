@@ -1238,18 +1238,48 @@ export default function AIMarketIntelligence({ data, livePrice, liveOrderBook, i
                 <span className="font-mono text-emerald-500 font-black">{aiResult.backtest.sharpeRatio}</span>
               </div>
               <div className="flex justify-between">
-                <span>Annualized Sortino Ratio</span>
-                <span className="font-mono text-emerald-500 font-black">{aiResult.backtest.sortinoRatio}</span>
-              </div>
-              <div className="flex justify-between">
                 <span>Profit Factor</span>
                 <span className="font-mono text-blue-500 font-black">{aiResult.backtest.profitFactor}x</span>
               </div>
               <div className="flex justify-between">
-                <span>Maximum Backtest Drawdown</span>
-                <span className="font-mono text-rose-500 font-black">-{aiResult.backtest.maxDrawdown}%</span>
+                <span>Total Trades (Wins / Losses)</span>
+                <span className="font-mono text-slate-800 dark:text-slate-200 font-black">
+                  {aiResult.backtest.totalTrades} (<span className="text-emerald-500">{aiResult.backtest.winningTrades}W</span> / <span className="text-rose-500">{aiResult.backtest.losingTrades}L</span>)
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span>Total Gross Profit / Loss %</span>
+                <span className="font-mono font-black">
+                  <span className="text-emerald-500">+{aiResult.backtest.totalProfitPercent}%</span> / <span className="text-rose-500">-{aiResult.backtest.totalLossPercent}%</span>
+                </span>
               </div>
             </div>
+
+            {aiResult.backtest.tradeDetails && aiResult.backtest.tradeDetails.length > 0 && (
+              <div className="mt-4 pt-3 border-t border-slate-200/40 dark:border-slate-700/40">
+                <span className="text-[9px] text-slate-400 font-black uppercase tracking-wider block mb-2">Recent Trade Logs</span>
+                <div className="max-h-32 overflow-y-auto space-y-1 pr-1 custom-scrollbar">
+                  {aiResult.backtest.tradeDetails.slice().reverse().map((trade, idx) => (
+                    <div key={idx} className="flex justify-between items-center p-1.5 bg-slate-50 dark:bg-slate-800 rounded border border-slate-100 dark:border-slate-700 text-[9px] font-mono">
+                      <div className="flex items-center gap-1.5">
+                        <span className={`px-1 rounded ${trade.type === 'LONG' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500'} font-bold`}>
+                          {trade.type}
+                        </span>
+                        <span className="text-slate-500">{trade.entryDate} &rarr; {trade.exitDate}</span>
+                      </div>
+                      <div className="text-right">
+                        <span className={`block font-black ${trade.profitPercent > 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
+                          {trade.profitPercent > 0 ? '+' : ''}{trade.profitPercent}% (₹{trade.profitPrice})
+                        </span>
+                        <span className="text-[8px] text-slate-400 font-sans">
+                          In: ₹{trade.entryPrice.toFixed(2)} | Out: ₹{trade.exitPrice.toFixed(2)}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* CARD 8: HYBRID MACHINE LEARNING LAYER */}
@@ -1368,21 +1398,34 @@ export default function AIMarketIntelligence({ data, livePrice, liveOrderBook, i
               </div>
 
               {/* Trade setup details */}
-              <div className="grid grid-cols-3 gap-2.5 text-[9px] font-mono text-center mb-4">
-                <div className="p-1 border border-emerald-500/20 bg-emerald-500/5 rounded">
-                  <span className="text-emerald-500 block font-bold uppercase text-[8px]">Target Price</span>
-                  <span className="text-emerald-500 font-black font-mono">₹{aiResult.riskReward.targetPrice.toFixed(2)}</span>
-                  <span className="text-slate-400 block text-[7px] font-sans font-medium">+{aiResult.riskReward.rewardPercent}%</span>
+              <div className="space-y-2 mb-4">
+                <div className="grid grid-cols-3 gap-2 text-[9px] font-mono text-center">
+                  <div className="p-1 border border-blue-500/20 bg-blue-500/5 rounded flex flex-col justify-center">
+                    <span className="text-blue-500 block font-bold uppercase text-[8px]">Entry Price</span>
+                    <span className="text-blue-500 font-black font-mono">₹{aiResult.riskReward.entryPrice.toFixed(2)}</span>
+                  </div>
+                  <div className="p-1 border border-purple-500/20 bg-purple-500/5 rounded flex flex-col justify-center">
+                    <span className="text-purple-500 block font-bold uppercase text-[8px]">Exit Price</span>
+                    <span className="text-purple-500 font-black font-mono">₹{aiResult.riskReward.exitPrice?.toFixed(2) || aiResult.riskReward.targetPrice.toFixed(2)}</span>
+                  </div>
+                  <div className="p-1 border border-rose-500/20 bg-rose-500/5 rounded">
+                    <span className="text-rose-500 block font-bold uppercase text-[8px]">Stop Loss</span>
+                    <span className="text-rose-500 font-black font-mono">₹{aiResult.riskReward.stopLoss.toFixed(2)}</span>
+                    <span className="text-slate-400 block text-[7px] font-sans font-medium">-{aiResult.riskReward.riskPercent}%</span>
+                  </div>
                 </div>
-                <div className="p-1 border border-blue-500/20 bg-blue-500/5 rounded flex flex-col justify-center">
-                  <span className="text-blue-500 block font-bold uppercase text-[8px]">Entry Price</span>
-                  <span className="text-blue-500 font-black font-mono">₹{aiResult.riskReward.entryPrice.toFixed(2)}</span>
-                </div>
-                <div className="p-1 border border-rose-500/20 bg-rose-500/5 rounded">
-                  <span className="text-rose-500 block font-bold uppercase text-[8px]">Stop Loss</span>
-                  <span className="text-rose-500 font-black font-mono">₹{aiResult.riskReward.stopLoss.toFixed(2)}</span>
-                  <span className="text-slate-400 block text-[7px] font-sans font-medium">-{aiResult.riskReward.riskPercent}%</span>
-                </div>
+
+                {aiResult.riskReward.targets && aiResult.riskReward.targets.length > 0 && (
+                  <div className="grid grid-cols-3 gap-2 text-[9px] font-mono text-center mt-2">
+                    {aiResult.riskReward.targets.map((t, i) => (
+                      <div key={i} className="p-1 border border-emerald-500/20 bg-emerald-500/5 rounded">
+                        <span className="text-emerald-500 block font-bold uppercase text-[8px]">Target {i + 1}</span>
+                        <span className="text-emerald-500 font-black font-mono">₹{t.toFixed(2)}</span>
+                        {i === 0 && <span className="text-slate-400 block text-[7px] font-sans font-medium">+{aiResult.riskReward.rewardPercent}%</span>}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
 
