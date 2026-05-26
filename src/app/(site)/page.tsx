@@ -5,9 +5,27 @@ import { useSearchParams } from 'next/navigation';
 import { calculateScenario, getSummary } from '@/utils/calculations';
 import { Header, QuickStart } from '@/components/Header';
 import { Controls } from '@/components/Controls';
-import { SummaryCards, ExecutiveSummary, WealthChart } from '@/components/WealthVisuals';
-import { ComparisonMatrix, DetailedLedger } from '@/components/Tables';
-import { KnowledgeBase } from '@/components/KnowledgeBase';
+import { SummaryCards, ExecutiveSummary } from '@/components/WealthVisuals';
+import dynamicImport from 'next/dynamic';
+
+const WealthChart = dynamicImport(() => import('@/components/WealthVisuals').then(m => m.WealthChart), { 
+  ssr: false, 
+  loading: () => <div className="w-full h-80 rounded-2xl bg-slate-100 dark:bg-slate-800/50 animate-pulse" />
+});
+
+const ComparisonMatrix = dynamicImport(() => import('@/components/Tables').then(m => m.ComparisonMatrix), { 
+  ssr: false,
+  loading: () => <div className="w-full h-40 rounded-2xl bg-slate-100 dark:bg-slate-800/50 animate-pulse" />
+});
+
+const DetailedLedger = dynamicImport(() => import('@/components/Tables').then(m => m.DetailedLedger), { 
+  ssr: false,
+  loading: () => <div className="w-full h-60 rounded-2xl bg-slate-100 dark:bg-slate-800/50 animate-pulse" />
+});
+
+const KnowledgeBase = dynamicImport(() => import('@/components/KnowledgeBase').then(m => m.KnowledgeBase), { 
+  ssr: false 
+});
 
 function WealthDashboardContent() {
   const searchParams = useSearchParams();
