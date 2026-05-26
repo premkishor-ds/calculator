@@ -24,7 +24,7 @@ function WealthDashboardContent() {
   const [selectedSymbol, setSelectedSymbol] = useState<string>('');
   const [copied, setCopied] = useState(false);
 
-  // Extract from query parameters on mount
+  // Extract from query parameters or localStorage on mount
   useEffect(() => {
     const timer = setTimeout(() => {
       const qLumpsum = searchParams.get('lumpsum');
@@ -35,16 +35,64 @@ function WealthDashboardContent() {
       const qInflation = searchParams.get('inflation');
       const qSymbol = searchParams.get('symbol');
 
-      if (qLumpsum) setInitialLumpsum(Math.max(0, parseInt(qLumpsum)));
-      if (qSip) setStartSip(Math.max(0, parseInt(qSip)));
-      if (qStepUp) setStepUp(Math.min(100, Math.max(0, parseInt(qStepUp))));
-      if (qCagr) setCagr(Math.min(100, Math.max(1, parseInt(qCagr))));
-      if (qYears) setYears(Math.min(50, Math.max(1, parseInt(qYears))));
-      if (qInflation) setInflation(Math.min(20, Math.max(0, parseInt(qInflation))));
+      if (qLumpsum) {
+        setInitialLumpsum(Math.max(0, parseInt(qLumpsum)));
+      } else {
+        const stored = localStorage.getItem('wealth_initialLumpsum');
+        if (stored) setInitialLumpsum(Math.max(0, parseInt(stored)));
+      }
+
+      if (qSip) {
+        setStartSip(Math.max(0, parseInt(qSip)));
+      } else {
+        const stored = localStorage.getItem('wealth_startSip');
+        if (stored) setStartSip(Math.max(0, parseInt(stored)));
+      }
+
+      if (qStepUp) {
+        setStepUp(Math.min(100, Math.max(0, parseInt(qStepUp))));
+      } else {
+        const stored = localStorage.getItem('wealth_stepUp');
+        if (stored) setStepUp(Math.min(100, Math.max(0, parseInt(stored))));
+      }
+
+      if (qCagr) {
+        setCagr(Math.min(100, Math.max(1, parseInt(qCagr))));
+      } else {
+        const stored = localStorage.getItem('wealth_cagr');
+        if (stored) setCagr(Math.min(100, Math.max(1, parseInt(stored))));
+      }
+
+      if (qYears) {
+        setYears(Math.min(50, Math.max(1, parseInt(qYears))));
+      } else {
+        const stored = localStorage.getItem('wealth_years');
+        if (stored) setYears(Math.min(50, Math.max(1, parseInt(stored))));
+      }
+
+      if (qInflation) {
+        setInflation(Math.min(20, Math.max(0, parseInt(qInflation))));
+      } else {
+        const stored = localStorage.getItem('wealth_inflation');
+        if (stored) setInflation(Math.min(20, Math.max(0, parseInt(stored))));
+      }
+
       if (qSymbol) setSelectedSymbol(qSymbol);
     }, 0);
     return () => clearTimeout(timer);
   }, [searchParams]);
+
+  // Synchronise parameters state to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem('wealth_initialLumpsum', String(initialLumpsum));
+      localStorage.setItem('wealth_startSip', String(startSip));
+      localStorage.setItem('wealth_stepUp', String(stepUp));
+      localStorage.setItem('wealth_cagr', String(cagr));
+      localStorage.setItem('wealth_years', String(years));
+      localStorage.setItem('wealth_inflation', String(inflation));
+    } catch {}
+  }, [initialLumpsum, startSip, stepUp, cagr, years, inflation]);
 
   const resetAll = () => {
     setInitialLumpsum(0);
@@ -55,6 +103,14 @@ function WealthDashboardContent() {
     setInflation(6);
     setTargetGoal('');
     setSelectedSymbol('');
+    try {
+      localStorage.removeItem('wealth_initialLumpsum');
+      localStorage.removeItem('wealth_startSip');
+      localStorage.removeItem('wealth_stepUp');
+      localStorage.removeItem('wealth_cagr');
+      localStorage.removeItem('wealth_years');
+      localStorage.removeItem('wealth_inflation');
+    } catch {}
   };
 
   // Load theme after mount
@@ -199,6 +255,38 @@ function WealthDashboardContent() {
         <ComparisonMatrix matrix={matrix} years={years} />
         <DetailedLedger ledger={ledger} years={years} />
         
+        {/* 🧠 GEO & Conversational AI Reference: How Worth is Calculated */}
+        <section className="my-12 p-6 sm:p-8 bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xl">
+          <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white mb-4">
+            How is Website and Personal Worth Calculated?
+          </h2>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mb-6 leading-relaxed">
+            This dashboard uses strict mathematical formulas to project your future corpus and purchasing power. Modern search engines and AI advisors rely on these standardized models to evaluate compounding efficiency.
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 text-xs leading-relaxed text-slate-600 dark:text-slate-350">
+            <div className="space-y-4">
+              <h3 className="font-extrabold text-blue-500 uppercase tracking-wider text-[10px]">1. The Compound Wealth Formula</h3>
+              <p>
+                Your future wealth is calculated using a dynamic monthly compounding model that incorporates both your initial lumpsum and stepped-up monthly SIP:
+              </p>
+              <ul className="list-disc list-inside space-y-1.5 pl-2 font-medium">
+                <li><strong className="text-slate-800 dark:text-slate-200">Stepped-up Monthly Contribution:</strong> Your monthly SIP increases annually by the step-up percentage to offset salary increases.</li>
+                <li><strong className="text-slate-800 dark:text-slate-200">CAGR (Compound Annual Growth Rate):</strong> The expected rate of return is converted to a monthly equivalent rate: <code className="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 rounded text-blue-500 font-semibold font-mono">r = (1 + CAGR)^(1/12) - 1</code>.</li>
+              </ul>
+            </div>
+            <div className="space-y-4">
+              <h3 className="font-extrabold text-orange-500 uppercase tracking-wider text-[10px]">2. Inflation & Tax Adjustments</h3>
+              <p>
+                True financial worth is measured by actual purchasing power in today&apos;s money after tax deductions:
+              </p>
+              <ul className="list-disc list-inside space-y-1.5 pl-2 font-medium">
+                <li><strong className="text-slate-800 dark:text-slate-200">Real Purchasing Power:</strong> Adjusted for inflation by dividing the future value by <code className="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 rounded text-orange-500 font-semibold font-mono">(1 + Inflation)^n</code>.</li>
+                <li><strong className="text-slate-800 dark:text-slate-200">Long-Term Capital Gains (LTCG) Tax:</strong> Effective tax of 12.5% applied exclusively on capital gains exceeding the ₹1.25 Lakh threshold.</li>
+              </ul>
+            </div>
+          </div>
+        </section>
+
         <KnowledgeBase />
 
       </div>

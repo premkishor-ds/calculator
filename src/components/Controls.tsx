@@ -32,6 +32,20 @@ export const Controls: React.FC<ControlsProps> = (props) => {
     resetAll
   } = props;
 
+  const handleNumberChange = (value: string, setter: (v: number) => void, maxVal: number) => {
+    const clean = value.replace(/[^0-9]/g, '');
+    if (clean === '') {
+      setter(0);
+      return;
+    }
+    const parsed = parseInt(clean, 10);
+    if (isNaN(parsed)) {
+      setter(0);
+    } else {
+      setter(Math.min(maxVal, parsed));
+    }
+  };
+
   return (
     <section className="bg-white dark:bg-slate-900/50 backdrop-blur-md p-4 sm:p-6 lg:p-8 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xl mb-12">
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-6 sm:mb-8">
@@ -99,17 +113,25 @@ export const Controls: React.FC<ControlsProps> = (props) => {
           <div className="flex flex-col gap-2">
             <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Initial Lumpsum</label>
             <input 
-              type="number" value={initialLumpsum} onChange={(e) => setInitialLumpsum(Number(e.target.value))}
+              type="text" 
+              inputMode="numeric"
+              value={initialLumpsum === 0 ? '' : initialLumpsum} 
+              onChange={(e) => handleNumberChange(e.target.value, setInitialLumpsum, 1000000000000)}
               onFocus={(e) => e.target.select()}
-              className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3 outline-none focus:ring-2 ring-blue-500 transition-all text-sm"
+              placeholder="0"
+              className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3 outline-none focus:ring-2 ring-blue-500 transition-all text-sm font-semibold"
             />
           </div>
           <div className="flex flex-col gap-2">
             <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Step-Up %</label>
             <input 
-              type="number" value={stepUp} onChange={(e) => setStepUp(Number(e.target.value))}
+              type="text" 
+              inputMode="numeric"
+              value={stepUp === 0 ? '' : stepUp} 
+              onChange={(e) => handleNumberChange(e.target.value, setStepUp, 100)}
               onFocus={(e) => e.target.select()}
-              className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3 outline-none focus:ring-2 ring-blue-500 transition-all text-sm"
+              placeholder="0"
+              className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3 outline-none focus:ring-2 ring-blue-500 transition-all text-sm font-semibold"
             />
           </div>
           <div className="flex flex-col gap-2">
@@ -117,24 +139,47 @@ export const Controls: React.FC<ControlsProps> = (props) => {
               Inflation % <span title="Inflation Rate - The rate at which the purchasing power of money decreases (standard is 6%)."><HelpCircle className="w-3 h-3 cursor-help text-slate-400" /></span>
             </label>
             <input 
-              type="number" value={inflation} onChange={(e) => setInflation(Number(e.target.value))}
+              type="text" 
+              inputMode="numeric"
+              value={inflation === 0 ? '' : inflation} 
+              onChange={(e) => handleNumberChange(e.target.value, setInflation, 50)}
               onFocus={(e) => e.target.select()}
-              className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3 outline-none focus:ring-2 ring-orange-500 transition-all text-sm"
+              placeholder="0"
+              className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3 outline-none focus:ring-2 ring-orange-500 transition-all text-sm font-semibold"
             />
           </div>
           <div className="flex flex-col gap-2">
             <label className="text-[10px] font-bold uppercase tracking-wider text-purple-500">Target Goal (₹)</label>
             <input 
-              type="number" value={targetGoal} onChange={(e) => handleReverseSip(e.target.value)}
+              type="text" 
+              inputMode="numeric"
+              value={targetGoal} 
+              onChange={(e) => {
+                const clean = e.target.value.replace(/[^0-9]/g, '');
+                handleReverseSip(clean);
+              }}
               onFocus={(e) => e.target.select()}
               placeholder="Goal ₹"
-              className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3 outline-none focus:ring-2 ring-purple-500 transition-all placeholder:text-slate-600 text-sm font-bold"
+              className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3 outline-none focus:ring-2 ring-purple-500 transition-all placeholder:text-slate-650 text-sm font-bold"
             />
           </div>
         </div>
 
       </div>
-    </section>
 
+      {/* 🔒 100% Private & Client-Side Wealth Intelligence Badge */}
+      <div className="mt-8 pt-6 border-t border-slate-200 dark:border-slate-800/80 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="flex items-center gap-3 text-slate-500 dark:text-slate-400">
+          <span className="text-xl">🔒</span>
+          <div className="text-left">
+            <p className="text-[11px] font-black uppercase tracking-wider text-slate-700 dark:text-slate-200">100% Private & Client-Side Sandbox</p>
+            <p className="text-[10px] text-slate-400 dark:text-slate-500 font-semibold leading-relaxed">All computations run locally on your device. Your financial worth, assets, and liabilities data are never stored or sent to any server.</p>
+          </div>
+        </div>
+        <div className="shrink-0 px-3.5 py-1.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 text-[10px] font-black uppercase tracking-wider rounded-xl">
+          Zero Data Storage
+        </div>
+      </div>
+    </section>
   );
 };

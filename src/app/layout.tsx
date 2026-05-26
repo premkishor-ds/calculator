@@ -64,6 +64,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
+        <link rel="canonical" href="https://worth-calculator.netlify.app/" />
         <script
           dangerouslySetInnerHTML={{
             __html: `(function(){try{var s=localStorage.getItem('theme');var d=s?s==='dark':window.matchMedia('(prefers-color-scheme: dark)').matches;if(d)document.documentElement.classList.add('dark');}catch(e){}})();`,
@@ -85,8 +86,20 @@ export default function RootLayout({
                 "@type": "FinancialCalculator",
                 "name": "Vision Wealth: Multibagger Compounding Planner",
                 "description": "Advanced financial tool to calculate Step-Up SIP, CAGR growth, and inflation-adjusted wealth for stock market investors.",
-                "url": SITE_URL,
+                "url": "https://worth-calculator.netlify.app/",
                 "category": "Investment Calculator"
+              },
+              {
+                "@context": "https://schema.org",
+                "@type": "SoftwareApplication",
+                "name": "Worth Calculator",
+                "operatingSystem": "All",
+                "applicationCategory": "FinanceApplication",
+                "offers": {
+                  "@type": "Offer",
+                  "price": "0",
+                  "priceCurrency": "USD"
+                }
               },
               {
                 "@context": "https://schema.org",
