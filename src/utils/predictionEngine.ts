@@ -403,7 +403,7 @@ export function calcRSI(prices: number[], period: number = 14): number[] {
 
   let avgGain = gains / period;
   let avgLoss = losses / period;
-  rsi[period] = avgLoss === 0 ? 100 : 100 - 100 / (1 + avgGain / avgLoss);
+  rsi[period] = avgLoss === 0 ? (avgGain === 0 ? 50 : 100) : 100 - 100 / (1 + avgGain / avgLoss);
 
   for (let i = period + 1; i < prices.length; i++) {
     const diff = prices[i] - prices[i - 1];
@@ -413,7 +413,7 @@ export function calcRSI(prices: number[], period: number = 14): number[] {
     avgGain = (avgGain * (period - 1) + gain) / period;
     avgLoss = (avgLoss * (period - 1) + loss) / period;
 
-    rsi[i] = avgLoss === 0 ? 100 : 100 - 100 / (1 + avgGain / avgLoss);
+    rsi[i] = avgLoss === 0 ? (avgGain === 0 ? 50 : 100) : 100 - 100 / (1 + avgGain / avgLoss);
   }
   // Fill leading
   for (let i = 0; i < period; i++) {
@@ -586,14 +586,18 @@ export function calcADX(highs: number[], lows: number[], closes: number[], perio
   const startIdx = period * 2 - 1;
   for (let i = startIdx; i < len; i++) {
     finalADX[i] = adx[i - startIdx] || 20;
+  }
+  for (let i = period; i < len; i++) {
     finalPlusDI[i] = plusDI[i - period] || 20;
     finalMinusDI[i] = minusDI[i - period] || 20;
   }
   
   for (let i = 0; i < startIdx; i++) {
-    finalADX[i] = finalADX[startIdx];
-    finalPlusDI[i] = finalPlusDI[startIdx];
-    finalMinusDI[i] = finalMinusDI[startIdx];
+    finalADX[i] = finalADX[startIdx] || 20;
+  }
+  for (let i = 0; i < period; i++) {
+    finalPlusDI[i] = finalPlusDI[period] || 20;
+    finalMinusDI[i] = finalMinusDI[period] || 20;
   }
 
   return { adx: finalADX, plusDI: finalPlusDI, minusDI: finalMinusDI };
@@ -1030,8 +1034,10 @@ export function getCorrelationSimilarity(s1: number[], s2: number[]): number {
     pSum += s1[i] * s2[i];
   }
   const num = pSum - (sum1 * sum2) / n;
-  const den = Math.sqrt((sum1Sq - (sum1 * sum1) / n) * (sum2Sq - (sum2 * sum2) / n));
-  if (den === 0) return 0;
+  const var1 = Math.max(0, sum1Sq - (sum1 * sum1) / n);
+  const var2 = Math.max(0, sum2Sq - (sum2 * sum2) / n);
+  const den = Math.sqrt(var1 * var2);
+  if (den === 0 || isNaN(den)) return 0;
   return Math.max(0, (num / den + 1) / 2);
 }
 
@@ -1704,10 +1710,8 @@ export function runAIPredictionEngine(
 
   // Daily expected return return calculation
   let expectedReturnDaily = logReturns.reduce((sum, r) => sum + r, 0) / (logReturns.length || 1);
-  if (Math.abs(expectedReturnDaily) > 0.01) {
-    // bound return expectations to prevent simulation anomalies
-    expectedReturnDaily = expectedReturnDaily > 0 ? 0.0008 : -0.0008;
-  }
+  // Strictly bound return expectations to prevent Monte Carlo explosion anomalies
+  expectedReturnDaily = Math.max(-0.002, Math.min(0.002, expectedReturnDaily));
 
   // Run 10,000 simulations
   const mcResult = runMonteCarlo(
@@ -1737,9 +1741,9 @@ export function runAIPredictionEngine(
     momentumScore: Math.min(99, Math.max(5, momentumScore)),
     volatilityScore: Math.min(99, Math.max(5, volatilityScore)),
     trendStrengthScore: Math.min(99, Math.max(5, trendStrengthScore)),
-    distanceFromEMA9: Number((((currentPrice - ema9[len - 1]) / ema9[len - 1]) * 100).toFixed(2)),
-    atrPercent: Number(((atrVal / currentPrice) * 100).toFixed(2)),
-    relativeStrength: Number(((closes[len - 1] / closes[len - 20]) / (closes[len - 20] > 0 ? 1 : 1)).toFixed(2)),
+    distanceFromEMA9: Number((((currentPrice - ema9[len - 1]) / (ema9[len - 1] || 1)) * 100).toFixed(2)),
+    atrPercent: Number(((atrVal / (currentPrice || 1)) * 100).toFixed(2)),
+    relativeStrength: Number((closes[len - 1] / (closes[len - 20] || 1)).toFixed(2)),
     priceVelocity: Number(velocity.toFixed(2)),
     priceAcceleration: Number(acceleration.toFixed(2))
   };
