@@ -1,6 +1,50 @@
-﻿import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { yahooFinance } from '@/lib/yahoo-finance';
-import { WATCHLIST_SYMBOLS } from '../route';
+import { DEFAULT_SEEDS } from '@/utils/symbols';
+
+// Curated sector map for peer comparison (small fixed list)
+const PEER_SYMBOLS = DEFAULT_SEEDS.slice(0, 34).map(s => s.symbol);
+
+const SECTORS_MAP: Record<string, string> = {
+  'E2E.NS': 'Tech',
+  'AURIONPRO.NS': 'Tech',
+  'COFORGE.NS': 'Tech',
+  'NETWEB.NS': 'Tech',
+  'VOLTAMP.NS': 'Power/Engineering',
+  'TDPOWERSYS.NS': 'Power/Engineering',
+  'TARIL.NS': 'Power/Engineering',
+  'PRECWIRE.NS': 'Power/Engineering',
+  'KIRLOSENG.NS': 'Power/Engineering',
+  'KEI.NS': 'Power/Engineering',
+  'APARINDS.NS': 'Power/Engineering',
+  'GVT&D.NS': 'Power/Engineering',
+  'CGPOWER.NS': 'Power/Engineering',
+  'KRN.NS': 'Power/Engineering',
+  'MAZDOCK.NS': 'Defense',
+  'ZENTEC.NS': 'Defense',
+  'GRSE.NS': 'Defense',
+  'PARAS.NS': 'Defense',
+  'ASTRAMICRO.NS': 'Defense',
+  'DATAPATTNS.NS': 'Defense',
+  'MTARTECH.NS': 'Defense',
+  'IDEAFORGE.NS': 'Defense',
+  'HSCL.NS': 'FMCG/Chemicals',
+  'HFCL.NS': 'FMCG/Chemicals',
+  'BECTORFOOD.NS': 'FMCG/Chemicals',
+  'AEROFLEX.NS': 'FMCG/Chemicals',
+  'SHILCTECH.NS': 'Healthcare',
+  'APOLLO.NS': 'Healthcare'
+};
+
+function normalizeSector(sector: string): string {
+  const s = sector.trim().toLowerCase();
+  if (s.includes('tech')) return 'tech';
+  if (s.includes('power') || s.includes('engineer') || s.includes('industrial') || s.includes('machinery')) return 'industrials';
+  if (s.includes('defense') || s.includes('aerospace') || s.includes('space')) return 'defense';
+  if (s.includes('chemical') || s.includes('fmcg') || s.includes('consumer') || s.includes('food') || s.includes('basic materials')) return 'chemicals_fmcg';
+  if (s.includes('health') || s.includes('medical') || s.includes('pharma')) return 'healthcare';
+  return s;
+}
 
 export async function GET(
   request: NextRequest,
@@ -95,7 +139,30 @@ export async function GET(
     const holders = (summary.majorHoldersBreakdown || {}) as any;
     const profile = (summary.assetProfile || {}) as any;
 
-    const regularPrice = price.regularMarketPrice || 0;
+    const lastChartClose = chartQuotes.length > 0 
+      ? Number(chartQuotes[chartQuotes.length - 1].close || chartQuotes[chartQuotes.length - 1].adjclose || 0)
+      : 0;
+
+    const lastChartOpen = chartQuotes.length > 0
+      ? Number(chartQuotes[chartQuotes.length - 1].open || 0)
+      : 0;
+
+    const regularPrice = price.regularMarketPrice 
+      || financialData.currentPrice 
+      || detail.regularMarketPrice 
+      || lastChartClose
+      || detail.ask 
+      || detail.bid 
+      || detail.fiftyDayAverage
+      || 0;
+
+    const change = price.regularMarketChange 
+      || detail.regularMarketChange 
+      || (lastChartClose > 0 && lastChartOpen > 0 ? lastChartClose - lastChartOpen : 0);
+
+    const changePercent = (price.regularMarketChangePercent || detail.regularMarketChangePercent || 0) * 100 
+      || (lastChartClose > 0 && lastChartOpen > 0 ? ((lastChartClose - lastChartOpen) / lastChartOpen) * 100 : 0);
+
     const bv = stats.bookValue || 0;
     const cmpBv = bv > 0 ? Number((regularPrice / bv).toFixed(2)) : 0;
     const rawDivYield = detail.dividendYield || 0;
@@ -103,11 +170,10 @@ export async function GET(
     const instHold = (holders.institutionsPercentHeld || stats.heldPercentInstitutions || 0) * 100;
     const pubHold = Math.max(0, 100 - promHold - instHold);
 
-    // Dynamic fundamental indicators
     const ratios = {
       price: regularPrice,
-      change: price.regularMarketChange || 0,
-      changePercent: (price.regularMarketChangePercent || 0) * 100,
+      change,
+      changePercent,
       name: price.shortName || price.longName || symbol,
       symbol: price.symbol || symbol,
       marketCap: price.marketCap || 0,
@@ -217,23 +283,34 @@ export async function GET(
       volume: q.volume || 0,
     }));
 
-    // Fetch peer values dynamically from WATCHLIST_SYMBOLS
+    // Fetch peer values dynamically from WATCHLIST_SYMBOLS comparing within the same sector
     const normalizedSymbolUpper = symbol.toUpperCase();
-    const cleanTarget = normalizedSymbolUpper.trim().replace('.NS', '');
-    const matchIndex = WATCHLIST_SYMBOLS.findIndex(s => {
-      const cleanS = s.trim().toUpperCase().replace('.NS', '');
-      return cleanS === cleanTarget;
+    const cleanTarget = normalizedSymbolUpper.trim().replace('.NS', '') + '.NS';
+    
+    // 1. Determine target stock's sector from map or profile details, and normalize it
+    const rawTargetSector = SECTORS_MAP[cleanTarget] || corporateProfile.sector || 'N/A';
+    const targetSectorNorm = normalizeSector(rawTargetSector);
+    
+    // 2. Find all watchlist symbols in the same sector, excluding the target stock itself
+    let sectorPeers = PEER_SYMBOLS.filter(s => {
+      const formattedSym = (s.includes('.') ? s : `${s}.NS`).toUpperCase();
+      if (formattedSym === cleanTarget) return false;
+      const rawSector = SECTORS_MAP[formattedSym] || 'N/A';
+      return rawSector !== 'N/A' && normalizeSector(rawSector) === targetSectorNorm;
     });
 
-    const peerSymbols: string[] = [];
-    if (matchIndex !== -1) {
-      for (let i = 1; i <= 3; i++) {
-        const nextIdx = (matchIndex + i) % WATCHLIST_SYMBOLS.length;
-        peerSymbols.push(WATCHLIST_SYMBOLS[nextIdx]);
-      }
+    // 3. Fallback: if there are less than 3 matching sector peers, pad it with other active watchlist symbols
+    if (sectorPeers.length < 3) {
+      const extraPeers = PEER_SYMBOLS.filter(s => {
+        const formattedSym = (s.includes('.') ? s : `${s}.NS`).toUpperCase();
+        return formattedSym !== cleanTarget && !sectorPeers.includes(s);
+      });
+      sectorPeers = [...sectorPeers, ...extraPeers].slice(0, 3);
     } else {
-      peerSymbols.push(...WATCHLIST_SYMBOLS.slice(0, 3));
+      sectorPeers = sectorPeers.slice(0, 3);
     }
+
+    const peerSymbols = sectorPeers;
 
     const peersQuotes = await Promise.allSettled(
       peerSymbols.map(peerSym => {

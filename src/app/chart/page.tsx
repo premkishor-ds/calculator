@@ -39,7 +39,7 @@ import {
   Lock,
   Unlock
 } from 'lucide-react';
-import { DEFAULT_SYMBOLS } from '@/utils/symbols';
+import { DEFAULT_SYMBOLS, DEFAULT_SEEDS } from '@/utils/symbols';
 import { buildAllTags, DEFAULT_CUSTOM_TAGS, CUSTOM_TAG_IDS, type TagDef, type CustomTagRaw } from '@/utils/tags';
 import { getBackendApiUrl, getBackendWsUrl } from '@/lib/backend-config';
 import AIMarketIntelligence from '@/components/AIMarketIntelligence';
@@ -187,7 +187,11 @@ interface WorkspaceTemplate {
 
 // Lazy getter — evaluated client-side so localhost/prod resolution works correctly after hydration
 function getApiUrl() { return getBackendApiUrl(); }
-const WS_URL = getBackendWsUrl();
+// Evaluated lazily client-side to avoid SSR picking wrong URL
+function getWsUrl() {
+  if (typeof window !== 'undefined') return getBackendWsUrl();
+  return '';
+}
 
 const SECTORS_MAP: Record<string, string> = {
   'E2E.NS': 'Tech',
@@ -361,8 +365,10 @@ function TradingTerminalInner() {
   const wsRef = useRef<WebSocket | null>(null);
 
   useEffect(() => {
+    const wsUrl = getWsUrl();
+    if (!wsUrl) return;
     // Initialise WebSocket connection
-    const socket = new WebSocket(WS_URL);
+    const socket = new WebSocket(wsUrl);
     wsRef.current = socket;
 
     socket.onopen = () => {
@@ -1093,18 +1099,24 @@ function TradingTerminalInner() {
       } catch (err) {
         setApiFailed(true);
         try {
-          const fallbackSymbols = DEFAULT_SYMBOLS;
-          const res = await fetch(`/api/watchlist?symbols=${encodeURIComponent(fallbackSymbols.join(','))}`);
+          // Use DEFAULT_SEEDS for real names; only fetch live data for first 10
+          const seedStocks: StockQuote[] = DEFAULT_SEEDS.map(s => ({
+            symbol: s.symbol, name: s.name,
+            price: 0, change: 0, changePercent: 0, marketCap: 0, volume: 0,
+            pe: 0, eps: 0, cmpBv: 0, divYield: 0, promHold: 0, profitGrowth: 0, salesGrowth: 0,
+            isFavourite: false, tags: []
+          }));
+          setWatchlistStocks(seedStocks);
+          const firstPage = DEFAULT_SEEDS.slice(0, 10).map(s => s.symbol);
+          const res = await fetch(`/api/watchlist?symbols=${encodeURIComponent(firstPage.join(','))}`);
           if (res.ok) {
-            const data = await res.json();
-            const fallbackData = data.map((s: LiveStock) => ({
-              ...s,
-              isFavourite: false,
-              tags: [] as string[]
+            const liveData = await res.json();
+            setWatchlistStocks(prev => prev.map(s => {
+              const live = liveData.find((l: LiveStock) => l.symbol.toUpperCase() === s.symbol.toUpperCase());
+              return live ? { ...s, ...live, name: s.name, isFavourite: false, tags: [] } : s;
             }));
-            setWatchlistStocks(fallbackData);
             if (!urlSymbolHonouredRef.current) {
-              const def = fallbackData.find((s: StockQuote) => s.symbol === selectedSymbol) || fallbackData[0];
+              const def = seedStocks.find(s => s.symbol === selectedSymbol) || seedStocks[0];
               selectSymbolRoot(def.symbol);
             }
             urlSymbolHonouredRef.current = true;

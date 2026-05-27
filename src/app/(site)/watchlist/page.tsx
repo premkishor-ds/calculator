@@ -16,7 +16,7 @@ import {
   TrendingUp as StockIcon,
   Star
 } from 'lucide-react';
-import { DEFAULT_SYMBOLS, DEFAULT_SEEDS } from '@/utils/symbols';
+import { DEFAULT_SEEDS } from '@/utils/symbols';
 import { buildAllTags, DEFAULT_CUSTOM_TAGS, CUSTOM_TAG_IDS, type TagDef, type CustomTagRaw } from '@/utils/tags';
 import { getBackendApiUrl } from '@/lib/backend-config';
 
@@ -86,6 +86,7 @@ export default function WatchlistPage() {
   const [showFavouritesOnly, setShowFavouritesOnly] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const PAGE_SIZE = 10;
+  const liveLoadedRef = useRef<Set<string>>(new Set());
 
   // Unified filter bar state
   const [activeFilterField, setActiveFilterField] = useState<string>('none');
@@ -155,93 +156,48 @@ export default function WatchlistPage() {
       setLoading(true);
       setError('');
       setApiFailed(false);
+      liveLoadedRef.current = new Set();
 
-      // Resolve URL client-side (avoids SSR always picking PROD_API)
       const BACKEND_API_URL = getBackendApiUrl();
 
-      // 1. Try to fetch stocks from Express backend API
+      // 1. Try MongoDB backend
       let backendStocks: BackendStock[] = [];
       try {
         const backendRes = await fetch(`${BACKEND_API_URL}/stocks?watchlist=${encodeURIComponent(selectedWatchlist)}`);
         if (!backendRes.ok) throw new Error();
         backendStocks = await backendRes.json();
       } catch (err) {
-        console.warn("Express backend failed - falling back to default stocks list", err);
+        console.warn('Express backend failed - falling back to hardcoded list', err);
         setApiFailed(true);
-        // Clear local storage on API failure as requested
-        if (typeof window !== 'undefined') {
-          localStorage.removeItem('vision_watchlist');
-        }
-        
-        // Build mock stocks list from default symbols
-        backendStocks = DEFAULT_SYMBOLS.map(symbol => ({
-          symbol,
-          name: symbol.split('.')[0] + ' Ltd.',
-          isFavourite: false,
-          tags: []
-        }));
+        if (typeof window !== 'undefined') localStorage.removeItem('vision_watchlist');
+        // Use real names from DEFAULT_SEEDS hardcoded list
+        backendStocks = DEFAULT_SEEDS.map(s => ({ symbol: s.symbol, name: s.name, isFavourite: false, tags: [] }));
       }
 
-      if (backendStocks.length === 0) {
-        setStocks([]);
-        setLoading(false);
-        return;
-      }
+      if (backendStocks.length === 0) { setStocks([]); setLoading(false); return; }
 
-      const symbols = backendStocks.map(s => s.symbol);
+      // 2. Set all stocks immediately with zero prices (real names shown right away)
+      const skeleton: StockData[] = backendStocks.map(s => ({
+        symbol: s.symbol, name: s.name,
+        price: 0, change: 0, changePercent: 0, marketCap: 0, volume: 0,
+        pe: 0, eps: 0, cmpBv: 0, divYield: 0, promHold: 0, profitGrowth: 0, salesGrowth: 0,
+        isFavourite: !!s.isFavourite, tags: s.tags || []
+      }));
+      setStocks(skeleton);
 
-      // 2. Fetch live metrics from Next.js Yahoo Finance API
-      // If the live data fetch fails, show stocks with placeholder zero values
-      let liveData: LiveStock[] = [];
+      // 3. Fetch live data only for first page symbols immediately
+      const firstPageSymbols = backendStocks.slice(0, PAGE_SIZE).map(s => s.symbol);
       try {
-        const liveRes = await fetch(`/api/watchlist?symbols=${encodeURIComponent(symbols.join(','))}`);
+        const liveRes = await fetch(`/api/watchlist?symbols=${encodeURIComponent(firstPageSymbols.join(','))}`);
         if (liveRes.ok) {
-          liveData = await liveRes.json();
-        } else {
-          console.warn('Live data fetch returned non-OK status, using placeholder values');
+          const liveData: LiveStock[] = await liveRes.json();
+          firstPageSymbols.forEach(sym => liveLoadedRef.current.add(sym));
+          setStocks(prev => prev.map(s => {
+            const live = liveData.find(l => l.symbol.toUpperCase() === s.symbol.toUpperCase());
+            return live ? { ...s, ...live, name: s.name, isFavourite: s.isFavourite, tags: s.tags } : s;
+          }));
         }
-      } catch (liveErr) {
-        console.warn('Live data fetch failed, using placeholder values:', liveErr);
-      }
-
-      // 3. Merge Live Quote metrics with Backend details
-      // If live data is empty, create placeholder entries from backendStocks
-      let mergedData: StockData[];
-      if (liveData.length > 0) {
-        mergedData = liveData.map((liveStock: LiveStock) => {
-          const backendStock = backendStocks.find(
-            (s: BackendStock) => s.symbol.toUpperCase() === liveStock.symbol.toUpperCase()
-          );
-          return {
-            ...liveStock,
-            name: backendStock ? backendStock.name : liveStock.name,
-            isFavourite: backendStock ? !!backendStock.isFavourite : false,
-            tags: backendStock ? (backendStock.tags || []) : []
-          };
-        });
-      } else {
-        // Fallback: show stocks with zero metrics so the list is still visible
-        mergedData = backendStocks.map((s: BackendStock) => ({
-          symbol: s.symbol,
-          name: s.name,
-          price: 0,
-          change: 0,
-          changePercent: 0,
-          marketCap: 0,
-          volume: 0,
-          pe: 0,
-          eps: 0,
-          cmpBv: 0,
-          divYield: 0,
-          promHold: 0,
-          profitGrowth: 0,
-          salesGrowth: 0,
-          isFavourite: !!s.isFavourite,
-          tags: s.tags || []
-        }));
-      }
-
-      setStocks(mergedData);
+      } catch { /* keep skeleton prices */ }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Something went wrong while fetching watchlist');
     } finally {
@@ -259,12 +215,29 @@ export default function WatchlistPage() {
 
   // Fetch stocks on mount and schedule live updates every 60s
   useEffect(() => {
-    Promise.resolve().then(() => {
-      fetchStocksFromAPI();
-    });
+    Promise.resolve().then(() => { fetchStocksFromAPI(); });
     const interval = setInterval(fetchStocksFromAPI, 60000);
     return () => clearInterval(interval);
   }, [fetchStocksFromAPI, selectedWatchlist]);
+
+  // Fetch live data for visible page symbols on page change (lazy loading)
+  useEffect(() => {
+    if (stocks.length === 0) return;
+    const visibleSymbols = paginatedStocks
+      .map(s => s.symbol)
+      .filter(sym => !liveLoadedRef.current.has(sym));
+    if (visibleSymbols.length === 0) return;
+    fetch(`/api/watchlist?symbols=${encodeURIComponent(visibleSymbols.join(','))}`)
+      .then(r => r.ok ? r.json() : [])
+      .then((liveData: LiveStock[]) => {
+        visibleSymbols.forEach(sym => liveLoadedRef.current.add(sym));
+        setStocks(prev => prev.map(s => {
+          const live = liveData.find(l => l.symbol.toUpperCase() === s.symbol.toUpperCase());
+          return live ? { ...s, ...live, name: s.name, isFavourite: s.isFavourite, tags: s.tags } : s;
+        }));
+      })
+      .catch(() => {});
+  }, [currentPage, stocks.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Load custom tags on mount
   useEffect(() => {
