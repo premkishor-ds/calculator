@@ -19,6 +19,7 @@ import {
 import { DEFAULT_SEEDS } from '@/utils/symbols';
 import { buildAllTags, DEFAULT_CUSTOM_TAGS, CUSTOM_TAG_IDS, type TagDef, type CustomTagRaw } from '@/utils/tags';
 import { getBackendApiUrl } from '@/lib/backend-config';
+import PortfolioTracker from '@/components/PortfolioTracker';
 
 interface StockData {
   symbol: string;
@@ -74,6 +75,7 @@ export default function WatchlistPage() {
   const router = useRouter();
 
   const [stocks, setStocks] = useState<StockData[]>([]);
+  const [activeViewMode, setActiveViewMode] = useState<'screener' | 'portfolio'>('screener');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');
@@ -237,7 +239,7 @@ export default function WatchlistPage() {
         }));
       })
       .catch(() => {});
-  }, [currentPage, stocks.length]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [currentPage, stocks.length]);
 
   // Load custom tags on mount
   useEffect(() => {
@@ -660,9 +662,34 @@ export default function WatchlistPage() {
               <StockIcon className="w-6 h-6 text-blue-500 animate-pulse" />
               <span className="text-xs font-bold text-blue-500 uppercase tracking-widest">Active Stock Research Cockpit</span>
             </div>
-            <h1 className="text-3xl sm:text-4xl font-extrabold bg-gradient-to-r from-cyan-400 to-blue-600 bg-clip-text text-transparent tracking-tight">
-              Institutional Screener
-            </h1>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <h1 className="text-3xl sm:text-4xl font-extrabold bg-gradient-to-r from-cyan-400 to-blue-600 bg-clip-text text-transparent tracking-tight">
+                {activeViewMode === 'screener' ? 'Institutional Screener' : 'Institutional Portfolio'}
+              </h1>
+              
+              <div className="flex bg-slate-200 dark:bg-slate-800 p-1 rounded-2xl shrink-0">
+                <button 
+                  onClick={() => setActiveViewMode('screener')}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                    activeViewMode === 'screener' 
+                      ? 'bg-blue-500 text-white shadow-md' 
+                      : 'text-slate-500 hover:text-slate-800 dark:hover:text-white'
+                  }`}
+                >
+                  Stock Screener
+                </button>
+                <button 
+                  onClick={() => setActiveViewMode('portfolio')}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                    activeViewMode === 'portfolio' 
+                      ? 'bg-blue-500 text-white shadow-md' 
+                      : 'text-slate-500 hover:text-slate-800 dark:hover:text-white'
+                  }`}
+                >
+                  Live Portfolio Tracker
+                </button>
+              </div>
+            </div>
             <p className="text-sm text-slate-500 dark:text-slate-400 mt-2 max-w-xl font-medium leading-relaxed">
               Build and curate your own portfolio workspace in real-time. Dynamic search, live ticker validators, persistent backend watchlist reloads, and tabular CSV exports.
             </p>
@@ -685,8 +712,10 @@ export default function WatchlistPage() {
           </div>
         </div>
 
-        {/* Watchlist Manager Panel */}
-        <div className="bg-white dark:bg-slate-900/50 backdrop-blur-md rounded-3xl border border-slate-200 dark:border-slate-800 p-6 mb-8 shadow-sm">
+        {activeViewMode === 'screener' ? (
+          <>
+            {/* Watchlist Manager Panel */}
+            <div className="bg-white dark:bg-slate-900/50 backdrop-blur-md rounded-3xl border border-slate-200 dark:border-slate-800 p-6 mb-8 shadow-sm">
           <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
             <div>
               <label className="text-[10px] text-slate-400 dark:text-slate-500 font-extrabold uppercase tracking-widest mb-1.5 block">Select Portfolio Watchlist Workspace</label>
@@ -1338,8 +1367,16 @@ export default function WatchlistPage() {
             <span className="font-semibold text-blue-600 dark:text-blue-400">Stock Market Disclaimer:</span> Investment in securities market are subject to market risks, read all the related documents carefully before investing. Fundamental ratio analysis and technical indicators presented on this cockpit are fetched dynamically from active database corporate filings and standard market quote tickers in real-time. Past performance is not indicative of future investment returns.
           </div>
         </div>
+      </>
+    ) : (
+      <PortfolioTracker
+        theme="dark"
+        selectedWatchlist={selectedWatchlist}
+        showToast={showToast}
+      />
+    )}
 
-      </div>
+  </div>
       
       {/* Floating dynamic glassmorphic toast notification */}
       {toast && (

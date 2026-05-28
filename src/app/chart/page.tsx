@@ -43,6 +43,7 @@ import { DEFAULT_SYMBOLS, DEFAULT_SEEDS } from '@/utils/symbols';
 import { buildAllTags, DEFAULT_CUSTOM_TAGS, CUSTOM_TAG_IDS, type TagDef, type CustomTagRaw } from '@/utils/tags';
 import { getBackendApiUrl, getBackendWsUrl } from '@/lib/backend-config';
 import AIMarketIntelligence from '@/components/AIMarketIntelligence';
+import Backtester from '@/components/Backtester';
 /* Dynamically import the chart so it's client-only (no SSR) */
 const AdvancedChart = dynamic(() => import('@/components/AdvancedChart'), {
   ssr: false,
@@ -984,7 +985,7 @@ function TradingTerminalInner() {
 
   const [sidebarMode, setSidebarMode] = useState<'watchlist' | 'fundamentals'>('watchlist');
   const [sidebarSize, setSidebarSize] = useState<'normal' | 'wide'>('normal');
-  const [sidebarActiveTab, setSidebarActiveTab] = useState<'overview' | 'dcf' | 'financials' | 'news'>('overview');
+  const [sidebarActiveTab, setSidebarActiveTab] = useState<'overview' | 'dcf' | 'financials' | 'news' | 'backtest'>('overview');
   const [dcfDiscountRate, setDcfDiscountRate] = useState<number>(10);
   const [dcfTerminalGrowth, setDcfTerminalGrowth] = useState<number>(4);
   const [financialTable, setFinancialTable] = useState<'qpl' | 'pl' | 'bs' | 'cf'>('qpl');
@@ -2090,7 +2091,8 @@ function TradingTerminalInner() {
                       { id: 'overview', label: '🏛️ Overview' },
                       { id: 'dcf', label: '🎯 DCF Target' },
                       { id: 'financials', label: '📋 Statement Tables' },
-                      { id: 'news', label: '📰 News & Peers' }
+                      { id: 'news', label: '📰 News & Peers' },
+                      { id: 'backtest', label: '🧪 Strategy Backtest' }
                     ].map(tab => (
                       <button
                         key={tab.id}
@@ -2295,7 +2297,7 @@ function TradingTerminalInner() {
                   {sidebarActiveTab === 'news' && (
                     <div className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0 text-[10px]">
                       <div>
-                        <span className="text-[8px] font-black text-slate-450 uppercase block mb-1.5">Comparable Competitors</span>
+                        <span className="text-[8px] font-black text-slate-455 uppercase block mb-1.5">Comparable Competitors</span>
                         <div className="grid grid-cols-1 divide-y divide-slate-100 dark:divide-slate-900/60 font-bold">
                           {deepData?.peers?.slice(0, 3).map((p: PeerItem) => (
                             <div key={p.symbol} className="py-1.5 flex items-center justify-between gap-2">
@@ -2303,13 +2305,23 @@ function TradingTerminalInner() {
                                 <span className="text-slate-800 dark:text-slate-100 block">{p.symbol.replace('.NS','')}</span>
                               </div>
                               <div className="text-right font-mono">
-                                <span className="block text-slate-700 dark:text-slate-300">₹{p.price.toFixed(0)}</span>
+                                <span className="block text-slate-700 dark:text-slate-350">₹{p.price.toFixed(0)}</span>
                                 <span className="text-[7.5px] text-slate-400 block">P/E: {p.pe > 0 ? p.pe.toFixed(1) : '—'}</span>
                               </div>
                             </div>
                           ))}
                         </div>
                       </div>
+                    </div>
+                  )}
+
+                  {sidebarActiveTab === 'backtest' && (
+                    <div className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0">
+                      <Backtester 
+                        chartData={deepData?.chartData || []} 
+                        theme={theme}
+                        symbol={selectedSymbol}
+                      />
                     </div>
                   )}
                 </>
