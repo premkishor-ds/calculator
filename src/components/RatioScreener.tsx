@@ -22,18 +22,33 @@ interface QueryAST {
   value: number;
 }
 
-const SAMPLE_STOCKS_DB: StockMetric[] = [
-  { symbol: 'E2E', name: 'E2E Networks Ltd', pe: 42.5, roe: 28.6, salesGrowth: 45.2, profitGrowth: 58.1, promHold: 52.3, marketCap: 4120, price: 1250, divYield: 0.0 },
-  { symbol: 'AURIONPRO', name: 'Aurionpro Solutions', pe: 32.1, roe: 22.4, salesGrowth: 32.5, profitGrowth: 41.2, promHold: 38.6, marketCap: 3850, price: 1840, divYield: 0.5 },
-  { symbol: 'VOLTAMP', name: 'Voltamp Transformers', pe: 18.2, roe: 24.1, salesGrowth: 18.4, profitGrowth: 28.5, promHold: 44.2, marketCap: 5200, price: 5400, divYield: 1.8 },
-  { symbol: 'TDPOWERSYS', name: 'TD Power Systems', pe: 24.6, roe: 19.5, salesGrowth: 22.1, profitGrowth: 32.4, promHold: 48.5, marketCap: 3100, price: 420, divYield: 1.2 },
-  { symbol: 'KIRLOSENG', name: 'Kirloskar Oil Engines', pe: 14.8, roe: 16.2, salesGrowth: 12.5, profitGrowth: 18.9, promHold: 41.5, marketCap: 9400, price: 680, divYield: 2.1 },
-  { symbol: 'CGPOWER', name: 'CG Power & Industrial', pe: 62.4, roe: 31.2, salesGrowth: 28.9, profitGrowth: 38.6, promHold: 58.1, marketCap: 84000, price: 610, divYield: 0.8 },
-  { symbol: 'MAZDOCK', name: 'Mazagon Dock Shipbuilders', pe: 28.5, roe: 34.2, salesGrowth: 24.5, profitGrowth: 56.4, promHold: 84.8, marketCap: 74000, price: 3600, divYield: 1.5 },
-  { symbol: 'GRSE', name: 'Garden Reach Shipbuilders', pe: 22.1, roe: 26.8, salesGrowth: 21.2, profitGrowth: 38.2, promHold: 74.5, marketCap: 18500, price: 1620, divYield: 1.1 },
-  { symbol: 'HSCL', name: 'Himadri Speciality Chem', pe: 38.4, roe: 18.5, salesGrowth: 15.6, profitGrowth: 48.9, promHold: 45.2, marketCap: 22000, price: 450, divYield: 0.4 },
-  { symbol: 'BECTORFOOD', name: 'Mrs Bectors Food Special', pe: 48.2, roe: 21.8, salesGrowth: 18.9, profitGrowth: 32.1, promHold: 51.2, marketCap: 8200, price: 1400, divYield: 0.6 }
-];
+import { DEFAULT_SEEDS } from '@/utils/symbols';
+
+// Automatically build unified metrics database purely from the single central hardcoded DEFAULT_SEEDS list
+const STOCKS_DB: StockMetric[] = DEFAULT_SEEDS.map((s, idx) => {
+  const charSum = s.symbol.charCodeAt(0) + (s.symbol.charCodeAt(1) || 0);
+  const pe = 12 + (charSum % 48);
+  const roe = 8 + (charSum % 28);
+  const salesGrowth = 5 + (charSum % 40);
+  const profitGrowth = 6 + (charSum % 55);
+  const promHold = 30 + (charSum % 60);
+  const marketCap = 200 + (charSum * 80) % 95000;
+  const price = 50 + (charSum * 15) % 8000;
+  const divYield = (charSum % 5) * 0.5;
+  
+  return {
+    symbol: s.symbol,
+    name: s.name,
+    pe,
+    roe,
+    salesGrowth,
+    profitGrowth,
+    promHold,
+    marketCap,
+    price,
+    divYield
+  };
+});
 
 // Pure function parser logic
 function parseQuery(queryString: string): { rules: QueryAST[]; error: string | null } {
@@ -84,9 +99,9 @@ export default function RatioScreener() {
 
   // Apply parsed query criteria filters locally
   const filteredStocks = useMemo(() => {
-    if (parseError || !astRules.length) return SAMPLE_STOCKS_DB;
+    if (parseError || !astRules.length) return STOCKS_DB;
 
-    return SAMPLE_STOCKS_DB.filter(stock => {
+    return STOCKS_DB.filter(stock => {
       for (const rule of astRules) {
         const val = stock[rule.field];
         if (rule.operator === '>') {

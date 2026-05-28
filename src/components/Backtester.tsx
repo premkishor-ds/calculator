@@ -380,9 +380,9 @@ export default function Backtester({ chartData, theme, symbol }: BacktesterProps
                         <td className={`p-3 text-right font-black ${
                           t.pnl === undefined ? 'text-slate-400' : t.pnl >= 0 ? 'text-emerald-500' : 'text-red-500'
                         }`}>
-                          {t.pnl === undefined 
+                          {t.pnl === undefined || t.pnlPercent === undefined
                             ? '--' 
-                            : `₹${t.pnl.toFixed(2)} (${t.pnlPercent >= 0 ? '+' : ''}${t.pnlPercent?.toFixed(1)}%)`}
+                            : `₹${t.pnl.toFixed(2)} (${t.pnlPercent >= 0 ? '+' : ''}${t.pnlPercent.toFixed(1)}%)`}
                         </td>
                       </tr>
                     ))}

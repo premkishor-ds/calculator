@@ -1,4 +1,4 @@
-﻿export interface SeedStock {
+export interface SeedStock {
   symbol: string;
   name: string;
 }

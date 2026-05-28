@@ -195,36 +195,7 @@ function getWsUrl() {
   return '';
 }
 
-const SECTORS_MAP: Record<string, string> = {
-  'E2E.NS': 'Tech',
-  'AURIONPRO.NS': 'Tech',
-  'COFORGE.NS': 'Tech',
-  'NETWEB.NS': 'Tech',
-  'VOLTAMP.NS': 'Power/Engineering',
-  'TDPOWERSYS.NS': 'Power/Engineering',
-  'TARIL.NS': 'Power/Engineering',
-  'PRECWIRE.NS': 'Power/Engineering',
-  'KIRLOSENG.NS': 'Power/Engineering',
-  'KEI.NS': 'Power/Engineering',
-  'APARINDS.NS': 'Power/Engineering',
-  'GVT&D.NS': 'Power/Engineering',
-  'CGPOWER.NS': 'Power/Engineering',
-  'KRN.NS': 'Power/Engineering',
-  'MAZDOCK.NS': 'Defense',
-  'ZENTEC.NS': 'Defense',
-  'GRSE.NS': 'Defense',
-  'PARAS.NS': 'Defense',
-  'ASTRAMICRO.NS': 'Defense',
-  'DATAPATTNS.NS': 'Defense',
-  'MTARTECH.NS': 'Defense',
-  'IDEAFORGE.NS': 'Defense',
-  'HSCL.NS': 'FMCG/Chemicals',
-  'HFCL.NS': 'FMCG/Chemicals',
-  'BECTORFOOD.NS': 'FMCG/Chemicals',
-  'AEROFLEX.NS': 'FMCG/Chemicals',
-  'SHILCTECH.NS': 'Healthcare',
-  'APOLLO.NS': 'Healthcare'
-};
+// SECTORS_MAP is now imported centrally from '@/utils/symbols'
 
 function TradingTerminalInner() {
   /* ── Core Theme & Workspace States ────────────────────────── */

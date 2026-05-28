@@ -5,36 +5,85 @@ import { DEFAULT_SEEDS } from '@/utils/symbols';
 // Curated sector map for peer comparison (small fixed list)
 const PEER_SYMBOLS = DEFAULT_SEEDS.slice(0, 34).map(s => s.symbol);
 
-const SECTORS_MAP: Record<string, string> = {
-  'E2E.NS': 'Tech',
-  'AURIONPRO.NS': 'Tech',
-  'COFORGE.NS': 'Tech',
-  'NETWEB.NS': 'Tech',
-  'VOLTAMP.NS': 'Power/Engineering',
-  'TDPOWERSYS.NS': 'Power/Engineering',
-  'TARIL.NS': 'Power/Engineering',
-  'PRECWIRE.NS': 'Power/Engineering',
-  'KIRLOSENG.NS': 'Power/Engineering',
-  'KEI.NS': 'Power/Engineering',
-  'APARINDS.NS': 'Power/Engineering',
-  'GVT&D.NS': 'Power/Engineering',
-  'CGPOWER.NS': 'Power/Engineering',
-  'KRN.NS': 'Power/Engineering',
-  'MAZDOCK.NS': 'Defense',
-  'ZENTEC.NS': 'Defense',
-  'GRSE.NS': 'Defense',
-  'PARAS.NS': 'Defense',
-  'ASTRAMICRO.NS': 'Defense',
-  'DATAPATTNS.NS': 'Defense',
-  'MTARTECH.NS': 'Defense',
-  'IDEAFORGE.NS': 'Defense',
-  'HSCL.NS': 'FMCG/Chemicals',
-  'HFCL.NS': 'FMCG/Chemicals',
-  'BECTORFOOD.NS': 'FMCG/Chemicals',
-  'AEROFLEX.NS': 'FMCG/Chemicals',
-  'SHILCTECH.NS': 'Healthcare',
-  'APOLLO.NS': 'Healthcare'
-};
+function getSectorForSymbol(symbol: string, name?: string): string {
+  const cleanSym = symbol.toUpperCase().trim();
+  
+  // Hardcoded sectors lookup for premium watchlist seeds
+  const localSectorMap: Record<string, string> = {
+    'E2E.NS': 'Tech',
+    'AURIONPRO.NS': 'Tech',
+    'COFORGE.NS': 'Tech',
+    'NETWEB.NS': 'Tech',
+    'VOLTAMP.NS': 'Power/Engineering',
+    'TDPOWERSYS.NS': 'Power/Engineering',
+    'TARIL.NS': 'Power/Engineering',
+    'PRECWIRE.NS': 'Power/Engineering',
+    'KIRLOSENG.NS': 'Power/Engineering',
+    'KEI.NS': 'Power/Engineering',
+    'APARINDS.NS': 'Power/Engineering',
+    'GVT&D.NS': 'Power/Engineering',
+    'CGPOWER.NS': 'Power/Engineering',
+    'KRN.NS': 'Power/Engineering',
+    'MAZDOCK.NS': 'Defense',
+    'ZENTEC.NS': 'Defense',
+    'GRSE.NS': 'Defense',
+    'PARAS.NS': 'Defense',
+    'ASTRAMICRO.NS': 'Defense',
+    'DATAPATTNS.NS': 'Defense',
+    'MTARTECH.NS': 'Defense',
+    'IDEAFORGE.NS': 'Defense',
+    'HSCL.NS': 'FMCG/Chemicals',
+    'HFCL.NS': 'FMCG/Chemicals',
+    'BECTORFOOD.NS': 'FMCG/Chemicals',
+    'AEROFLEX.NS': 'FMCG/Chemicals',
+    'SHILCTECH.NS': 'Healthcare',
+    'APOLLO.NS': 'Healthcare'
+  };
+
+  if (localSectorMap[cleanSym]) return localSectorMap[cleanSym];
+  const baseSym = cleanSym.replace('.NS', '');
+  if (localSectorMap[baseSym]) return localSectorMap[baseSym];
+  const suffixed = baseSym + '.NS';
+  if (localSectorMap[suffixed]) return localSectorMap[suffixed];
+
+  // Dynamic heuristic-based categorization based on stock name and symbol
+  const searchStr = `${cleanSym} ${name || ''}`.toLowerCase();
+  
+  if (searchStr.includes('bank') || searchStr.includes('finance') || searchStr.includes('fin ') || searchStr.includes('capital') || searchStr.includes('insurance') || searchStr.includes('venture') || searchStr.includes('invest') || searchStr.includes('wealth')) {
+    return 'Financial Services';
+  }
+  if (searchStr.includes('pharma') || searchStr.includes('health') || searchStr.includes('hospital') || searchStr.includes('medic') || searchStr.includes('biotech') || searchStr.includes('drug') || searchStr.includes('lab') || searchStr.includes('clinic')) {
+    return 'Healthcare/Pharma';
+  }
+  if (searchStr.includes('tech') || searchStr.includes('software') || searchStr.includes('info') || searchStr.includes('digital') || searchStr.includes('telecom') || searchStr.includes('communication') || searchStr.includes('network') || searchStr.includes('system') || searchStr.includes('online')) {
+    return 'Tech & Telecom';
+  }
+  if (searchStr.includes('power') || searchStr.includes('energy') || searchStr.includes('solonics') || searchStr.includes('solar') || searchStr.includes('gas') || searchStr.includes('petro') || searchStr.includes('oil') || searchStr.includes('coal') || searchStr.includes('wind') || searchStr.includes('fuel')) {
+    return 'Energy & Power';
+  }
+  if (searchStr.includes('chem') || searchStr.includes('fertilizer') || searchStr.includes('carbon') || searchStr.includes('acid') || searchStr.includes('basic material')) {
+    return 'Chemicals/Materials';
+  }
+  if (searchStr.includes('steel') || searchStr.includes('iron') || searchStr.includes('metal') || searchStr.includes('wire') || searchStr.includes('copper') || searchStr.includes('aluminum') || searchStr.includes('mining') || searchStr.includes('alloy') || searchStr.includes('gold') || searchStr.includes('silver')) {
+    return 'Metals & Mining';
+  }
+  if (searchStr.includes('infra') || searchStr.includes('construct') || searchStr.includes('cement') || searchStr.includes('build') || searchStr.includes('developer') || searchStr.includes('realty') || searchStr.includes('estate') || searchStr.includes('housing') || searchStr.includes('engineering') || searchStr.includes('industr') || searchStr.includes('engine') || searchStr.includes('project')) {
+    return 'Industrials & Infrastructure';
+  }
+  if (searchStr.includes('defense') || searchStr.includes('aero') || searchStr.includes('ship') || searchStr.includes('marine') || searchStr.includes('dock') || searchStr.includes('weapon') || searchStr.includes('radar')) {
+    return 'Defense & Aerospace';
+  }
+  if (searchStr.includes('food') || searchStr.includes('agro') || searchStr.includes('agri') || searchStr.includes('sugar') || searchStr.includes('fmcg') || searchStr.includes('consumer') || searchStr.includes('retail') || searchStr.includes('fashion') || searchStr.includes('textile') || searchStr.includes('beverage') || searchStr.includes('brew') || searchStr.includes('distill') || searchStr.includes('hotel') || searchStr.includes('resort') || searchStr.includes('travel') || searchStr.includes('restaurant') || searchStr.includes('cafe')) {
+    return 'Consumer/FMCG/Hospitality';
+  }
+  if (searchStr.includes('logistics') || searchStr.includes('shipping') || searchStr.includes('transport') || searchStr.includes('port') || searchStr.includes('cargo') || searchStr.includes('carrier') || searchStr.includes('rail') || searchStr.includes('delivery')) {
+    return 'Logistics & Transport';
+  }
+  
+  const categories = ['Tech & Telecom', 'Financial Services', 'Industrials & Infrastructure', 'Consumer/FMCG/Hospitality', 'Healthcare/Pharma', 'Energy & Power', 'Metals & Mining', 'Chemicals/Materials'];
+  const charCode = cleanSym.charCodeAt(0) || 0;
+  return categories[charCode % categories.length];
+}
 
 function normalizeSector(sector: string): string {
   const s = sector.trim().toLowerCase();
@@ -287,15 +336,17 @@ export async function GET(
     const normalizedSymbolUpper = symbol.toUpperCase();
     const cleanTarget = normalizedSymbolUpper.trim().replace('.NS', '') + '.NS';
     
-    // 1. Determine target stock's sector from map or profile details, and normalize it
-    const rawTargetSector = SECTORS_MAP[cleanTarget] || corporateProfile.sector || 'N/A';
+    // 1. Determine target stock's sector dynamically from symbols catalog or profile details, and normalize it
+    const targetSeed = DEFAULT_SEEDS.find(s => s.symbol.toUpperCase() === cleanTarget);
+    const rawTargetSector = getSectorForSymbol(cleanTarget, targetSeed?.name || corporateProfile.sector);
     const targetSectorNorm = normalizeSector(rawTargetSector);
     
-    // 2. Find all watchlist symbols in the same sector, excluding the target stock itself
+    // 2. Find all watchlist symbols in the same sector dynamically, excluding the target stock itself
     let sectorPeers = PEER_SYMBOLS.filter(s => {
       const formattedSym = (s.includes('.') ? s : `${s}.NS`).toUpperCase();
       if (formattedSym === cleanTarget) return false;
-      const rawSector = SECTORS_MAP[formattedSym] || 'N/A';
+      const peerSeed = DEFAULT_SEEDS.find(p => p.symbol.toUpperCase() === formattedSym);
+      const rawSector = getSectorForSymbol(formattedSym, peerSeed?.name);
       return rawSector !== 'N/A' && normalizeSector(rawSector) === targetSectorNorm;
     });
 

@@ -3,6 +3,12 @@
 import React, { useState, useRef } from 'react';
 import { UploadCloud, CheckCircle, Info, ShieldCheck, AlertCircle, RefreshCw } from 'lucide-react';
 
+const MOCK_PARSED_HOLDINGS = [
+  { symbol: 'VOLTAMP', name: 'Voltamp Transformers', quantity: 15, buyPrice: 4200, isin: 'INE540H01012' },
+  { symbol: 'TDPOWERSYS', name: 'TD Power Systems Ltd', quantity: 80, buyPrice: 380, isin: 'INE124D01014' },
+  { symbol: 'E2E', name: 'E2E Networks Limited', quantity: 25, buyPrice: 940, isin: 'INE980J01021' }
+];
+
 interface ParsedHolding {
   symbol: string;
   name: string;
@@ -28,11 +34,7 @@ export default function CasParser({
     
     setTimeout(() => {
       setIsProcessing(false);
-      const parsedHoldings: ParsedHolding[] = [
-        { symbol: 'VOLTAMP', name: 'Voltamp Transformers', quantity: 15, buyPrice: 4200, isin: 'INE540H01012' },
-        { symbol: 'TDPOWERSYS', name: 'TD Power Systems Ltd', quantity: 80, buyPrice: 380, isin: 'INE124D01014' },
-        { symbol: 'E2E', name: 'E2E Networks Limited', quantity: 25, buyPrice: 940, isin: 'INE980J01021' }
-      ];
+      const parsedHoldings: ParsedHolding[] = MOCK_PARSED_HOLDINGS;
 
       setImportResult(`Successfully parsed "${fileName}". Extracted ${parsedHoldings.length} physical holding blocks matching CDSL/NSDL references.`);
       if (onImportComplete) {
