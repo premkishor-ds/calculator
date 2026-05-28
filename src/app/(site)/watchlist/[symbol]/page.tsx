@@ -788,25 +788,7 @@ const { sentiment, confidence, riseFactors, fallFactors, strengths, risks } = ou
 
 
     
-    let confidence = 50;
-    if (bullishCount >= 4) {
-      sentiment = 'Bullish';
-      confidence = 70 + (bullishCount - 4) * 10;
-    } else if (bearishCount >= 3) {
-      sentiment = 'Bearish';
-      confidence = 65 + (bearishCount - 3) * 10;
-    } else {
-      sentiment = 'Neutral';
-      confidence = 50 + Math.abs(bullishCount - bearishCount) * 8;
-    }
 
-    confidence = Math.min(95, Math.max(45, confidence));
-
-    // Compile Why stock may rise (Bullish) vs fall (Bearish) dynamically with exact parameters
-    const riseFactors = [];
-    const fallFactors = [];
-
-    if (piotroskiResult.score >= 7) {
       riseFactors.push(`Elite Financial Health: Outstanding Piotroski F-Score of ${piotroskiResult.score}/9 indicates superb operational efficiency, profit margins growth, and low default risk.`);
     } else {
       fallFactors.push(`Operational Bottlenecks: Moderate Piotroski F-Score of ${piotroskiResult.score}/9 highlights area of concern in margin expansions or working capital conversion.`);
