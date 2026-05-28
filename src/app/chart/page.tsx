@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
@@ -44,6 +44,7 @@ import { buildAllTags, DEFAULT_CUSTOM_TAGS, CUSTOM_TAG_IDS, type TagDef, type Cu
 import { getBackendApiUrl, getBackendWsUrl } from '@/lib/backend-config';
 import AIMarketIntelligence from '@/components/AIMarketIntelligence';
 import Backtester from '@/components/Backtester';
+import WatchlistSidebar from '@/components/watchlist/WatchlistSidebar';
 import OptionsStrategyBuilder from '@/components/OptionsStrategyBuilder';
 /* Dynamically import the chart so it's client-only (no SSR) */
 const AdvancedChart = dynamic(() => import('@/components/AdvancedChart'), {
@@ -52,7 +53,7 @@ const AdvancedChart = dynamic(() => import('@/components/AdvancedChart'), {
     <div className="flex-1 flex items-center justify-center bg-slate-950 min-h-[300px]">
       <div className="flex flex-col items-center gap-3">
         <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-        <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Initialising Chart Engine…</span>
+        <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Initialising Chart Engineâ€¦</span>
       </div>
     </div>
   ),
@@ -187,7 +188,7 @@ interface WorkspaceTemplate {
   updatedAt: string;
 }
 
-// Lazy getter — evaluated client-side so localhost/prod resolution works correctly after hydration
+// Lazy getter â€” evaluated client-side so localhost/prod resolution works correctly after hydration
 function getApiUrl() { return getBackendApiUrl(); }
 // Evaluated lazily client-side to avoid SSR picking wrong URL
 function getWsUrl() {
@@ -198,12 +199,12 @@ function getWsUrl() {
 // SECTORS_MAP is now imported centrally from '@/utils/symbols'
 
 function TradingTerminalInner() {
-  /* ── Core Theme & Workspace States ────────────────────────── */
+  /* â”€â”€ Core Theme & Workspace States â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   const [theme, setTheme] = useState<'dark' | 'light'>('light');
   const [watchlistStocks, setWatchlistStocks] = useState<StockQuote[]>([]);
   const [livePrices, setLivePrices] = useState<Record<string, number>>({});
   
-  // Floating Toast State — useRef tracks timer to prevent stacking multiple timers
+  // Floating Toast State â€” useRef tracks timer to prevent stacking multiple timers
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const showToast = useCallback((message: string, type: 'success' | 'error' | 'info' = 'success') => {
@@ -297,23 +298,23 @@ function TradingTerminalInner() {
     }
   };
 
-  /* ── Alerts & Sidebar Panel States ────────────────────────── */
+  /* â”€â”€ Alerts & Sidebar Panel States â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   const [showAlertsSidebar, setShowAlertsSidebar] = useState(false);
   const [alertsList, setAlertsList] = useState<ActiveAlert[]>([]);
   const [newAlertCondition, setNewAlertCondition] = useState<ActiveAlert['condition']>('price_above');
   const [newAlertValue, setNewAlertValue] = useState('');
 
-  /* ── Workspace templates States ──────────────────────────── */
+  /* â”€â”€ Workspace templates States â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   const [savedTemplates, setSavedTemplates] = useState<WorkspaceTemplate[]>([]);
   const [newTemplateName, setNewTemplateName] = useState('');
   const [showTemplatesDropdown, setShowTemplatesDropdown] = useState(false);
 
 
-  /* ── Watchlist Screener States ────────────────────────────── */
+  /* â”€â”€ Watchlist Screener States â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   const [screenerSortField, setScreenerSortField] = useState<'symbol' | 'price' | 'changePercent' | 'sma20' | 'sma50' | 'rsi14'>('symbol');
   const [screenerSortDirection, setScreenerSortDirection] = useState<'asc' | 'desc'>('asc');
 
-  /* ── Backtester States ────────────────────────────────────── */
+  /* â”€â”€ Backtester States â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   const [strategyType, setStrategyType] = useState<'emacross' | 'rsi'>('emacross');
   const [backtestRunning, setBacktestRunning] = useState(false);
   const [backtestResults, setBacktestResults] = useState<{
@@ -324,7 +325,7 @@ function TradingTerminalInner() {
     trades: any[];
   } | null>(null);
 
-  /* ── AI Pattern Scanner States ───────────────────────────── */
+  /* â”€â”€ AI Pattern Scanner States â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   const [aiPatterns, setAiPatterns] = useState<Array<{
     timeStr: string;
     pattern: string;
@@ -334,7 +335,7 @@ function TradingTerminalInner() {
   }>>([]);
   const [aiScanning, setAiScanning] = useState(false);
 
-  /* ── Socket Connection & Simulated Feeds ──────────────────── */
+  /* â”€â”€ Socket Connection & Simulated Feeds â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   const wsRef = useRef<WebSocket | null>(null);
 
   useEffect(() => {
@@ -389,7 +390,7 @@ function TradingTerminalInner() {
     };
   }, [showToast]);
 
-  /* ── Fetch Helper Methods ────────────────────────────────── */
+  /* â”€â”€ Fetch Helper Methods â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
   const fetchAlerts = useCallback(async () => {
     try {
@@ -417,7 +418,7 @@ function TradingTerminalInner() {
   }, [fetchAlerts, fetchWorkspaceLayouts]);
 
 
-  /* ── Alerts Side Panel Submissions ────────────────────────── */
+  /* â”€â”€ Alerts Side Panel Submissions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   const handleCreateAlert = async (e: React.FormEvent) => {
     e.preventDefault();
     const val = parseFloat(newAlertValue);
@@ -460,7 +461,7 @@ function TradingTerminalInner() {
     } catch {}
   };
 
-  /* ── Cloud Workspace Templates ───────────────────────────── */
+  /* â”€â”€ Cloud Workspace Templates â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   const handleSaveWorkspaceLayout = async (e: React.FormEvent) => {
     e.preventDefault();
     const name = newTemplateName.trim();
@@ -547,7 +548,7 @@ function TradingTerminalInner() {
     } catch {}
   };
 
-  /* ── Screener Calculations on active watchlist ────────────── */
+  /* â”€â”€ Screener Calculations on active watchlist â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   const watchlistScreenerData = useMemo(() => {
     return watchlistStocks.map(stock => {
       // Deterministic indicators computed on-the-fly from daily price
@@ -588,7 +589,7 @@ function TradingTerminalInner() {
     }
   };
 
-  /* ── Strategy Backtest Loop ───────────────────────────────── */
+  /* â”€â”€ Strategy Backtest Loop â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   const handleRunBacktest = async () => {
     if (!selectedSymbol) return;
     try {
@@ -785,7 +786,7 @@ function TradingTerminalInner() {
     }
   };
 
-  /* ── Candlestick AI Scanner ────────────────────────────────── */
+  /* â”€â”€ Candlestick AI Scanner â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   const handleScanPatterns = async () => {
     if (!selectedSymbol) return;
     try {
@@ -815,7 +816,7 @@ function TradingTerminalInner() {
         if (body <= 0.06 * range && range > 0) {
           found.push({
             timeStr: p.date,
-            pattern: '⚖️ Doji Line',
+            pattern: 'âš–ï¸ Doji Line',
             sentiment: 'Neutral',
             reliability: 'Low',
             close: p.close
@@ -827,7 +828,7 @@ function TradingTerminalInner() {
                  (p.high - Math.max(p.open, p.close) <= 0.15 * body)) {
           found.push({
             timeStr: p.date,
-            pattern: '🔨 Bullish Hammer',
+            pattern: 'ðŸ”¨ Bullish Hammer',
             sentiment: 'Bullish',
             reliability: 'Medium',
             close: p.close
@@ -837,7 +838,7 @@ function TradingTerminalInner() {
         else if (p.close > p.open && prev.close < prev.open && p.open <= prev.close && p.close >= prev.open) {
           found.push({
             timeStr: p.date,
-            pattern: '🟢 Bullish Engulfing',
+            pattern: 'ðŸŸ¢ Bullish Engulfing',
             sentiment: 'Bullish',
             reliability: 'High',
             close: p.close
@@ -845,7 +846,7 @@ function TradingTerminalInner() {
         } else if (p.close < p.open && prev.close > prev.open && p.open >= prev.close && p.close <= prev.open) {
           found.push({
             timeStr: p.date,
-            pattern: '🔴 Bearish Engulfing',
+            pattern: 'ðŸ”´ Bearish Engulfing',
             sentiment: 'Bearish',
             reliability: 'High',
             close: p.close
@@ -862,9 +863,9 @@ function TradingTerminalInner() {
     }
   };
 
-  /* ── Tabbed Bottom Drawer Selector State (Removed) ──────────── */
+  /* â”€â”€ Tabbed Bottom Drawer Selector State (Removed) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
-  /* ── Keyboard Hotkeys Handlers ────────────────────────────── */
+  /* â”€â”€ Keyboard Hotkeys Handlers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const activeElement = document.activeElement?.tagName;
@@ -914,7 +915,7 @@ function TradingTerminalInner() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [activeGridIndex, showToast]);
 
-  /* ── Static tags filtering logic ────────────────────────── */
+  /* â”€â”€ Static tags filtering logic â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   type WatchlistSortOption = 'default' | 'nameAsc' | 'nameDesc' | 'priceDesc' | 'priceAsc' | 'changePctDesc' | 'changePctAsc' | 'changeAbsDesc' | 'changeAbsAsc';
   const [watchlistSort, setWatchlistSort] = useState<WatchlistSortOption>('default');
   const [searchQuery, setSearchQuery] = useState('');
@@ -1325,6 +1326,157 @@ function TradingTerminalInner() {
     return () => { active = false; };
   }, [selectedSymbol]);
 
+  // Watchlist CRUD callbacks for WatchlistSidebar
+  const handleCreateWatchlist = useCallback(async (name: string): Promise<{ ok: boolean; error?: string }> => {
+    const clean = name.trim();
+    if (!clean) return { ok: false, error: 'Name required' };
+    try {
+      const res = await fetch(`${getApiUrl()}/watchlists`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: clean })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setWatchlists(prev => [...prev, data]);
+        setSelectedWatchlist(data.name);
+        showToast(`Watchlist "${data.name}" created`, 'success');
+        return { ok: true };
+      }
+      const err = await res.json().catch(() => null);
+      return { ok: false, error: err?.error || 'Failed to create' };
+    } catch { return { ok: false, error: 'Network error' }; }
+  }, [showToast]);
+
+  const handleRenameWatchlist = useCallback(async (oldName: string, newName: string): Promise<{ ok: boolean; error?: string }> => {
+    const clean = newName.trim();
+    if (!clean) return { ok: false, error: 'Name required' };
+    try {
+      const res = await fetch(`${getApiUrl()}/watchlists/${encodeURIComponent(oldName)}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: clean })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setWatchlists(prev => prev.map(w => w.name === oldName ? { ...w, name: data.name } : w));
+        if (selectedWatchlist === oldName) setSelectedWatchlist(data.name);
+        showToast(`Renamed to "${data.name}"`, 'success');
+        return { ok: true };
+      }
+      const err = await res.json().catch(() => null);
+      return { ok: false, error: err?.error || 'Failed to rename' };
+    } catch { return { ok: false, error: 'Network error' }; }
+  }, [selectedWatchlist, showToast]);
+
+  const handleDeleteWatchlist = useCallback(async (name: string): Promise<boolean> => {
+    try {
+      const res = await fetch(`${getApiUrl()}/watchlists/${encodeURIComponent(name)}`, { method: 'DELETE' });
+      if (res.ok) {
+        setWatchlists(prev => prev.filter(w => w.name !== name));
+        if (selectedWatchlist === name) setSelectedWatchlist('default');
+        showToast(`Watchlist "${name}" deleted`, 'info');
+        return true;
+      }
+    } catch {}
+    return false;
+  }, [selectedWatchlist, showToast]);
+
+  const handleAddStockSidebar = useCallback(async (sym: string): Promise<{ ok: boolean; error?: string }> => {
+    if (watchlistStocks.some(s => s.symbol.toUpperCase() === sym.toUpperCase())) {
+      return { ok: false, error: 'Stock already in watchlist' };
+    }
+    try {
+      const res = await fetch(`/api/watchlist?symbols=${encodeURIComponent(sym)}`);
+      if (!res.ok) return { ok: false, error: 'Ticker not found' };
+      const data = await res.json();
+      if (!data?.length) return { ok: false, error: 'No quote returned' };
+      const stock = data[0];
+      let savedStock = { ...stock, isFavourite: false, tags: [] as string[] };
+      if (!apiFailed) {
+        try {
+          const backendRes = await fetch(`${getApiUrl()}/stocks`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ symbol: stock.symbol, name: stock.name, isFavourite: false, watchlist: selectedWatchlist })
+          });
+          if (backendRes.ok) {
+            const dbStock = await backendRes.json();
+            savedStock = { ...stock, name: dbStock.name, isFavourite: !!dbStock.isFavourite, tags: dbStock.tags ?? [], _id: dbStock._id };
+          } else if (backendRes.status === 409) {
+            return { ok: false, error: 'Stock already in watchlist' };
+          }
+        } catch {}
+      }
+      setWatchlistStocks(prev => [savedStock, ...prev]);
+      selectSymbolRoot(savedStock.symbol);
+      showToast(`${sym.split('.')[0]} added`, 'success');
+      return { ok: true };
+    } catch (err: any) {
+      return { ok: false, error: err.message || 'Failed to add' };
+    }
+  }, [watchlistStocks, apiFailed, selectedWatchlist, selectSymbolRoot, showToast]);
+
+  const handleRemoveStockSidebar = useCallback(async (symbol: string): Promise<boolean> => {
+    try {
+      if (!apiFailed) {
+        const res = await fetch(`${getApiUrl()}/stocks/${encodeURIComponent(symbol)}?watchlist=${encodeURIComponent(selectedWatchlist)}`, { method: 'DELETE' });
+        if (!res.ok) throw new Error();
+      }
+      const next = watchlistStocks.filter(s => s.symbol.toUpperCase() !== symbol.toUpperCase());
+      setWatchlistStocks(next);
+      if (selectedSymbol.toUpperCase() === symbol.toUpperCase()) {
+        selectSymbolRoot(next.length > 0 ? next[0].symbol : '');
+      }
+      showToast(`${symbol.split('.')[0]} removed`, 'info');
+      return true;
+    } catch {
+      showToast('Failed to remove stock', 'error');
+      return false;
+    }
+  }, [apiFailed, selectedWatchlist, watchlistStocks, selectedSymbol, selectSymbolRoot, showToast]);
+
+  const handleToggleTagSidebar = useCallback(async (sym: string, tagId: string) => {
+    const stock = watchlistStocks.find(s => s.symbol === sym);
+    if (!stock) return;
+    const current = stock.tags ?? [];
+    const next = current.includes(tagId) ? current.filter(t => t !== tagId) : [...current, tagId];
+    setWatchlistStocks(prev => prev.map(s => s.symbol === sym ? { ...s, tags: next } : s));
+    if (!apiFailed) {
+      try {
+        await fetch(`${getApiUrl()}/stocks/${encodeURIComponent(sym)}?watchlist=${encodeURIComponent(selectedWatchlist)}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tags: next, watchlist: selectedWatchlist })
+        });
+      } catch {
+        setWatchlistStocks(prev => prev.map(s => s.symbol === sym ? { ...s, tags: current } : s));
+      }
+    }
+  }, [watchlistStocks, apiFailed, selectedWatchlist]);
+
+  const [sidebarSuggestions, setSidebarSuggestions] = useState<{symbol:string;name:string;exchange:string}[]>([]);
+  const [sidebarSuggestLoading, setSidebarSuggestLoading] = useState(false);
+  const sidebarSuggestTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const fetchSidebarSuggestions = useCallback((query: string) => {
+    if (sidebarSuggestTimer.current) clearTimeout(sidebarSuggestTimer.current);
+    if (!query.trim()) { setSidebarSuggestions([]); return; }
+    setSidebarSuggestLoading(true);
+    sidebarSuggestTimer.current = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/search?q=${encodeURIComponent(query.trim())}`);
+        if (res.ok) setSidebarSuggestions(await res.json());
+      } catch { setSidebarSuggestions([]); }
+      finally { setSidebarSuggestLoading(false); }
+    }, 300);
+  }, []);
+
+  const clearSidebarSuggestions = useCallback(() => {
+    setSidebarSuggestions([]);
+    if (sidebarSuggestTimer.current) clearTimeout(sidebarSuggestTimer.current);
+  }, []);
+
   const filteredWatchlist = useMemo(() => {
     let filtered = watchlistStocks.filter(s => {
       const matchesSearch = s.symbol.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -1372,7 +1524,7 @@ function TradingTerminalInner() {
   return (
     <div className="min-h-dvh lg:h-dvh lg:overflow-hidden bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans" onClick={() => setTagPopoverSym(null)}>
       
-      {/* ── Header ────────────────────────────────────────────── */}
+      {/* â”€â”€ Header â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <header className="flex flex-wrap items-center justify-between gap-3 px-4 sm:px-6 py-2.5 bg-white dark:bg-slate-950 border-b border-slate-200 dark:border-slate-850 shadow-sm shrink-0 z-40">
         <div className="flex items-center gap-3 sm:gap-4 min-w-0">
           <Link href="/watchlist" className="group p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-all text-slate-400 hover:text-slate-900 dark:hover:text-white touch-manipulation shrink-0">
@@ -1395,7 +1547,7 @@ function TradingTerminalInner() {
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500" />
           <input
             type="text"
-            placeholder="Search ticker (e.g. INFY, TATAMOTORS)…"
+            placeholder="Search ticker (e.g. INFY, TATAMOTORS)â€¦"
             value={terminalSearch}
             onChange={e => setTerminalSearch(e.target.value)}
             disabled={terminalSearching}
@@ -1448,7 +1600,7 @@ function TradingTerminalInner() {
         </div>
       </header>
 
-      {/* ── Main Viewport Panel Grid & Drawer ─────────────────── */}
+      {/* â”€â”€ Main Viewport Panel Grid & Drawer â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <main className="flex-1 flex flex-col lg:grid lg:grid-cols-12 lg:overflow-hidden min-h-0 relative">
         
         {/* Mobile View Toggle Tabs */}
@@ -1565,7 +1717,7 @@ function TradingTerminalInner() {
                             onClick={(e) => handleDeleteWorkspaceLayout(tmpl.name, e)}
                             className="text-slate-400 hover:text-red-500 transition-colors p-0.5 rounded"
                           >
-                            ✕
+                            âœ•
                           </button>
                         </div>
                       ))}
@@ -1681,7 +1833,7 @@ function TradingTerminalInner() {
                     : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-300 border border-transparent'
                 }`}
               >
-                📋 Watchlist
+                ðŸ“‹ Watchlist
               </button>
               <button
                 type="button"
@@ -1692,7 +1844,7 @@ function TradingTerminalInner() {
                     : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-300 border border-transparent'
                 }`}
               >
-                🏛️ Fundamentals
+                ðŸ›ï¸ Fundamentals
               </button>
             </div>
             <button
@@ -1700,329 +1852,43 @@ function TradingTerminalInner() {
               onClick={() => setSidebarSize(sidebarSize === 'wide' ? 'normal' : 'wide')}
               className="hidden lg:flex px-2 py-1 text-[9px] font-extrabold text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 bg-slate-100 dark:bg-slate-905 border border-slate-200 dark:border-slate-800 rounded-lg items-center gap-1 transition-all"
             >
-              <span>{sidebarSize === 'wide' ? 'Narrow ➔' : '« Wide'}</span>
+              <span>{sidebarSize === 'wide' ? 'Narrow âž”' : 'Â« Wide'}</span>
             </button>
           </div>
 
           {/* Render Watchlist panel content */}
           {sidebarMode === 'watchlist' ? (
-            <>
-              <div className="p-4 border-b border-slate-100 dark:border-slate-850 shrink-0">
-                
-                {/* Watchlists Switcher panel */}
-                <div className="mb-4 bg-slate-50 dark:bg-slate-900/60 p-3 rounded-2xl border border-slate-150 dark:border-slate-800/80">
-                  <div className="flex justify-between items-center mb-2">
-                    <label className="text-[9px] font-extrabold text-slate-450 dark:text-slate-500 uppercase tracking-widest">Active Workspace</label>
-                    <form 
-                      onSubmit={async (e) => {
-                        e.preventDefault();
-                        if (!newWatchlistName.trim()) return;
-                        setWlError('');
-                        try {
-                          const res = await fetch(`${getApiUrl()}/watchlists`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ name: newWatchlistName.trim() })
-                          });
-                          if (res.ok) {
-                            const data = await res.json();
-                            setWatchlists(prev => [...prev, data]);
-                            setSelectedWatchlist(data.name);
-                            setNewWatchlistName('');
-                          } else {
-                            const err = await res.json();
-                            setWlError(err.error || 'Error');
-                          }
-                        } catch {
-                          setWlError('Error');
-                        }
-                      }} 
-                      className="flex gap-1 items-center"
-                    >
-                      <input
-                        type="text"
-                        placeholder="+ New..."
-                        value={newWatchlistName}
-                        onChange={e => { setNewWatchlistName(e.target.value); setWlError(''); }}
-                        className="w-16 px-1.5 py-0.5 bg-white dark:bg-slate-950 border border-slate-250 dark:border-slate-800 rounded-lg text-[9px] font-bold text-slate-800 dark:text-slate-100 placeholder:text-slate-500 focus:outline-none animate-fade-in"
-                      />
-                    </form>
-                  </div>
-
-                  {wlError && <p className="text-[8px] text-red-500 font-extrabold mb-1">{wlError}</p>}
-
-                  <div className="flex flex-wrap gap-1 max-h-24 overflow-y-auto scrollbar-thin">
-                    {watchlists.map(wl => {
-                      const active = selectedWatchlist === wl.name;
-                      return (
-                        <div
-                          key={wl.name}
-                          onClick={() => { setSelectedWatchlist(wl.name); setActiveTagFilter('all'); }}
-                          className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[9px] font-bold border transition-all cursor-pointer select-none ${
-                            active
-                              ? 'bg-blue-500/10 border-blue-500/30 text-blue-655 dark:text-blue-400 font-black shadow-sm'
-                              : 'bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-850 text-slate-500 hover:border-slate-300 dark:hover:border-slate-800'
-                          }`}
-                        >
-                          <span className="truncate max-w-[80px]">{wl.name === 'default' ? '🏛️ Institutional' : wl.name}</span>
-                          {!wl.isDefault && wl.name !== 'default' && (
-                            <button
-                              type="button"
-                              onClick={async (e) => {
-                                e.stopPropagation();
-                                if (!window.confirm(`Delete watchlist "${wl.name}"?`)) return;
-                                try {
-                                  const res = await fetch(`${getApiUrl()}/watchlists/${encodeURIComponent(wl.name)}`, { method: 'DELETE' });
-                                  if (res.ok) {
-                                    setWatchlists(prev => prev.filter(w => w.name !== wl.name));
-                                    if (selectedWatchlist === wl.name) setSelectedWatchlist('default');
-                                  }
-                                } catch {}
-                              }}
-                              className="text-slate-400 hover:text-red-500 transition-colors ml-0.5 shrink-0"
-                            >
-                              ✕
-                            </button>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                <h2 className="text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-3 flex items-center gap-2 select-none">
-                  <Layers className="w-3.5 h-3.5 text-blue-500" /> Watchlist List
-                  <button
-                    type="button"
-                    onClick={() => { setShowAddModal(true); setAddModalError(''); setAddSymbolInput(''); }}
-                    className="ml-auto flex items-center gap-1 px-2 py-1 bg-blue-500/10 border border-blue-500/20 text-blue-600 dark:text-blue-455 text-[9px] font-extrabold rounded-lg hover:bg-blue-500/20 transition-all"
-                  >
-                    <Plus className="w-2.5 h-2.5" /> ADD
-                  </button>
-                </h2>
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 dark:text-slate-500" />
-                    <input
-                      id="watchlist-filter-input"
-                      type="text"
-                      placeholder="Filter stocks (Press Space)…"
-                      value={searchQuery}
-                      onChange={e => setSearchQuery(e.target.value)}
-                      className="w-full pl-9 pr-4 py-2 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-blue-500/50 rounded-xl text-xs font-bold text-slate-800 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-600 focus:outline-none transition-all"
-                    />
-                  </div>
-                  <select
-                    value={watchlistSort}
-                    onChange={e => setWatchlistSort(e.target.value as any)}
-                    className="px-2 py-2 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-400 focus:outline-none cursor-pointer shrink-0"
-                    title="Sort Watchlist"
-                  >
-                    <option value="default">Default</option>
-                    <option value="nameAsc">Name (A-Z)</option>
-                    <option value="nameDesc">Name (Z-A)</option>
-                    <option value="priceDesc">Price (High-Low)</option>
-                    <option value="priceAsc">Price (Low-High)</option>
-                    <option value="changePctDesc">% Change (High-Low)</option>
-                    <option value="changePctAsc">% Change (Low-High)</option>
-                    <option value="changeAbsDesc">Change (High-Low)</option>
-                    <option value="changeAbsAsc">Change (Low-High)</option>
-                  </select>
-                </div>
-
-                {/* Tag Filters */}
-                <div className="mt-3 flex flex-wrap gap-1">
-                  <button
-                    type="button"
-                    onClick={() => setActiveTagFilter('all')}
-                    className={`px-2 py-0.5 rounded-full text-[9px] font-extrabold border transition-all ${
-                      activeTagFilter === 'all'
-                        ? 'bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-white border-slate-300 dark:border-slate-600 shadow-sm'
-                        : 'bg-transparent text-slate-500 border-slate-200 dark:border-slate-850 hover:border-slate-400 dark:hover:border-slate-600'
-                    }`}
-                  >
-                    All ({watchlistStocks.length})
-                  </button>
-                  {allTags.map((tag: TagDef) => {
-                    const count = watchlistStocks.filter(s => (s.tags ?? []).includes(tag.id)).length;
-                    if (count === 0 && activeTagFilter !== tag.id) return null;
-                    const isCustom = CUSTOM_TAG_IDS.includes(tag.id as typeof CUSTOM_TAG_IDS[number]);
-                    const raw = isCustom ? customTagRaw.find(t => t.tagId === tag.id) : null;
-                    return (
-                      <div key={tag.id} className="flex items-center gap-0.5">
-                        <button
-                          type="button"
-                          onClick={() => setActiveTagFilter(activeTagFilter === tag.id ? 'all' : tag.id)}
-                          className={`px-2 py-0.5 rounded-full text-[9px] font-extrabold border transition-all ${
-                            activeTagFilter === tag.id ? 'opacity-100' : 'opacity-60 hover:opacity-90'
-                          } ${
-                            !raw
-                              ? (activeTagFilter === tag.id
-                                  ? tag.color
-                                  : 'bg-transparent text-slate-500 border-slate-200 dark:border-slate-850 hover:border-slate-400 dark:hover:border-slate-600')
-                              : ''
-                          }`}
-                          style={raw ? {
-                            backgroundColor: raw.color + '25',
-                            color: raw.color,
-                            borderColor: raw.color + '60',
-                          } : {}}
-                        >
-                          {tag.label} {count > 0 && `(${count})`}
-                        </button>
-                        {isCustom && (
-                          <button
-                            type="button"
-                            onClick={e => { e.stopPropagation(); const r = customTagRaw.find(t => t.tagId === tag.id)!; setEditingTag(r); setEditLabel(r.label); setEditColor(r.color); }}
-                            className="text-slate-400 hover:text-slate-650 transition-colors text-[9px] leading-none"
-                          >✎</button>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Scrollable list items */}
-              <div className="flex-1 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-900/60 min-h-0">
-                {watchlistLoading ? (
-                  <div className="flex flex-col divide-y divide-slate-100 dark:divide-slate-900/60 animate-pulse">
-                    {[...Array(5)].map((_, idx) => (
-                      <div key={idx} className="px-4 py-3 flex items-center justify-between gap-3 border-l-4 border-transparent">
-                        <div className="flex-1">
-                          <div className="h-3.5 bg-slate-200 dark:bg-slate-800 rounded-md w-16 mb-1.5" />
-                          <div className="h-2.5 bg-slate-100 dark:bg-slate-900 rounded-md w-24" />
-                        </div>
-                        <div className="text-right">
-                          <div className="h-3.5 bg-slate-200 dark:bg-slate-800 rounded-md w-12 ml-auto mb-1.5" />
-                          <div className="h-2.5 bg-slate-100 dark:bg-slate-900 rounded-md w-10 ml-auto" />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : filteredWatchlist.length > 0 ? (
-                  filteredWatchlist.map(stock => {
-                    const active = stock.symbol === selectedSymbol;
-                    const positive = stock.changePercent >= 0;
-                    return (
-                      <div
-                        key={stock.symbol}
-                        onClick={() => {
-                          selectSymbolRoot(stock.symbol);
-                          if (window.innerWidth < 1024) setMobileViewTab('chart');
-                        }}
-                        className={`w-full text-left px-4 py-3 flex items-center justify-between gap-3 transition-all border-l-4 touch-manipulation cursor-pointer group/item ${
-                          active ? 'bg-slate-50 dark:bg-slate-900 border-blue-550 dark:border-blue-500 shadow-sm' : 'hover:bg-slate-100/50 dark:hover:bg-slate-905 border-transparent'
-                        }`}
-                      >
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-1.5">
-                            <span className={`text-xs font-black ${active ? 'text-blue-600 dark:text-blue-400' : 'text-slate-800 dark:text-slate-100'}`}>
-                              {stock.symbol.split('.')[0]}
-                            </span>
-                            <span className="text-[9px] text-slate-400 dark:text-slate-600 font-bold">{stock.symbol.split('.')[1]}</span>
-                          </div>
-                          <p className="text-[10px] text-slate-500 truncate max-w-[130px] mt-0.5">
-                            {stock.name}
-                          </p>
-                          {/* Tag pills */}
-                          {(stock.tags ?? []).length > 0 && (
-                            <div className="flex flex-wrap gap-0.5 mt-1">
-                              {(stock.tags ?? []).map(tid => {
-                                const td = tagMap[tid];
-                                if (!td) return null;
-                                return td.custom ? (
-                                  <span key={tid} className="px-1.5 py-0 rounded-full text-[8px] font-extrabold border"
-                                    style={{ backgroundColor: td.dot + '25', color: td.dot, borderColor: td.dot + '60' }}>
-                                    {td.label}
-                                  </span>
-                                ) : (
-                                  <span key={tid} className={`px-1.5 py-0 rounded-full text-[8px] font-extrabold border ${td.color}`}>
-                                    {td.label}
-                                  </span>
-                                );
-                              })}
-                            </div>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-2 shrink-0">
-                          <div className="text-right">
-                            <div className="text-xs font-black text-slate-900 dark:text-white font-mono">₹{(livePrices[stock.symbol] || stock.price).toFixed(0)}</div>
-                            <span className={`inline-flex items-center gap-1 text-[9px] font-extrabold px-1.5 py-0.5 rounded mt-0.5 ${
-                              positive ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-red-500/10 text-red-500 dark:text-red-400'
-                            }`}>
-                              <span>{positive ? '+' : ''}{stock.changePercent.toFixed(1)}%</span>
-                              <span className="opacity-60 font-semibold border-l border-current pl-1 ml-0.5">
-                                {positive ? '+' : ''}{stock.change.toFixed(1)}
-                              </span>
-                            </span>
-                          </div>
-                          
-                          {/* Hover Actions */}
-                          <div className="flex items-center gap-1 opacity-0 group-hover/item:opacity-100 transition-opacity relative">
-                            <button
-                              type="button"
-                              onClick={e => { e.stopPropagation(); setTagPopoverSym(tagPopoverSym === stock.symbol ? null : stock.symbol); }}
-                              className="p-1 rounded-lg border bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-550 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/15 transition-all"
-                            >
-                              <Plus className="w-3 h-3" />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={(e) => handleDeleteStock(stock.symbol, e)}
-                              className="p-1 rounded-lg border bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-550 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/15 transition-all"
-                            >
-                              <Trash2 className="w-3 h-3" />
-                            </button>
-
-                            {/* Tags list popover */}
-                            {tagPopoverSym === stock.symbol && (
-                              <div
-                                className="absolute right-0 top-7 z-50 w-52 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-2xl p-2"
-                                onClick={e => e.stopPropagation()}
-                              >
-                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2 px-1">Assign Tag</p>
-                                <div className="flex flex-col gap-0.5">
-                                  {allTags.map((tag: TagDef) => {
-                                    const isActive = (stock.tags ?? []).includes(tag.id);
-                                    return tag.custom ? (
-                                      <button
-                                        key={tag.id}
-                                        type="button"
-                                        onClick={e => handleToggleTag(stock.symbol, tag.id, e)}
-                                        className="flex items-center gap-2 px-2 py-1.5 rounded-lg text-[10px] font-bold text-left hover:bg-slate-50 dark:hover:bg-slate-800/80 transition-all"
-                                        style={isActive ? { backgroundColor: tag.dot + '20', color: tag.dot } : {}}
-                                      >
-                                        <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: isActive ? tag.dot : '#64748b' }} />
-                                        {tag.label}
-                                        {isActive && <span className="ml-auto text-[8px]">✓</span>}
-                                      </button>
-                                    ) : (
-                                      <button
-                                        key={tag.id}
-                                        type="button"
-                                        onClick={e => handleToggleTag(stock.symbol, tag.id, e)}
-                                        className={`flex items-center gap-2 px-2 py-1.5 rounded-lg text-[10px] font-bold text-left hover:bg-slate-50 dark:hover:bg-slate-800/80 transition-all ${isActive ? tag.color : ''}`}
-                                      >
-                                        <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: isActive ? tag.dot : '#64748b' }} />
-                                        {tag.label}
-                                        {isActive && <span className="ml-auto text-[8px]">✓</span>}
-                                      </button>
-                                    );
-                                  })}
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })
-                ) : (
-                  <div className="p-8 text-center text-slate-500 text-xs font-semibold">No matching watchlist stocks found.</div>
-                )}
-              </div>
-            </>
+            <WatchlistSidebar
+              watchlists={watchlists}
+              selectedWatchlist={selectedWatchlist}
+              onSelectWatchlist={(name) => { setSelectedWatchlist(name); setActiveTagFilter('all'); }}
+              onCreateWatchlist={handleCreateWatchlist}
+              onRenameWatchlist={handleRenameWatchlist}
+              onDeleteWatchlist={handleDeleteWatchlist}
+              watchlistStocks={watchlistStocks}
+              filteredWatchlist={filteredWatchlist}
+              watchlistLoading={watchlistLoading}
+              livePrices={livePrices}
+              searchQuery={searchQuery}
+              onSearchChange={setSearchQuery}
+              activeTagFilter={activeTagFilter}
+              onSetTagFilter={setActiveTagFilter}
+              watchlistSort={watchlistSort}
+              onSortChange={setWatchlistSort}
+              selectedSymbol={selectedSymbol}
+              onSelectSymbol={selectSymbolRoot}
+              onAddStock={handleAddStockSidebar}
+              onRemoveStock={handleRemoveStockSidebar}
+              onToggleTag={handleToggleTagSidebar}
+              suggestions={sidebarSuggestions}
+              suggestLoading={sidebarSuggestLoading}
+              onFetchSuggestions={fetchSidebarSuggestions}
+              onClearSuggestions={clearSidebarSuggestions}
+              customTagRaw={customTagRaw}
+              onEditCustomTag={(tag) => { setEditingTag(tag); setEditLabel(tag.label); setEditColor(tag.color); }}
+              showToast={showToast}
+              onMobileSwitchToChart={() => setMobileViewTab('chart')}
+            />
           ) : (
             
             // FUNDAMENTALS PANEL (One-stop research station)
@@ -2060,12 +1926,12 @@ function TradingTerminalInner() {
                   {/* Sub-tab selection row */}
                   <div className="flex items-center border-b border-slate-100 dark:border-slate-900 bg-slate-50 dark:bg-slate-950 px-2 py-1 shrink-0 overflow-x-auto scrollbar-none gap-0.5">
                     {[
-                      { id: 'overview', label: '🏛️ Overview' },
-                      { id: 'dcf', label: '🎯 DCF Target' },
-                      { id: 'financials', label: '📋 Statement Tables' },
-                      { id: 'news', label: '📰 News & Peers' },
-                      { id: 'backtest', label: '🧪 Strategy Backtest' },
-                      { id: 'options', label: '🎭 Options Strategist' }
+                      { id: 'overview', label: 'ðŸ›ï¸ Overview' },
+                      { id: 'dcf', label: 'ðŸŽ¯ DCF Target' },
+                      { id: 'financials', label: 'ðŸ“‹ Statement Tables' },
+                      { id: 'news', label: 'ðŸ“° News & Peers' },
+                      { id: 'backtest', label: 'ðŸ§ª Strategy Backtest' },
+                      { id: 'options', label: 'ðŸŽ­ Options Strategist' }
                     ].map(tab => (
                       <button
                         key={tab.id}
@@ -2088,26 +1954,26 @@ function TradingTerminalInner() {
                       <div className="grid grid-cols-2 gap-3">
                         <div className="bg-slate-50 dark:bg-slate-900/60 p-2.5 rounded-xl border border-slate-150 dark:border-slate-800/80">
                           <span className="text-slate-400 font-extrabold uppercase block tracking-wider text-[8px] mb-0.5">Sector</span>
-                          <span className="font-extrabold text-slate-800 dark:text-slate-200 block truncate">{deepData?.profile?.sector || '—'}</span>
+                          <span className="font-extrabold text-slate-800 dark:text-slate-200 block truncate">{deepData?.profile?.sector || 'â€”'}</span>
                         </div>
                         <div className="bg-slate-50 dark:bg-slate-900/60 p-2.5 rounded-xl border border-slate-150 dark:border-slate-800/80">
                           <span className="text-slate-400 font-extrabold uppercase block tracking-wider text-[8px] mb-0.5">Industry</span>
-                          <span className="font-extrabold text-slate-800 dark:text-slate-200 block truncate">{deepData?.profile?.industry || '—'}</span>
+                          <span className="font-extrabold text-slate-800 dark:text-slate-200 block truncate">{deepData?.profile?.industry || 'â€”'}</span>
                         </div>
                       </div>
 
                       <div className="grid grid-cols-2 gap-3">
                         <div className="bg-slate-50 dark:bg-slate-900/60 p-2.5 rounded-xl border border-slate-150 dark:border-slate-800/80">
                           <span className="text-slate-400 font-extrabold uppercase block tracking-wider text-[8px] mb-0.5">P/E Ratio</span>
-                          <span className="font-extrabold text-slate-850 dark:text-slate-205 block font-mono">{selectedStock.pe > 0 ? selectedStock.pe.toFixed(1) : '—'}</span>
+                          <span className="font-extrabold text-slate-850 dark:text-slate-205 block font-mono">{selectedStock.pe > 0 ? selectedStock.pe.toFixed(1) : 'â€”'}</span>
                         </div>
                         <div className="bg-slate-50 dark:bg-slate-900/60 p-2.5 rounded-xl border border-slate-150 dark:border-slate-800/80">
                           <span className="text-slate-400 font-extrabold uppercase block tracking-wider text-[8px] mb-0.5">ROE</span>
-                          <span className="font-extrabold text-slate-850 dark:text-slate-205 block font-mono">{deepData?.ratios?.roe ? `${deepData.ratios.roe.toFixed(1)}%` : '—'}</span>
+                          <span className="font-extrabold text-slate-850 dark:text-slate-205 block font-mono">{deepData?.ratios?.roe ? `${deepData.ratios.roe.toFixed(1)}%` : 'â€”'}</span>
                         </div>
                         <div className="bg-slate-50 dark:bg-slate-900/60 p-2.5 rounded-xl border border-slate-150 dark:border-slate-800/80">
                           <span className="text-slate-400 font-extrabold uppercase block tracking-wider text-[8px] mb-0.5">Debt/Equity</span>
-                          <span className="font-extrabold text-slate-850 dark:text-slate-205 block font-mono">{deepData?.ratios?.debtToEquity !== undefined ? (deepData.ratios.debtToEquity / 100).toFixed(2) : '—'}</span>
+                          <span className="font-extrabold text-slate-850 dark:text-slate-205 block font-mono">{deepData?.ratios?.debtToEquity !== undefined ? (deepData.ratios.debtToEquity / 100).toFixed(2) : 'â€”'}</span>
                         </div>
                         <div className="bg-slate-50 dark:bg-slate-900/60 p-2.5 rounded-xl border border-slate-150 dark:border-slate-800/80">
                           <span className="text-slate-400 font-extrabold uppercase block tracking-wider text-[8px] mb-0.5">Div Yield</span>
@@ -2119,7 +1985,7 @@ function TradingTerminalInner() {
                         <div className="bg-slate-50 dark:bg-slate-900/60 p-3 rounded-xl border border-slate-150 dark:border-slate-800/80">
                           <div className="flex justify-between items-center text-[8px] text-slate-400 font-extrabold uppercase tracking-widest mb-1.5">
                             <span>52-Week Range</span>
-                            <span className="font-mono">₹{deepData.ratios.fiftyTwoWeekLow.toFixed(0)} - ₹{deepData.ratios.fiftyTwoWeekHigh.toFixed(0)}</span>
+                            <span className="font-mono">â‚¹{deepData.ratios.fiftyTwoWeekLow.toFixed(0)} - â‚¹{deepData.ratios.fiftyTwoWeekHigh.toFixed(0)}</span>
                           </div>
                           <div className="w-full bg-slate-200 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden relative">
                             <div 
@@ -2143,10 +2009,10 @@ function TradingTerminalInner() {
                       <div className="bg-slate-50 dark:bg-slate-900/60 p-3.5 rounded-2xl border border-slate-150 dark:border-slate-800/80 text-center">
                         <span className="text-slate-400 font-black uppercase block tracking-widest text-[8px] mb-1.5">IMPLIED COMPASS CAGR</span>
                         <span className="text-2xl font-black text-blue-600 dark:text-blue-400 block tracking-tight font-mono">
-                          {impliedGrowth !== undefined ? `${impliedGrowth.toFixed(2)}%` : '—'}
+                          {impliedGrowth !== undefined ? `${impliedGrowth.toFixed(2)}%` : 'â€”'}
                         </span>
                         <p className="text-[9px] text-slate-400 mt-2 leading-relaxed font-semibold">
-                          To justify spot price <span className="font-extrabold font-mono">₹{selectedStock.price}</span>, this enterprise must compound EPS at <span className="font-extrabold text-blue-600 dark:text-blue-400 font-mono">{impliedGrowth.toFixed(2)}%</span> annually.
+                          To justify spot price <span className="font-extrabold font-mono">â‚¹{selectedStock.price}</span>, this enterprise must compound EPS at <span className="font-extrabold text-blue-600 dark:text-blue-400 font-mono">{impliedGrowth.toFixed(2)}%</span> annually.
                         </p>
                       </div>
 
@@ -2206,8 +2072,8 @@ function TradingTerminalInner() {
                                   {rows.map((r: QuarterlyItem, idx: number) => (
                                     <tr key={idx} className="hover:bg-slate-100 dark:hover:bg-slate-900/50">
                                       <td className="py-1.5 px-2 font-bold font-sans text-slate-700 dark:text-slate-350">{r.date}</td>
-                                      <td className="py-1.5 px-2 text-right">₹{(r.revenue / 10000000).toFixed(1)}Cr</td>
-                                      <td className="py-1.5 px-2 text-right text-emerald-600">₹{(r.netIncome / 10000000).toFixed(1)}Cr</td>
+                                      <td className="py-1.5 px-2 text-right">â‚¹{(r.revenue / 10000000).toFixed(1)}Cr</td>
+                                      <td className="py-1.5 px-2 text-right text-emerald-600">â‚¹{(r.netIncome / 10000000).toFixed(1)}Cr</td>
                                     </tr>
                                   ))}
                                 </tbody>
@@ -2230,8 +2096,8 @@ function TradingTerminalInner() {
                                   {rows.map((r: ProfitLossItem, idx: number) => (
                                     <tr key={idx} className="hover:bg-slate-100 dark:hover:bg-slate-900/50">
                                       <td className="py-1.5 px-2 font-bold font-sans text-slate-700 dark:text-slate-350">{r.date}</td>
-                                      <td className="py-1.5 px-2 text-right">₹{(r.revenue / 10000000).toFixed(1)}Cr</td>
-                                      <td className="py-1.5 px-2 text-right text-emerald-600">₹{(r.netIncome / 10000000).toFixed(1)}Cr</td>
+                                      <td className="py-1.5 px-2 text-right">â‚¹{(r.revenue / 10000000).toFixed(1)}Cr</td>
+                                      <td className="py-1.5 px-2 text-right text-emerald-600">â‚¹{(r.netIncome / 10000000).toFixed(1)}Cr</td>
                                     </tr>
                                   ))}
                                 </tbody>
@@ -2254,8 +2120,8 @@ function TradingTerminalInner() {
                                   {rows.map((r: BalanceSheetItem, idx: number) => (
                                     <tr key={idx} className="hover:bg-slate-100 dark:hover:bg-slate-900/50">
                                       <td className="py-1.5 px-2 font-bold font-sans text-slate-700 dark:text-slate-350">{r.date}</td>
-                                      <td className="py-1.5 px-2 text-right">₹{(r.totalAssets / 10000000).toFixed(1)}Cr</td>
-                                      <td className="py-1.5 px-2 text-right text-indigo-500">₹{(r.equity / 10000000).toFixed(1)}Cr</td>
+                                      <td className="py-1.5 px-2 text-right">â‚¹{(r.totalAssets / 10000000).toFixed(1)}Cr</td>
+                                      <td className="py-1.5 px-2 text-right text-indigo-500">â‚¹{(r.equity / 10000000).toFixed(1)}Cr</td>
                                     </tr>
                                   ))}
                                 </tbody>
@@ -2278,8 +2144,8 @@ function TradingTerminalInner() {
                                 <span className="text-slate-800 dark:text-slate-100 block">{p.symbol.replace('.NS','')}</span>
                               </div>
                               <div className="text-right font-mono">
-                                <span className="block text-slate-700 dark:text-slate-350">₹{p.price.toFixed(0)}</span>
-                                <span className="text-[7.5px] text-slate-400 block">P/E: {p.pe > 0 ? p.pe.toFixed(1) : '—'}</span>
+                                <span className="block text-slate-700 dark:text-slate-350">â‚¹{p.price.toFixed(0)}</span>
+                                <span className="text-[7.5px] text-slate-400 block">P/E: {p.pe > 0 ? p.pe.toFixed(1) : 'â€”'}</span>
                               </div>
                             </div>
                           ))}
@@ -2313,7 +2179,7 @@ function TradingTerminalInner() {
         </section>
       </main>
 
-      {/* ── Active Alerts Sidebar slider drawer ────────────────── */}
+      {/* â”€â”€ Active Alerts Sidebar slider drawer â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       {showAlertsSidebar && (
         <div className="fixed inset-y-0 right-0 z-50 w-80 bg-white dark:bg-slate-950 border-l border-slate-200 dark:border-slate-800 shadow-2xl flex flex-col animate-slide-left p-4">
           <div className="flex justify-between items-center border-b border-slate-100 dark:border-slate-850 pb-2 mb-4 shrink-0 select-none">
@@ -2404,7 +2270,7 @@ function TradingTerminalInner() {
         </div>
       )}
 
-      {/* ── Add Stock modal dialog ────────────────────────────── */}
+      {/* â”€â”€ Add Stock modal dialog â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       {showAddModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in" onClick={() => setShowAddModal(false)}>
           <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 w-full max-w-sm shadow-2xl animate-scale-up" onClick={e => e.stopPropagation()}>
@@ -2496,7 +2362,7 @@ function TradingTerminalInner() {
                 maxLength={24}
                 value={editLabel}
                 onChange={e => setEditLabel(e.target.value)}
-                placeholder="Tag name…"
+                placeholder="Tag nameâ€¦"
                 className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 focus:border-blue-500/50 rounded-xl text-xs font-semibold text-slate-100 placeholder:text-slate-600 focus:outline-none"
               />
               <div className="flex items-center gap-3">
@@ -2516,7 +2382,7 @@ function TradingTerminalInner() {
                   onClick={handleSaveCustomTag}
                   className="flex-1 py-2.5 bg-blue-500 hover:bg-blue-600 disabled:bg-blue-500/40 text-white rounded-xl text-xs font-extrabold transition-all cursor-pointer"
                 >
-                  {editSaving ? 'Saving…' : 'Save'}
+                  {editSaving ? 'Savingâ€¦' : 'Save'}
                 </button>
                 <button
                   type="button"
@@ -2551,7 +2417,7 @@ export default function TradingTerminalPage() {
       <div className="min-h-dvh bg-slate-950 flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
           <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-          <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Initialising Terminal…</span>
+          <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Initialising Terminalâ€¦</span>
         </div>
       </div>
     }>
