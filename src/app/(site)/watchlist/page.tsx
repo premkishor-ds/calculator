@@ -22,6 +22,7 @@ import { getBackendApiUrl } from '@/lib/backend-config';
 import PortfolioTracker from '@/components/PortfolioTracker';
 import RatioScreener from '@/components/RatioScreener';
 import CasParser from '@/components/CasParser';
+import WatchlistTest from '@/components/WatchlistTest';
 
 interface StockData {
   symbol: string;
@@ -827,6 +828,7 @@ export default function WatchlistPage() {
         </div>
 
         {/* Unified Search + Filter Bar */}
+        <WatchlistTest />
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
           <div className="lg:col-span-2 relative bg-white dark:bg-slate-900/50 backdrop-blur-md rounded-3xl border border-slate-200 dark:border-slate-800 p-6 flex flex-col justify-center gap-3">
             <label className="text-xs text-slate-400 font-bold uppercase block">Search &amp; Filter Watchlist</label>
@@ -1118,6 +1120,9 @@ export default function WatchlistPage() {
             </div>
           </div>
         )}
+
+        {/* Watchlist CRUD Test Button */}
+        <WatchlistTest />
 
         {apiFailed && (
           <div className="mb-6 px-4 py-3 bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-extrabold rounded-2xl flex items-center justify-between animate-pulse max-w-md">
