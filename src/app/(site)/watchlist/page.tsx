@@ -22,6 +22,7 @@ import { getBackendApiUrl } from '@/lib/backend-config';
 import PortfolioTracker from '@/components/PortfolioTracker';
 import RatioScreener from '@/components/RatioScreener';
 import CasParser from '@/components/CasParser';
+import WatchlistCreateForm from '../components/WatchlistCreateForm';
 import WatchlistTest from '@/components/WatchlistTest';
 
 interface StockData {
@@ -802,28 +803,11 @@ export default function WatchlistPage() {
             </div>
 
             {/* Create Watchlist Form */}
-            <form onSubmit={handleCreateWatchlist} className="w-full lg:w-auto shrink-0 flex flex-col sm:flex-row gap-2.5">
-              <div className="relative flex-1 sm:w-64">
-                <input
-                  type="text"
-                  maxLength={32}
-                  placeholder="New workspace name..."
-                  value={newWatchlistName}
-                  onChange={(e) => { setNewWatchlistName(e.target.value); setWlError(''); }}
-                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-850 rounded-2xl text-xs font-bold text-slate-850 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-655 focus:outline-none focus:border-blue-500"
-                />
-                {wlError && (
-                  <span className="absolute left-1 top-full mt-1 text-[10px] text-red-500 font-bold">{wlError}</span>
-                )}
-              </div>
-              <button
-                type="submit"
-                disabled={creatingWatchlist || !newWatchlistName.trim()}
-                className="px-4 py-3 bg-blue-500 hover:bg-blue-600 disabled:bg-blue-400 text-white rounded-2xl text-xs font-bold transition-all shadow-md active:scale-[0.98] shrink-0"
-              >
-                {creatingWatchlist ? 'Creating...' : '+ Create Workspace'}
-              </button>
-            </form>
+            <WatchlistCreateForm
+              watchlists={watchlists}
+              setWatchlists={setWatchlists}
+              setSelectedWatchlist={setSelectedWatchlist}
+            />
           </div>
         </div>
 
