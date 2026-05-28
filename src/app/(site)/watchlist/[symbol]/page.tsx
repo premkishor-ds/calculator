@@ -759,26 +759,35 @@ function AIForecastDashboard({
   }, [sortedPL, sortedBS, sortedCF, qualityHorizon]);
 
   // F. Dynamic AI Sentiment & Confidence Score Generator
-  const outlookResult = useMemo(() => {
-    let bullishCount = 0;
-    let bearishCount = 0;
+const outlookResult = useMemo(() =>
+  computeOutlookResult({
+    ratios,
+    piotroskiResult,
+    techResult,
+    valuationResult,
+    qualityResult,
+    dcfResult,
+    qualityHorizon,
+    profile: data.profile,
+    sortedBS,
+  }),
+  [
+    piotroskiResult,
+    techResult,
+    valuationResult,
+    ratios,
+    qualityResult,
+    dcfResult,
+    qualityHorizon,
+    data.profile,
+    sortedBS,
+  ]
+);
+const { sentiment, confidence, riseFactors, fallFactors, strengths, risks } = outlookResult;
 
-    if (piotroskiResult.score >= 6) bullishCount++;
-    else bearishCount++;
 
-    if (techResult.stance === 'Bullish') bullishCount++;
-    else if (techResult.stance === 'Bearish') bearishCount++;
 
-    if (valuationResult.stance === 'Undervalued') bullishCount++;
-    else if (valuationResult.stance === 'Overvalued') bearishCount++;
-
-    if (ratios.debtToEquity < 100) bullishCount++;
-    else bearishCount++;
-
-    if (ratios.profitMargin > 10) bullishCount++;
-    else bearishCount++;
-
-    let sentiment: 'Bullish' | 'Bearish' | 'Neutral' = 'Neutral';
+    
     let confidence = 50;
     if (bullishCount >= 4) {
       sentiment = 'Bullish';
