@@ -52,6 +52,7 @@ const AdvancedChart = dynamic(() => import('@/components/AdvancedChart'), {
 
 import AIMarketIntelligence from '@/components/AIMarketIntelligence';
 import { computeOutlookResult } from '@/lib/aiOutlook';
+import SimplyWallStSnowflake from '@/components/SimplyWallStSnowflake';
 
 import type {
   Ratios,
@@ -1189,6 +1190,21 @@ function AIForecastDashboard({
             }
           </div>
         </div>
+      </div>
+
+      {/* Simply Wall St Snowflake Section */}
+      <div className="mb-8">
+        <SimplyWallStSnowflake 
+          symbol={symbol}
+          snowflakeValues={{
+            value: Math.min(10, Math.max(2, Math.round(10 / (ratios.priceToBook || 2.5)))),
+            future: Math.min(10, Math.max(3, Math.round((qualityResult.profitCAGR || 15) / 3))),
+            past: Math.min(10, Math.max(4, Math.round((qualityResult.revCAGR || 12) / 2.5))),
+            health: ratios.currentRatio > 2 ? 9 : 7,
+            dividend: ratios.dividendYield > 2 ? 8 : 4,
+            momentum: Math.min(10, Math.max(2, Math.round(35 / (ratios.pe || 25) * 6)))
+          }}
+        />
       </div>
 
       {/* Grid containing Working Capital and Shareholding Churning */}

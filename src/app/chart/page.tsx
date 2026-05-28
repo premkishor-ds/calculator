@@ -44,6 +44,7 @@ import { buildAllTags, DEFAULT_CUSTOM_TAGS, CUSTOM_TAG_IDS, type TagDef, type Cu
 import { getBackendApiUrl, getBackendWsUrl } from '@/lib/backend-config';
 import AIMarketIntelligence from '@/components/AIMarketIntelligence';
 import Backtester from '@/components/Backtester';
+import OptionsStrategyBuilder from '@/components/OptionsStrategyBuilder';
 /* Dynamically import the chart so it's client-only (no SSR) */
 const AdvancedChart = dynamic(() => import('@/components/AdvancedChart'), {
   ssr: false,
@@ -985,7 +986,7 @@ function TradingTerminalInner() {
 
   const [sidebarMode, setSidebarMode] = useState<'watchlist' | 'fundamentals'>('watchlist');
   const [sidebarSize, setSidebarSize] = useState<'normal' | 'wide'>('normal');
-  const [sidebarActiveTab, setSidebarActiveTab] = useState<'overview' | 'dcf' | 'financials' | 'news' | 'backtest'>('overview');
+  const [sidebarActiveTab, setSidebarActiveTab] = useState<'overview' | 'dcf' | 'financials' | 'news' | 'backtest' | 'options'>('overview');
   const [dcfDiscountRate, setDcfDiscountRate] = useState<number>(10);
   const [dcfTerminalGrowth, setDcfTerminalGrowth] = useState<number>(4);
   const [financialTable, setFinancialTable] = useState<'qpl' | 'pl' | 'bs' | 'cf'>('qpl');
@@ -2092,7 +2093,8 @@ function TradingTerminalInner() {
                       { id: 'dcf', label: '🎯 DCF Target' },
                       { id: 'financials', label: '📋 Statement Tables' },
                       { id: 'news', label: '📰 News & Peers' },
-                      { id: 'backtest', label: '🧪 Strategy Backtest' }
+                      { id: 'backtest', label: '🧪 Strategy Backtest' },
+                      { id: 'options', label: '🎭 Options Strategist' }
                     ].map(tab => (
                       <button
                         key={tab.id}
@@ -2319,6 +2321,15 @@ function TradingTerminalInner() {
                     <div className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0">
                       <Backtester 
                         chartData={deepData?.chartData || []} 
+                        theme={theme}
+                        symbol={selectedSymbol}
+                      />
+                    </div>
+                  )}
+                  {sidebarActiveTab === 'options' && (
+                    <div className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0 bg-slate-950">
+                      <OptionsStrategyBuilder 
+                        spotPrice={selectedStock?.price || 18200}
                         theme={theme}
                         symbol={selectedSymbol}
                       />

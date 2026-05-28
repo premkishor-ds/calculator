@@ -20,6 +20,8 @@ import { DEFAULT_SEEDS } from '@/utils/symbols';
 import { buildAllTags, DEFAULT_CUSTOM_TAGS, CUSTOM_TAG_IDS, type TagDef, type CustomTagRaw } from '@/utils/tags';
 import { getBackendApiUrl } from '@/lib/backend-config';
 import PortfolioTracker from '@/components/PortfolioTracker';
+import RatioScreener from '@/components/RatioScreener';
+import CasParser from '@/components/CasParser';
 
 interface StockData {
   symbol: string;
@@ -75,7 +77,7 @@ export default function WatchlistPage() {
   const router = useRouter();
 
   const [stocks, setStocks] = useState<StockData[]>([]);
-  const [activeViewMode, setActiveViewMode] = useState<'screener' | 'portfolio'>('screener');
+  const [activeViewMode, setActiveViewMode] = useState<'screener' | 'portfolio' | 'ratio-screener' | 'cas-parser'>('screener');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');
@@ -306,6 +308,29 @@ export default function WatchlistPage() {
       }
     } catch {
       showToast('Network error while deleting watchlist', 'error');
+    }
+  };
+
+  // Synchronise parsed CDSL/NSDL e-statement holdings to backend database
+  const handleImportHoldings = async (holdings: Array<{ symbol: string; name: string; quantity: number; buyPrice: number }>) => {
+    const BACKEND_API_URL = getBackendApiUrl();
+    try {
+      for (const holding of holdings) {
+        await fetch(`${BACKEND_API_URL}/holdings`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            symbol: holding.symbol,
+            name: holding.name,
+            quantity: holding.quantity,
+            buyPrice: holding.buyPrice,
+            watchlist: selectedWatchlist
+          })
+        });
+      }
+      showToast(`Depository ingestion complete: Synchronized ${holdings.length} physical assets with MongoDB!`, 'success');
+    } catch {
+      showToast('Network error while saving imported holdings', 'error');
     }
   };
 
@@ -664,10 +689,16 @@ export default function WatchlistPage() {
             </div>
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <h1 className="text-3xl sm:text-4xl font-extrabold bg-gradient-to-r from-cyan-400 to-blue-600 bg-clip-text text-transparent tracking-tight">
-                {activeViewMode === 'screener' ? 'Institutional Screener' : 'Institutional Portfolio'}
+                {activeViewMode === 'screener' 
+                  ? 'Institutional Screener' 
+                  : activeViewMode === 'portfolio' 
+                  ? 'Institutional Portfolio'
+                  : activeViewMode === 'ratio-screener'
+                  ? 'Screener.in DSL Parser'
+                  : 'NSDL/CDSL Ingestion Engine'}
               </h1>
               
-              <div className="flex bg-slate-200 dark:bg-slate-800 p-1 rounded-2xl shrink-0">
+              <div className="flex flex-wrap bg-slate-200 dark:bg-slate-800 p-1 rounded-2xl shrink-0 gap-1">
                 <button 
                   onClick={() => setActiveViewMode('screener')}
                   className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
@@ -683,10 +714,30 @@ export default function WatchlistPage() {
                   className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
                     activeViewMode === 'portfolio' 
                       ? 'bg-blue-500 text-white shadow-md' 
-                      : 'text-slate-500 hover:text-slate-800 dark:hover:text-white'
+                      : 'text-slate-550 hover:text-slate-800 dark:hover:text-white'
                   }`}
                 >
-                  Live Portfolio Tracker
+                  Live Portfolio
+                </button>
+                <button 
+                  onClick={() => setActiveViewMode('ratio-screener')}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                    activeViewMode === 'ratio-screener' 
+                      ? 'bg-blue-500 text-white shadow-md' 
+                      : 'text-slate-550 hover:text-slate-800 dark:hover:text-white'
+                  }`}
+                >
+                  Ratio Query DSL
+                </button>
+                <button 
+                  onClick={() => setActiveViewMode('cas-parser')}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                    activeViewMode === 'cas-parser' 
+                      ? 'bg-blue-500 text-white shadow-md' 
+                      : 'text-slate-550 hover:text-slate-800 dark:hover:text-white'
+                  }`}
+                >
+                  CDSL/NSDL CAS Ingest
                 </button>
               </div>
             </div>
@@ -1368,12 +1419,16 @@ export default function WatchlistPage() {
           </div>
         </div>
       </>
-    ) : (
+    ) : activeViewMode === 'portfolio' ? (
       <PortfolioTracker
         theme="dark"
         selectedWatchlist={selectedWatchlist}
         showToast={showToast}
       />
+    ) : activeViewMode === 'ratio-screener' ? (
+      <RatioScreener />
+    ) : (
+      <CasParser onImportComplete={handleImportHoldings} />
     )}
 
   </div>
