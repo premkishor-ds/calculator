@@ -2,7 +2,7 @@
 
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import {
-  Search, Layers, Plus, Trash2, Star, TrendingUp, TrendingDown, RefreshCw, ChevronDown, X, Check, Pencil
+  Search, Layers, Plus, Trash2, Star, TrendingUp, TrendingDown, RefreshCw, ChevronDown, X, Check, Pencil, Download, Upload
 } from 'lucide-react';
 import VirtualStockList from '@/components/watchlist/VirtualStockList';
 import AddStockModal from '@/components/watchlist/AddStockModal';
@@ -113,6 +113,76 @@ export default function WatchlistSidebar({
   const handleAddStock = useCallback(async (sym: string) => {
     return onAddStock(sym);
   }, [onAddStock]);
+
+  const handleExportCSV = () => {
+    if (watchlistStocks.length === 0) {
+      if (showToast) showToast('No stocks to export', 'info');
+      return;
+    }
+    const csvRows = [
+      ['Symbol', 'Name', 'Tags'],
+      ...watchlistStocks.map(stock => [
+        stock.symbol,
+        stock.name.replace(/,/g, ' '),
+        (stock.tags || []).join(';')
+      ])
+    ];
+    const csvContent = "data:text/csv;charset=utf-8," 
+      + csvRows.map(e => e.join(",")).join("\n");
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `watchlist_${selectedWatchlist.toLowerCase()}_export.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    if (showToast) showToast('Watchlist exported successfully!', 'success');
+  };
+
+  const handleImportCSV = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      try {
+        const text = event.target?.result as string;
+        if (!text) return;
+        const lines = text.split(/\r?\n/);
+        if (lines.length <= 1) {
+          if (showToast) showToast('CSV is empty or invalid', 'error');
+          return;
+        }
+        
+        const importedSymbols: string[] = [];
+        for (let i = 1; i < lines.length; i++) {
+          const line = lines[i].trim();
+          if (!line) continue;
+          const parts = line.split(',');
+          const sym = parts[0]?.trim();
+          if (sym && !existingSymbols.includes(sym)) {
+            importedSymbols.push(sym);
+          }
+        }
+
+        if (importedSymbols.length === 0) {
+          if (showToast) showToast('No new unique symbols found in CSV', 'info');
+          return;
+        }
+
+        if (showToast) showToast(`Importing ${importedSymbols.length} stocks...`, 'info');
+        let successCount = 0;
+        for (const sym of importedSymbols) {
+          const res = await onAddStock(sym);
+          if (res.ok) successCount++;
+        }
+        if (showToast) showToast(`Successfully imported ${successCount} stocks!`, 'success');
+      } catch (err) {
+        if (showToast) showToast('Failed to parse CSV file', 'error');
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  };
 
   /* ── Render single stock row ───────────────────────────── */
   const renderStockRow = useCallback((stock: StockQuote, _index: number) => {
@@ -254,13 +324,36 @@ export default function WatchlistSidebar({
         <h2 className="text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-3 flex items-center gap-2 select-none">
           <Layers className="w-3.5 h-3.5 text-blue-500" /> Watchlist
           <span className="text-slate-300 dark:text-slate-700 font-mono">({filteredWatchlist.length})</span>
-          <button
-            type="button"
-            onClick={() => setShowAddModal(true)}
-            className="ml-auto flex items-center gap-1 px-2.5 py-1.5 bg-blue-500/10 border border-blue-500/20 text-blue-600 dark:text-blue-455 text-[9px] font-extrabold rounded-lg hover:bg-blue-500/20 transition-all"
-          >
-            <Plus className="w-2.5 h-2.5" /> ADD
-          </button>
+          
+          <div className="ml-auto flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={handleExportCSV}
+              className="flex items-center justify-center p-1.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 transition-all"
+              title="Export Watchlist to CSV"
+            >
+              <Download className="w-3 h-3" />
+            </button>
+            <label
+              className="flex items-center justify-center p-1.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 cursor-pointer transition-all"
+              title="Import Watchlist from CSV"
+            >
+              <Upload className="w-3 h-3" />
+              <input
+                type="file"
+                accept=".csv"
+                className="hidden"
+                onChange={handleImportCSV}
+              />
+            </label>
+            <button
+              type="button"
+              onClick={() => setShowAddModal(true)}
+              className="flex items-center gap-1 px-2.5 py-1.5 bg-blue-500/10 border border-blue-550/20 text-blue-600 dark:text-blue-450 text-[9px] font-extrabold rounded-lg hover:bg-blue-550/20 transition-all"
+            >
+              <Plus className="w-2.5 h-2.5" /> ADD
+            </button>
+          </div>
         </h2>
 
         {/* Search + Sort */}

@@ -28,6 +28,10 @@ export default function PortfolioPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Multi-Portfolio States
+  const [selectedPortfolio, setSelectedPortfolio] = useState('all');
+  const [targetPortfolio, setTargetPortfolio] = useState('default');
+
   // Form State
   const [symbol, setSymbol] = useState('');
   const [name, setName] = useState('');
@@ -76,6 +80,7 @@ export default function PortfolioPage() {
           name,
           buyPrice: parseFloat(buyPrice),
           quantity: parseInt(quantity, 10),
+          watchlist: targetPortfolio,
         }),
       });
 
@@ -158,9 +163,15 @@ export default function PortfolioPage() {
     );
   }
 
-  // Calculations
-  const totalCost = holdings.reduce((acc, h) => acc + (h.buyPrice * h.quantity), 0);
-  const currentValue = holdings.reduce((acc, h) => acc + ((h.currentPrice || h.buyPrice) * h.quantity), 0);
+  // Filter Holdings dynamically based on active Portfolio Partition
+  const filteredHoldings = holdings.filter(h => {
+    if (selectedPortfolio === 'all') return true;
+    return (h.watchlist || 'default').toLowerCase() === selectedPortfolio.toLowerCase();
+  });
+
+  // Calculations based on filtered holdings
+  const totalCost = filteredHoldings.reduce((acc, h) => acc + (h.buyPrice * h.quantity), 0);
+  const currentValue = filteredHoldings.reduce((acc, h) => acc + ((h.currentPrice || h.buyPrice) * h.quantity), 0);
   const totalPL = currentValue - totalCost;
   const plPercent = totalCost > 0 ? (totalPL / totalCost) * 100 : 0;
 
@@ -174,7 +185,7 @@ export default function PortfolioPage() {
     return 'Industrial Conglomerate';
   };
 
-  const sectorAllocations = holdings.reduce((acc: Record<string, number>, h) => {
+  const sectorAllocations = filteredHoldings.reduce((acc: Record<string, number>, h) => {
     const sector = getSector(h.symbol);
     const value = (h.currentPrice || h.buyPrice) * h.quantity;
     acc[sector] = (acc[sector] || 0) + value;
@@ -212,6 +223,29 @@ export default function PortfolioPage() {
               <Plus className="w-4 h-4" /> Add Transaction
             </button>
           </div>
+        </div>
+
+        {/* Portfolio Tabs Selector */}
+        <div className="flex flex-wrap gap-1.5 p-1.5 bg-white/50 dark:bg-slate-900/50 backdrop-blur-md rounded-2xl border border-slate-200/60 dark:border-slate-800/60 max-w-2xl">
+          {[
+            { id: 'all', label: '🌍 All Assets' },
+            { id: 'default', label: '💼 Default' },
+            { id: 'retirement', label: '📈 Retirement' },
+            { id: 'lumpsum', label: '💰 Lumpsum' },
+            { id: 'trading', label: '⚡ Trading' },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setSelectedPortfolio(tab.id)}
+              className={`px-4 py-2 rounded-xl text-xs font-extrabold transition-all duration-300 ${
+                selectedPortfolio === tab.id
+                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/25'
+                  : 'text-slate-500 dark:text-slate-400 hover:bg-slate-200/60 dark:hover:bg-slate-850/60'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
         </div>
 
         {/* Dynamic Add Form Panel */}
@@ -268,6 +302,19 @@ export default function PortfolioPage() {
                   className="w-full text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2.5 rounded-xl outline-none focus:border-blue-500 transition-colors"
                   required
                 />
+              </div>
+              <div className="col-span-2">
+                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Portfolio Division</label>
+                <select
+                  value={targetPortfolio}
+                  onChange={(e) => setTargetPortfolio(e.target.value)}
+                  className="w-full text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2.5 rounded-xl outline-none focus:border-blue-500 cursor-pointer transition-colors"
+                >
+                  <option value="default">💼 Default Wallet</option>
+                  <option value="retirement">📈 Retirement Wallet</option>
+                  <option value="lumpsum">💰 Lumpsum Wallet</option>
+                  <option value="trading">⚡ Trading Wallet</option>
+                </select>
               </div>
             </div>
             <div className="flex gap-2 justify-end mt-4">
@@ -339,7 +386,7 @@ export default function PortfolioPage() {
                 <RefreshCw className="w-6 h-6 animate-spin text-blue-500" />
                 <span className="text-xs">Fetching transactions from DB...</span>
               </div>
-            ) : holdings.length === 0 ? (
+            ) : filteredHoldings.length === 0 ? (
               <div className="text-center py-16 text-slate-400 border border-dashed border-slate-200 dark:border-slate-800 rounded-2xl">
                 <PieChart className="w-12 h-12 mx-auto text-slate-300 dark:text-slate-700 mb-2" />
                 <p className="text-xs font-semibold">No transactions registered in this wallet.</p>
@@ -356,6 +403,7 @@ export default function PortfolioPage() {
                   <thead>
                     <tr className="border-b border-slate-100 dark:border-slate-800 text-slate-400 font-bold">
                       <th className="py-3 px-2">Asset Details</th>
+                      <th className="py-3 px-2">Portfolio</th>
                       <th className="py-3 px-2 text-right">Quantity</th>
                       <th className="py-3 px-2 text-right">Buy Price</th>
                       <th className="py-3 px-2 text-right">Live Price</th>
@@ -364,7 +412,7 @@ export default function PortfolioPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {holdings.map((h) => {
+                    {filteredHoldings.map((h) => {
                       const cost = h.buyPrice * h.quantity;
                       const livePrice = h.currentPrice || h.buyPrice;
                       const val = livePrice * h.quantity;
@@ -375,6 +423,9 @@ export default function PortfolioPage() {
                           <td className="py-4 px-2">
                             <div className="font-extrabold text-slate-800 dark:text-slate-100">{h.symbol}</div>
                             <div className="text-[10px] text-slate-400 font-semibold">{h.name}</div>
+                          </td>
+                          <td className="py-4 px-2 capitalize font-semibold text-slate-500">
+                            {h.watchlist || 'default'}
                           </td>
                           <td className="py-4 px-2 text-right font-semibold">{h.quantity}</td>
                           <td className="py-4 px-2 text-right font-semibold">₹{h.buyPrice.toFixed(2)}</td>
@@ -413,7 +464,7 @@ export default function PortfolioPage() {
               <p className="text-[10px] text-slate-400 font-semibold mt-1">Based on market valuation allocations.</p>
             </div>
 
-            {holdings.length === 0 ? (
+            {filteredHoldings.length === 0 ? (
               <div className="text-center py-12 text-slate-400">
                 <p className="text-xs">No allocations available.</p>
               </div>
