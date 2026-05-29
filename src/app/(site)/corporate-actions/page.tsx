@@ -22,7 +22,7 @@ export default function CorporateActionsPage() {
   const [loading, setLoading] = useState<boolean>(true);
 
   // Calculator States
-  const [selectedStock, setSelectedStock] = useState(DEFAULT_SEEDS[0]?.symbol || 'INFY.NS');
+  const [selectedStock, setSelectedStock] = useState(DEFAULT_SEEDS[0]?.symbol || '');
   const [shareCount, setShareCount] = useState('100');
   const [taxBracket, setTaxBracket] = useState('20');
 
@@ -58,7 +58,11 @@ export default function CorporateActionsPage() {
   const selectedActionInfo = corporateActions.find(a => a.symbol === selectedStock);
   const dividendValuePerShare = selectedActionInfo?.type === 'dividend' 
     ? parseFloat(selectedActionInfo.ratioOrAmount.replace(/[^\d.]/g, '')) 
-    : 10.0; // Default estimate if not a dividend action in list
+    : (() => {
+        const symbolClean = selectedStock || (DEFAULT_SEEDS[0]?.symbol || '');
+        const dividendAmt = (symbolClean.split('').reduce((sum: number, c: string) => sum + c.charCodeAt(0), 0) % 25) + 1.2;
+        return dividendAmt;
+      })();
 
   const grossDividend = parseFloat(shareCount) * dividendValuePerShare;
   const tdsDeduction = grossDividend * 0.10; // Indian TDS at 10% on dividends above ₹5000
@@ -198,11 +202,11 @@ export default function CorporateActionsPage() {
                       {a.symbol.split('.')[0]} ({a.ratioOrAmount})
                     </option>
                   ))}
-                  {corporateActions.length === 0 && DEFAULT_SEEDS.slice(0, 5).map((s, idx) => {
+                  {corporateActions.length === 0 && DEFAULT_SEEDS.map((s, idx) => {
                     const dividendAmt = (s.symbol.split('').reduce((sum, c) => sum + c.charCodeAt(0), 0) % 25) + 1.2;
                     return (
                       <option key={idx} value={s.symbol}>
-                        {s.symbol.split('.')[0]} (₹{dividendAmt.toFixed(2)} per share)
+                        {s.name} ({s.symbol.split('.')[0]}) — (₹{dividendAmt.toFixed(2)}/share)
                       </option>
                     );
                   })}
