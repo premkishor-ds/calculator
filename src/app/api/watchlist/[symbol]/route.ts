@@ -7,44 +7,6 @@ const PEER_SYMBOLS = DEFAULT_SEEDS.slice(0, 34).map(s => s.symbol);
 
 function getSectorForSymbol(symbol: string, name?: string): string {
   const cleanSym = symbol.toUpperCase().trim();
-  
-  // Hardcoded sectors lookup for premium watchlist seeds
-  const localSectorMap: Record<string, string> = {
-    'E2E.NS': 'Tech',
-    'AURIONPRO.NS': 'Tech',
-    'COFORGE.NS': 'Tech',
-    'NETWEB.NS': 'Tech',
-    'VOLTAMP.NS': 'Power/Engineering',
-    'TDPOWERSYS.NS': 'Power/Engineering',
-    'TARIL.NS': 'Power/Engineering',
-    'PRECWIRE.NS': 'Power/Engineering',
-    'KIRLOSENG.NS': 'Power/Engineering',
-    'KEI.NS': 'Power/Engineering',
-    'APARINDS.NS': 'Power/Engineering',
-    'GVT&D.NS': 'Power/Engineering',
-    'CGPOWER.NS': 'Power/Engineering',
-    'KRN.NS': 'Power/Engineering',
-    'MAZDOCK.NS': 'Defense',
-    'ZENTEC.NS': 'Defense',
-    'GRSE.NS': 'Defense',
-    'PARAS.NS': 'Defense',
-    'ASTRAMICRO.NS': 'Defense',
-    'DATAPATTNS.NS': 'Defense',
-    'MTARTECH.NS': 'Defense',
-    'IDEAFORGE.NS': 'Defense',
-    'HSCL.NS': 'FMCG/Chemicals',
-    'HFCL.NS': 'FMCG/Chemicals',
-    'BECTORFOOD.NS': 'FMCG/Chemicals',
-    'AEROFLEX.NS': 'FMCG/Chemicals',
-    'SHILCTECH.NS': 'Healthcare',
-    'APOLLO.NS': 'Healthcare'
-  };
-
-  if (localSectorMap[cleanSym]) return localSectorMap[cleanSym];
-  const baseSym = cleanSym.replace('.NS', '');
-  if (localSectorMap[baseSym]) return localSectorMap[baseSym];
-  const suffixed = baseSym + '.NS';
-  if (localSectorMap[suffixed]) return localSectorMap[suffixed];
 
   // Dynamic heuristic-based categorization based on stock name and symbol
   const searchStr = `${cleanSym} ${name || ''}`.toLowerCase();

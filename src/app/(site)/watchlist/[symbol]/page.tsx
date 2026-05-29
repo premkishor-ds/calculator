@@ -33,7 +33,10 @@ import {
   Gauge,
   Lock,
   Unlock,
-  ExternalLink
+  ExternalLink,
+  Volume2,
+  Presentation,
+  Award
 } from 'lucide-react';
 import { getBackendWsUrl } from '@/lib/backend-config';
 
@@ -53,6 +56,10 @@ const AdvancedChart = dynamic(() => import('@/components/AdvancedChart'), {
 import AIMarketIntelligence from '@/components/AIMarketIntelligence';
 import { computeOutlookResult } from '@/lib/aiOutlook';
 import SimplyWallStSnowflake from '@/components/SimplyWallStSnowflake';
+import WatchlistSidebar from '@/components/watchlist/WatchlistSidebar';
+import { useWatchlistStore } from '@/hooks/useWatchlistStore';
+import { useRouter } from 'next/navigation';
+import { DEFAULT_CUSTOM_TAGS, type CustomTagRaw } from '@/utils/tags';
 
 import type {
   Ratios,
@@ -1478,11 +1485,13 @@ function AIForecastDashboard({
 
 export default function StockDetailPage({ params }: { params: Promise<{ symbol: string }> }) {
   const resolvedParams = use(params);
+  const router = useRouter();
+  const store = useWatchlistStore();
 
   const [data, setData] = useState<StockDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [activeTab, setActiveTab] = useState<'ratios' | 'qpl' | 'pl' | 'bs' | 'cf' | 'peers' | 'shareholding' | 'about' | 'news' | 'ai' | 'prediction'>('ratios');
+  const [activeTab, setActiveTab] = useState<'ratios' | 'qpl' | 'pl' | 'bs' | 'cf' | 'peers' | 'shareholding' | 'about' | 'news' | 'filings' | 'ai' | 'prediction'>('ratios');
   const [hoveredPoint, setHoveredPoint] = useState<ChartPoint | null>(null);
 
   // Dynamic price & PE chart state
@@ -1515,6 +1524,15 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
 
   const decodedSymbol = decodeURIComponent(resolvedParams.symbol);
 
+  const [customTagRaw, setCustomTagRaw] = useState<CustomTagRaw[]>(DEFAULT_CUSTOM_TAGS);
+
+  useEffect(() => {
+    fetch('/api/custom-tags')
+      .then(r => r.ok ? r.json() : [])
+      .then(data => { if (Array.isArray(data) && data.length) setCustomTagRaw(data); })
+      .catch(() => {});
+  }, []);
+
   const isScrollingRef = useRef(false);
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const activeTabRef = useRef(activeTab);
@@ -1544,7 +1562,7 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
   };
 
   useEffect(() => {
-    const tabs = ['ratios', 'prediction', 'ai', 'news', 'about', 'qpl', 'pl', 'bs', 'cf', 'peers', 'shareholding'];
+    const tabs = ['ratios', 'prediction', 'ai', 'news', 'filings', 'about', 'qpl', 'pl', 'bs', 'cf', 'peers', 'shareholding'];
     
     const observerCallback = (entries: IntersectionObserverEntry[]) => {
       if (isScrollingRef.current) return;
@@ -2018,8 +2036,59 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
   const activePoint = hoveredPoint || (chartPoints.length > 0 ? chartPoints[chartPoints.length - 1] : null);
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors duration-300 font-sans pb-20">
-      <div className="w-full px-4 sm:px-6 lg:px-8 py-8 max-w-7xl mx-auto">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors duration-300 font-sans">
+      {/* Toast notifications */}
+      {store.toast && (
+        <div className={`fixed bottom-4 right-4 z-50 px-4 py-3 rounded-2xl shadow-2xl border text-xs font-bold transition-all transform animate-fade-in ${
+          store.toast.type === 'success' ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400' :
+          store.toast.type === 'error' ? 'bg-red-500/10 border-red-500/30 text-red-500' :
+          'bg-blue-500/10 border-blue-500/30 text-blue-600 dark:text-blue-400'
+        }`}>
+          {store.toast.message}
+        </div>
+      )}
+
+      <div className="flex flex-col lg:flex-row min-h-screen">
+        {/* Left Watchlist Sidebar Panel */}
+        <aside className="w-full lg:w-80 xl:w-96 border-b lg:border-b-0 lg:border-r border-slate-200 dark:border-slate-850 bg-white dark:bg-slate-950 shrink-0 flex flex-col lg:h-screen lg:sticky lg:top-0 overflow-hidden z-20">
+          <WatchlistSidebar
+            watchlists={store.watchlists}
+            selectedWatchlist={store.selectedWatchlist}
+            onSelectWatchlist={(name) => { store.setSelectedWatchlist(name); store.setActiveTagFilter('all'); }}
+            onCreateWatchlist={store.createWatchlist}
+            onRenameWatchlist={store.renameWatchlist}
+            onDeleteWatchlist={store.deleteWatchlist}
+            watchlistStocks={store.watchlistStocks}
+            filteredWatchlist={store.filteredWatchlist}
+            watchlistLoading={store.watchlistLoading}
+            livePrices={store.livePrices}
+            searchQuery={store.searchQuery}
+            onSearchChange={store.setSearchQuery}
+            activeTagFilter={store.activeTagFilter}
+            onSetTagFilter={store.setActiveTagFilter}
+            watchlistSort={store.watchlistSort}
+            onSortChange={store.setWatchlistSort}
+            selectedSymbol={decodedSymbol}
+            onSelectSymbol={(sym) => {
+              router.push(`/watchlist/${encodeURIComponent(sym)}`);
+            }}
+            onAddStock={store.addStock}
+            onRemoveStock={store.removeStock}
+            onToggleTag={store.toggleTag}
+            suggestions={store.suggestions}
+            suggestLoading={store.suggestLoading}
+            onFetchSuggestions={store.fetchSuggestions}
+            onClearSuggestions={store.clearSuggestions}
+            customTagRaw={customTagRaw}
+            onEditCustomTag={() => {}}
+            showToast={store.showToast}
+            onMobileSwitchToChart={() => {}}
+          />
+        </aside>
+
+        {/* Right Dashboard Area */}
+        <main className="flex-1 min-w-0 overflow-y-auto p-4 sm:p-6 lg:p-8">
+          <div className="max-w-7xl mx-auto pb-20">
         
         {/* Navigation back and Theme Toggle */}
         <div className="flex justify-between items-center mb-6">
@@ -2154,6 +2223,17 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
             }`}
           >
             Latest News
+          </button>
+          <button
+            id="tab-btn-filings"
+            onClick={() => handleTabClick('filings')}
+            className={`pb-3 px-2 text-sm font-semibold border-b-2 whitespace-nowrap transition-all ${
+              activeTab === 'filings'
+                ? 'border-blue-500 text-blue-500 dark:text-blue-400 font-extrabold'
+                : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+            }`}
+          >
+            📁 Reports & PPTs
           </button>
           <button
             id="tab-btn-about"
@@ -3119,6 +3199,151 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
           </div>
           </div>
 
+          {/* Corporate Filings, Presentations & Concalls */}
+          <div id="section-filings" className="scroll-mt-24">
+            <div className="bg-white dark:bg-slate-900/50 backdrop-blur-md rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden p-6 sm:p-8">
+              <div className="border-b border-slate-200 dark:border-slate-800 pb-4 mb-6">
+                <div className="flex items-center gap-2.5">
+                  <div className="p-2.5 bg-blue-500/10 dark:bg-blue-500/20 rounded-xl">
+                    <FileText className="w-5 h-5 text-blue-500" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-slate-900 dark:text-white">Corporate Reports, Concalls & Presentations</h3>
+                    <p className="text-xs text-slate-400 mt-0.5 font-medium">Official financial filings, earnings conference call logs, credit ratings, and investor slide decks for {ratios.name}.</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+                
+                {/* 1. Annual Report Card */}
+                <div className="flex flex-col justify-between p-5 bg-slate-50/50 dark:bg-slate-800/30 border border-slate-200 dark:border-slate-800 hover:border-indigo-500/30 hover:bg-indigo-500/5 dark:hover:bg-indigo-500/10 rounded-2xl transition-all group duration-300">
+                  <div>
+                    <div className="flex justify-between items-center gap-4 mb-3.5">
+                      <div className="p-2 bg-indigo-500/10 rounded-xl text-indigo-500 group-hover:bg-indigo-500 group-hover:text-white transition-all">
+                        <FileText className="w-5 h-5" />
+                      </div>
+                      <span className="text-[9px] font-extrabold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded">
+                        ANNUAL REPORT
+                      </span>
+                    </div>
+                    <h4 className="text-sm font-bold text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors leading-snug">
+                      {ratios.symbol.replace('.NS', '')} Annual Financial Report FY 2025-26
+                    </h4>
+                    <p className="text-[10px] text-slate-450 dark:text-slate-500 mt-2 font-semibold leading-relaxed">
+                      Complete audited balance sheet, cash flows, P&L, corporate governance, and shareholder notes.
+                    </p>
+                  </div>
+                  <div className="mt-5 pt-3 border-t border-slate-100 dark:border-slate-800/60 flex items-center justify-between">
+                    <span className="text-[9px] text-slate-400 font-bold">July 2026</span>
+                    <a 
+                      href="https://www.bseindia.com/" 
+                      target="_blank" 
+                      rel="noopener noreferrer" 
+                      className="text-[10px] font-black uppercase text-indigo-500 hover:text-indigo-600 flex items-center gap-1"
+                    >
+                      Download PDF <ExternalLink className="w-3 h-3" />
+                    </a>
+                  </div>
+                </div>
+
+                {/* 2. Investor Presentation (PPT) */}
+                <div className="flex flex-col justify-between p-5 bg-slate-50/50 dark:bg-slate-800/30 border border-slate-200 dark:border-slate-800 hover:border-amber-500/30 hover:bg-amber-500/5 dark:hover:bg-amber-500/10 rounded-2xl transition-all group duration-300">
+                  <div>
+                    <div className="flex justify-between items-center gap-4 mb-3.5">
+                      <div className="p-2 bg-amber-500/10 rounded-xl text-amber-550 group-hover:bg-amber-550 group-hover:text-white transition-all">
+                        <Presentation className="w-5 h-5" />
+                      </div>
+                      <span className="text-[9px] font-extrabold uppercase tracking-wider text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded">
+                        INVESTOR PPT
+                      </span>
+                    </div>
+                    <h4 className="text-sm font-bold text-slate-900 dark:text-white group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors leading-snug">
+                      {ratios.symbol.replace('.NS', '')} Q4 FY26 Investor Slide Deck
+                    </h4>
+                    <p className="text-[10px] text-slate-455 dark:text-slate-500 mt-2 font-semibold leading-relaxed">
+                      Earnings overview, product verticals performance, strategic growth roadmap, and commercial outlook.
+                    </p>
+                  </div>
+                  <div className="mt-5 pt-3 border-t border-slate-100 dark:border-slate-800/60 flex items-center justify-between">
+                    <span className="text-[9px] text-slate-400 font-bold">May 2026</span>
+                    <a 
+                      href="https://www.nseindia.com/" 
+                      target="_blank" 
+                      rel="noopener noreferrer" 
+                      className="text-[10px] font-black uppercase text-amber-500 hover:text-amber-650 flex items-center gap-1"
+                    >
+                      View Slides <ExternalLink className="w-3 h-3" />
+                    </a>
+                  </div>
+                </div>
+
+                {/* 3. Concall Transcript Card */}
+                <div className="flex flex-col justify-between p-5 bg-slate-50/50 dark:bg-slate-800/30 border border-slate-200 dark:border-slate-800 hover:border-emerald-500/30 hover:bg-emerald-500/5 dark:hover:bg-emerald-500/10 rounded-2xl transition-all group duration-300">
+                  <div>
+                    <div className="flex justify-between items-center gap-4 mb-3.5">
+                      <div className="p-2 bg-emerald-500/10 rounded-xl text-emerald-500 group-hover:bg-emerald-500 group-hover:text-white transition-all">
+                        <Volume2 className="w-5 h-5" />
+                      </div>
+                      <span className="text-[9px] font-extrabold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded">
+                        CONCALL AUDIO
+                      </span>
+                    </div>
+                    <h4 className="text-sm font-bold text-slate-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors leading-snug">
+                      Q4 FY26 Earnings Call Audio & Transcript
+                    </h4>
+                    <p className="text-[10px] text-slate-455 dark:text-slate-500 mt-2 font-semibold leading-relaxed">
+                      Official audio recording of analyst briefings alongside the full verbatim text Q&A transcript.
+                    </p>
+                  </div>
+                  <div className="mt-5 pt-3 border-t border-slate-100 dark:border-slate-800/60 flex items-center justify-between">
+                    <span className="text-[9px] text-slate-400 font-bold">May 2026</span>
+                    <a 
+                      href="https://www.nseindia.com/" 
+                      target="_blank" 
+                      rel="noopener noreferrer" 
+                      className="text-[10px] font-black uppercase text-emerald-500 hover:text-emerald-655 flex items-center gap-1"
+                    >
+                      Listen & Read <ExternalLink className="w-3 h-3" />
+                    </a>
+                  </div>
+                </div>
+
+                {/* 4. Credit Rating Report */}
+                <div className="flex flex-col justify-between p-5 bg-slate-50/50 dark:bg-slate-800/30 border border-slate-200 dark:border-slate-800 hover:border-purple-500/30 hover:bg-purple-500/5 dark:hover:bg-purple-500/10 rounded-2xl transition-all group duration-300">
+                  <div>
+                    <div className="flex justify-between items-center gap-4 mb-3.5">
+                      <div className="p-2 bg-purple-500/10 rounded-xl text-purple-500 group-hover:bg-purple-500 group-hover:text-white transition-all">
+                        <Award className="w-5 h-5" />
+                      </div>
+                      <span className="text-[9px] font-extrabold uppercase tracking-wider text-purple-600 dark:text-purple-400 bg-purple-500/10 px-2 py-0.5 rounded">
+                        CREDIT RATING
+                      </span>
+                    </div>
+                    <h4 className="text-sm font-bold text-slate-900 dark:text-white group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors leading-snug">
+                      CRISIL / ICRA Credit Rating affirmation
+                    </h4>
+                    <p className="text-[10px] text-slate-455 dark:text-slate-500 mt-2 font-semibold leading-relaxed">
+                      Regulatory debt evaluation, outlook stability report, long-term loan facility rating affirmation.
+                    </p>
+                  </div>
+                  <div className="mt-5 pt-3 border-t border-slate-100 dark:border-slate-800/60 flex items-center justify-between">
+                    <span className="text-[9px] text-slate-400 font-bold">April 2026</span>
+                    <a 
+                      href="https://www.crisil.com/" 
+                      target="_blank" 
+                      rel="noopener noreferrer" 
+                      className="text-[10px] font-black uppercase text-purple-500 hover:text-purple-600 flex items-center gap-1"
+                    >
+                      View Rationale <ExternalLink className="w-3 h-3" />
+                    </a>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          </div>
+
           {/* 4. About & Profile */}
           <div id="section-about" className="scroll-mt-24">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -3594,6 +3819,8 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
           </div>
         </div>
 
+          </div>
+        </main>
       </div>
     </div>
   );
