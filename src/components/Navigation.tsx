@@ -6,9 +6,10 @@ import { usePathname } from 'next/navigation';
 import { Menu, X, Sun, Moon } from 'lucide-react';
 
 const LINKS = [
-  { href: '/about', label: 'About' },
-  { href: '/faq', label: 'FAQ' },
-  { href: '/blog', label: 'Blog' },
+  { href: '/portfolio', label: 'Portfolio' },
+  { href: '/corporate-actions', label: 'Corp Actions' },
+  { href: '/alerts', label: 'Alerts' },
+  { href: '/playbook', label: 'Playbook' },
   { href: '/watchlist', label: 'Watchlist' },
   { href: '/screener', label: 'Screener' },
   { href: '/chart', label: 'Terminal' },
