@@ -59,6 +59,7 @@ import SimplyWallStSnowflake from '@/components/SimplyWallStSnowflake';
 import WatchlistSidebar from '@/components/watchlist/WatchlistSidebar';
 import { useWatchlistStore } from '@/hooks/useWatchlistStore';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@/context/AuthContext';
 import { DEFAULT_CUSTOM_TAGS, type CustomTagRaw } from '@/utils/tags';
 
 import type {
@@ -1486,6 +1487,7 @@ function AIForecastDashboard({
 export default function StockDetailPage({ params }: { params: Promise<{ symbol: string }> }) {
   const resolvedParams = use(params);
   const router = useRouter();
+  const { user, loading: authLoading } = useAuth();
   const store = useWatchlistStore();
 
   const [data, setData] = useState<StockDetails | null>(null);
@@ -1878,6 +1880,53 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
     
     return bestGrowth * 100;
   }, [data, livePrice, discountRate, terminalGrowth]);
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col justify-center items-center gap-3">
+        <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+        <span className="text-xs font-bold text-slate-500 uppercase tracking-widest animate-pulse">Verifying Session…</span>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="min-h-[85vh] flex items-center justify-center bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 py-12 px-4 transition-colors duration-300">
+        <div className="max-w-md w-full text-center bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl p-8 rounded-3xl border border-slate-200/80 dark:border-slate-800/80 shadow-2xl relative overflow-hidden">
+          <div className="absolute -top-10 -left-10 w-32 h-32 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute -bottom-10 -right-10 w-32 h-32 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
+
+          <div className="inline-flex p-4 bg-blue-500/10 rounded-2xl text-blue-500 border border-blue-500/20 mb-5">
+            <Lock className="w-6 h-6 animate-pulse" />
+          </div>
+
+          <h2 className="text-xl font-black bg-gradient-to-r from-blue-600 to-cyan-500 bg-clip-text text-transparent">
+            Sign in to access your Watchlist
+          </h2>
+
+          <p className="text-xs text-slate-400 dark:text-slate-500 mt-2 leading-relaxed font-semibold">
+            Login or register to build custom watchlists, track live stock prices, get AI-powered insights, and receive price alerts.
+          </p>
+
+          <div className="flex gap-3 justify-center mt-6">
+            <Link
+              href="/login"
+              className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-cyan-500 hover:opacity-95 text-white rounded-xl font-bold text-xs shadow-lg transition-transform hover:scale-[1.02] active:scale-[0.98]"
+            >
+              Login
+            </Link>
+            <Link
+              href="/register"
+              className="px-5 py-2.5 border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-bold rounded-xl transition-transform hover:scale-[1.02]"
+            >
+              Register Free
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
