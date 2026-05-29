@@ -56,6 +56,8 @@ export const metadata: Metadata = {
   },
 };
 
+import { AuthProvider } from '@/context/AuthContext';
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -116,7 +118,9 @@ export default function RootLayout({
       <body className={`${outfit.className} antialiased bg-slate-50 dark:bg-slate-950 overflow-x-hidden`} suppressHydrationWarning>
         {/* PRODUCTION READY: Add your Google Analytics Tag here */}
         {/* <Script src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXX" /> */}
-        {children}
+        <AuthProvider>
+          {children}
+        </AuthProvider>
         <PWAInstallPrompt />
       </body>
     </html>

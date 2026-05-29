@@ -3,7 +3,8 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Menu, X, Sun, Moon } from 'lucide-react';
+import { Menu, X, Sun, Moon, LogOut, User } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
 
 const LINKS = [
   { href: '/portfolio', label: 'Portfolio' },
@@ -15,8 +16,10 @@ const LINKS = [
   { href: '/chart', label: 'Terminal' },
 ] as const;
 
+
 export const Navigation = () => {
   const pathname = usePathname();
+  const { user, logout } = useAuth();
   const [open, setOpen] = useState(false);
   const [theme, setTheme] = useState<'dark' | 'light'>('light');
 
@@ -96,6 +99,41 @@ export const Navigation = () => {
           >
             {theme === 'dark' ? <Sun className="w-4.5 h-4.5 text-yellow-400" /> : <Moon className="w-4.5 h-4.5 text-indigo-500" />}
           </button>
+
+          {/* Dynamic Authenticated Session Buttons */}
+          {user ? (
+            <div className="flex items-center gap-2">
+              <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl">
+                <User className="w-3.5 h-3.5 text-blue-500" />
+                <span className="text-[10px] font-black text-slate-600 dark:text-slate-300 truncate max-w-[80px]">
+                  {user.fullName.split(' ')[0]}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={logout}
+                className="p-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20 rounded-xl transition-all hover:scale-105 cursor-pointer"
+                title="Log out session"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-1.5">
+              <Link
+                href="/login"
+                className="px-3 py-1.5 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-[10px] font-bold rounded-xl transition-colors"
+              >
+                Login
+              </Link>
+              <Link
+                href="/register"
+                className="hidden sm:block px-3 py-1.5 bg-gradient-to-r from-blue-600 to-cyan-500 text-white text-[10px] font-bold rounded-xl hover:opacity-95 transition-opacity"
+              >
+                Register
+              </Link>
+            </div>
+          )}
 
           <button
             type="button"
