@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Menu, X, Sun, Moon, LogOut, User } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import NotificationCenter from '@/components/NotificationCenter';
 
 const LINKS = [
   { href: '/portfolio', label: 'Portfolio' },
@@ -99,6 +100,9 @@ export const Navigation = () => {
           >
             {theme === 'dark' ? <Sun className="w-4.5 h-4.5 text-yellow-400" /> : <Moon className="w-4.5 h-4.5 text-indigo-500" />}
           </button>
+
+          {/* Notification Center Bell */}
+          <NotificationCenter />
 
           {/* Dynamic Authenticated Session Buttons */}
           {user ? (
