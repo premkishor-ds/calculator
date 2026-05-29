@@ -39,6 +39,13 @@ export default function PortfolioPage() {
   const [quantity, setQuantity] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
 
+  // Sprint 4: Advanced Transactional Variables
+  const [transactionType, setTransactionType] = useState<'buy' | 'sell' | 'dividend' | 'bonus' | 'split'>('buy');
+  const [brokerageFees, setBrokerageFees] = useState('0');
+  const [standardTaxes, setStandardTaxes] = useState('0');
+  const [csvText, setCsvText] = useState('');
+  const [showCsvImport, setShowCsvImport] = useState(false);
+
   const fetchHoldings = async () => {
     if (!token) return;
     try {
@@ -81,6 +88,9 @@ export default function PortfolioPage() {
           buyPrice: parseFloat(buyPrice),
           quantity: parseInt(quantity, 10),
           watchlist: targetPortfolio,
+          transactionType,
+          brokerageFees: parseFloat(brokerageFees || '0'),
+          standardTaxes: parseFloat(standardTaxes || '0')
         }),
       });
 
@@ -217,6 +227,12 @@ export default function PortfolioPage() {
               <RefreshCw className="w-4 h-4 text-slate-500" />
             </button>
             <button
+              onClick={() => setShowCsvImport(!showCsvImport)}
+              className="px-4 py-2.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-250 rounded-xl text-xs font-bold transition-all hover:scale-[1.02] active:scale-[0.98]"
+            >
+              📥 Import Zerodha CSV
+            </button>
+            <button
               onClick={() => setShowAddForm(!showAddForm)}
               className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-cyan-500 text-white rounded-xl text-xs font-bold hover:opacity-90 transition-all hover:scale-[1.02] active:scale-[0.98]"
             >
@@ -224,6 +240,61 @@ export default function PortfolioPage() {
             </button>
           </div>
         </div>
+
+        {/* Zerodha CSV Import Area */}
+        {showCsvImport && (
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 rounded-3xl shadow-xl space-y-4 animate-in slide-in-from-top duration-300">
+            <h3 className="font-extrabold text-xs uppercase tracking-wider text-slate-700 dark:text-slate-300">
+              📥 Import Zerodha Portfolio CSV Trades
+            </h3>
+            <p className="text-[10px] text-slate-400 font-semibold leading-normal">
+              Paste your standard Zerodha trade book logs (comma separated values: <code className="font-mono">Symbol,BuyPrice,Quantity,CompanyName</code>).
+            </p>
+            <textarea
+              rows={4}
+              placeholder="RELIANCE.NS,2450.50,10,Reliance Industries"
+              value={csvText}
+              onChange={e => setCsvText(e.target.value)}
+              className="w-full p-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl text-xs font-mono focus:outline-none"
+            />
+            <div className="flex gap-2 justify-end">
+              <button
+                onClick={async () => {
+                  if (!csvText.trim()) return;
+                  try {
+                    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || '/api'}/holdings/import-csv`, {
+                      method: 'POST',
+                      headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                      },
+                      body: JSON.stringify({ csvData: csvText, watchlist: selectedPortfolio === 'all' ? 'default' : selectedPortfolio })
+                    });
+                    if (res.ok) {
+                      alert('CSV trades successfully compiled and registered.');
+                      setCsvText('');
+                      setShowCsvImport(false);
+                      fetchHoldings();
+                    } else {
+                      alert('CSV parsing error.');
+                    }
+                  } catch {
+                    alert('Import transaction failed.');
+                  }
+                }}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold"
+              >
+                Execute Import
+              </button>
+              <button
+                onClick={() => setShowCsvImport(false)}
+                className="px-4 py-2 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Portfolio Tabs Selector */}
         <div className="flex flex-wrap gap-1.5 p-1.5 bg-white/50 dark:bg-slate-900/50 backdrop-blur-md rounded-2xl border border-slate-200/60 dark:border-slate-800/60 max-w-2xl">
@@ -315,6 +386,40 @@ export default function PortfolioPage() {
                   <option value="lumpsum">💰 Lumpsum Wallet</option>
                   <option value="trading">⚡ Trading Wallet</option>
                 </select>
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Action Type</label>
+                <select
+                  value={transactionType}
+                  onChange={e => setTransactionType(e.target.value as any)}
+                  className="w-full text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2.5 rounded-xl outline-none focus:border-blue-500 cursor-pointer"
+                >
+                  <option value="buy">BUY</option>
+                  <option value="sell">SELL</option>
+                  <option value="dividend">DIVIDEND</option>
+                  <option value="bonus">BONUS</option>
+                  <option value="split">SPLIT</option>
+                </select>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Brokerage (₹)</label>
+                  <input
+                    type="number"
+                    value={brokerageFees}
+                    onChange={e => setBrokerageFees(e.target.value)}
+                    className="w-full text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2.5 rounded-xl outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Taxes (₹)</label>
+                  <input
+                    type="number"
+                    value={standardTaxes}
+                    onChange={e => setStandardTaxes(e.target.value)}
+                    className="w-full text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2.5 rounded-xl outline-none"
+                  />
+                </div>
               </div>
             </div>
             <div className="flex gap-2 justify-end mt-4">

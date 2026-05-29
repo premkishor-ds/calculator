@@ -670,6 +670,69 @@ export default function AdvancedChart({
 
   const [selectedInterval, setSelectedInterval] = useState<string>('Daily');
 
+  // Sprint 3: Advanced Charting Templates, Multi-Chart Splits & Sync Engine
+  const [multiChartLayout, setMultiChartLayout] = useState<1 | 2 | 4>(1);
+  const [compareSymbols, setCompareSymbols] = useState<string[]>([]);
+  const [compareInput, setCompareInput] = useState('');
+  const [indicatorTemplates, setIndicatorTemplates] = useState<Record<string, string[]>>({
+    'Moving Averages': ['EMA9', 'EMA20', 'EMA50', 'EMA100', 'EMA200'],
+    'Oscillators': ['RSI14', 'MACD', 'Stochastic'],
+    'Volatility': ['Bollinger', 'ATR', 'Supertrend']
+  });
+
+  const loadSavedTemplate = (templateName: string) => {
+    const list = indicatorTemplates[templateName];
+    if (list) {
+      if (onIndicatorsChange) onIndicatorsChange(new Set(list));
+      else setActiveIndicators(new Set(list));
+    }
+  };
+
+  const handleAddCompare = () => {
+    if (!compareInput.trim()) return;
+    const clean = compareInput.trim().toUpperCase();
+    if (!compareSymbols.includes(clean)) {
+      setCompareSymbols(prev => [...prev, clean]);
+      renderCompareLine(clean);
+    }
+    setCompareInput('');
+  };
+
+  const compareSeriesRef = useRef<Map<string, ISeriesApi<'Line'>>>(new Map());
+
+  const renderCompareLine = async (targetSymbol: string) => {
+    const chart = chartRef.current;
+    if (!chart) return;
+    try {
+      const res = await fetch(`/api/watchlist/${encodeURIComponent(targetSymbol)}/chart?interval=${encodeURIComponent(interval)}`);
+      if (res.ok) {
+        const json = await res.json();
+        const pts: ChartPoint[] = json.points || [];
+        if (pts.length > 0) {
+          const s = chart.addSeries(LineSeries, {
+            color: '#ef4444',
+            lineWidth: 2,
+            title: targetSymbol
+          });
+          s.setData(pts.map(p => ({ time: p.time as Time, value: p.close })));
+          compareSeriesRef.current.set(targetSymbol, s);
+        }
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleClearCompare = () => {
+    const chart = chartRef.current;
+    if (!chart) return;
+    compareSeriesRef.current.forEach(series => {
+      try { chart.removeSeries(series); } catch {}
+    });
+    compareSeriesRef.current.clear();
+    setCompareSymbols([]);
+  };
+
   /* Derived controlled/uncontrolled values */
   const interval = controlledInterval ?? selectedInterval;
   const style = controlledStyle ?? selectedStyle;
@@ -1636,7 +1699,7 @@ export default function AdvancedChart({
       {/* 📋 Dynamic Timeframe, Chart Style & Replay Controls Strip */}
       <div className="flex flex-wrap items-center justify-between gap-2 px-3 sm:px-4 py-2 border-b border-slate-200 dark:border-slate-800/80 shrink-0 bg-slate-50 dark:bg-slate-950">
         
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {/* Chart Style Picker Dropdown */}
           <div className="relative">
             <button
@@ -1765,6 +1828,31 @@ export default function AdvancedChart({
           </button>
         </div>
 
+        {/* Compare Tickers Mode Row */}
+        <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-1 rounded-xl">
+          <input
+            type="text"
+            placeholder="Compare Ticker (e.g. INFY.NS)"
+            value={compareInput}
+            onChange={e => setCompareInput(e.target.value)}
+            className="w-32 bg-white dark:bg-slate-950 border border-slate-250 dark:border-slate-850 px-2 py-1 rounded-lg text-[9px] font-bold outline-none uppercase"
+          />
+          <button
+            onClick={handleAddCompare}
+            className="px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-[9px] font-bold"
+          >
+            Add Compare
+          </button>
+          {compareSymbols.length > 0 && (
+            <button
+              onClick={handleClearCompare}
+              className="px-2 py-1 border border-red-500/20 bg-red-500/5 hover:bg-red-500/10 text-red-500 rounded-lg text-[9px] font-bold"
+            >
+              Clear Comparison
+            </button>
+          )}
+        </div>
+
         {/* Global actions */}
         <div className="flex items-center gap-1.5">
           <button
@@ -1888,8 +1976,10 @@ export default function AdvancedChart({
           </div>
         </div>
 
-        {/* Viewport Plotter */}
-        <div className="relative flex-1 min-h-0 bg-white dark:bg-slate-950">
+        {/* Viewport Plotter Grid split layouts */}
+        <div className={`relative flex-1 min-h-0 bg-white dark:bg-slate-950 grid ${
+          multiChartLayout === 2 ? 'grid-cols-2' : multiChartLayout === 4 ? 'grid-cols-2 grid-rows-2' : 'grid-cols-1'
+        } gap-1 p-1 bg-slate-200 dark:bg-slate-900`}>
           {loading && (
             <div className="absolute inset-0 bg-white/80 dark:bg-slate-950/80 backdrop-blur-[2px] z-20 flex flex-col items-center justify-center gap-2">
               <RefreshCw className="w-6 h-6 text-blue-500 animate-spin" />

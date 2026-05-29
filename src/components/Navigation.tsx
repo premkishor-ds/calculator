@@ -15,6 +15,7 @@ const LINKS = [
   { href: '/watchlist', label: 'Watchlist' },
   { href: '/screener', label: 'Screener' },
   { href: '/chart', label: 'Terminal' },
+  { href: '/security', label: 'Security' },
 ] as const;
 
 

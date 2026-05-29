@@ -2,7 +2,7 @@
 
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import {
-  Search, Layers, Plus, Trash2, Star, TrendingUp, TrendingDown, RefreshCw, ChevronDown, X, Check, Pencil, Download, Upload
+  Search, Layers, Plus, Trash2, Star, TrendingUp, TrendingDown, RefreshCw, ChevronDown, X, Check, Pencil, Download, Upload, Copy, Sparkles
 } from 'lucide-react';
 import VirtualStockList from '@/components/watchlist/VirtualStockList';
 import AddStockModal from '@/components/watchlist/AddStockModal';
@@ -100,9 +100,74 @@ export default function WatchlistSidebar({
   const [showAddModal, setShowAddModal] = useState(false);
   const [tagPopoverSym, setTagPopoverSym] = useState<string | null>(null);
 
+  // Sprint 2 Advanced Watchlist Enhancements States
+  const [cloningName, setCloningName] = useState('');
+  const [showCloneInput, setShowCloneInput] = useState(false);
+  const [analyticsData, setAnalyticsData] = useState<{ dailyReturn: number; topGainer: any; topLoser: any } | null>(null);
+  const [loadingAnalytics, setLoadingAnalytics] = useState(false);
+  const [smartFilter, setSmartFilter] = useState<'all' | 'high_volume' | 'breakout' | 'momentum'>('all');
+
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || '/api';
+
+  const fetchAnalytics = useCallback(async () => {
+    if (!selectedWatchlist) return;
+    try {
+      setLoadingAnalytics(true);
+      const res = await fetch(`${API_URL}/watchlists/${encodeURIComponent(selectedWatchlist)}/analytics`);
+      if (res.ok) {
+        const data = await res.json();
+        setAnalyticsData(data);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingAnalytics(false);
+    }
+  }, [selectedWatchlist, API_URL]);
+
+  useEffect(() => {
+    fetchAnalytics();
+  }, [selectedWatchlist, fetchAnalytics]);
+
+  const handleCloneWatchlist = async () => {
+    if (!cloningName.trim()) return;
+    try {
+      const res = await fetch(`${API_URL}/watchlists/${encodeURIComponent(selectedWatchlist)}/clone`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+        },
+        body: JSON.stringify({ targetName: cloningName.trim() })
+      });
+      if (res.ok) {
+        if (showToast) showToast(`Watchlist cloned to ${cloningName} successfully!`, 'success');
+        setCloningName('');
+        setShowCloneInput(false);
+        window.location.reload();
+      } else {
+        const err = await res.json();
+        if (showToast) showToast(err.error || 'Failed to clone watchlist', 'error');
+      }
+    } catch {
+      if (showToast) showToast('Network error during cloning', 'error');
+    }
+  };
+
   const allTags = buildAllTags(customTagRaw);
   const tagMap = Object.fromEntries(allTags.map(t => [t.id, t]));
   const existingSymbols = useMemo(() => watchlistStocks.map(s => s.symbol), [watchlistStocks]);
+
+  // Sprint 5 Smart Watchlist Filter Evaluator
+  const processedSmartWatchlist = useMemo(() => {
+    return filteredWatchlist.filter(s => {
+      if (smartFilter === 'all') return true;
+      if (smartFilter === 'high_volume') return s.volume >= 2000000 || s.volume === 0; // fallback seeds
+      if (smartFilter === 'breakout') return Math.abs(s.changePercent) >= 3.0;
+      if (smartFilter === 'momentum') return s.changePercent >= 1.5;
+      return true;
+    });
+  }, [filteredWatchlist, smartFilter]);
 
   const handleDeleteStock = useCallback(async (symbol: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -323,7 +388,7 @@ export default function WatchlistSidebar({
         {/* Title + Add button */}
         <h2 className="text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-3 flex items-center gap-2 select-none">
           <Layers className="w-3.5 h-3.5 text-blue-500" /> Watchlist
-          <span className="text-slate-300 dark:text-slate-700 font-mono">({filteredWatchlist.length})</span>
+          <span className="text-slate-300 dark:text-slate-700 font-mono">({processedSmartWatchlist.length})</span>
           
           <div className="ml-auto flex items-center gap-1.5">
             <button
@@ -378,20 +443,95 @@ export default function WatchlistSidebar({
               </button>
             )}
           </div>
+
+          {/* Sort Switcher */}
           <select
             value={watchlistSort}
             onChange={e => onSortChange(e.target.value as WatchlistSortOption)}
-            className="px-2 py-2 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-400 focus:outline-none cursor-pointer shrink-0"
+            className="px-2 py-2 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold text-slate-650 dark:text-slate-400 focus:outline-none cursor-pointer shrink-0"
             title="Sort"
           >
             <option value="default">Default</option>
-            <option value="nameAsc">Name A→Z</option>
-            <option value="nameDesc">Name Z→A</option>
+            <option value="nameAsc">Name A-Z</option>
+            <option value="nameDesc">Name Z-A</option>
             <option value="priceDesc">Price ↓</option>
             <option value="priceAsc">Price ↑</option>
             <option value="changePctDesc">%Chg ↓</option>
             <option value="changePctAsc">%Chg ↑</option>
           </select>
+        </div>
+
+        {/* Sprint 2 Watchlist Controls Panel (Clone & Smart Filters) */}
+        <div className="bg-slate-100 dark:bg-slate-900 p-3 rounded-2xl border border-slate-200 dark:border-slate-800/80 mb-3 space-y-3">
+          <div className="flex justify-between items-center text-[9px] font-extrabold uppercase tracking-widest text-slate-450 dark:text-slate-500">
+            <span>⚙️ Tools & Smart Filters</span>
+            <button
+              onClick={() => setShowCloneInput(!showCloneInput)}
+              className="text-[9.5px] font-black text-blue-500 hover:underline flex items-center gap-1"
+            >
+              <Copy className="w-2.5 h-2.5" /> Clone List
+            </button>
+          </div>
+
+          {showCloneInput && (
+            <div className="flex gap-1.5 animate-in slide-in-from-top duration-200">
+              <input
+                type="text"
+                placeholder="New watchlist name..."
+                value={cloningName}
+                onChange={e => setCloningName(e.target.value)}
+                className="flex-1 px-2.5 py-1.5 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-[10px] font-bold outline-none"
+              />
+              <button
+                onClick={handleCloneWatchlist}
+                className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-[9px] font-bold"
+              >
+                Go
+              </button>
+            </div>
+          )}
+
+          {/* Smart filters row */}
+          <div className="flex flex-wrap gap-1">
+            {[
+              { id: 'all', label: 'All Stocks' },
+              { id: 'high_volume', label: '🔥 High Volume' },
+              { id: 'breakout', label: '📈 Breakout' },
+              { id: 'momentum', label: '⚡ Momentum' }
+            ].map(f => (
+              <button
+                key={f.id}
+                onClick={() => setSmartFilter(f.id as any)}
+                className={`px-2.5 py-1 rounded-lg text-[9px] font-black border transition-all ${
+                  smartFilter === f.id
+                    ? 'bg-blue-600 border-blue-600 text-white shadow-sm'
+                    : 'bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-500 hover:border-slate-350'
+                }`}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Dynamic Watchlist Analytics Widget */}
+          {analyticsData && (
+            <div className="border-t border-slate-200/50 dark:border-slate-800/50 pt-2.5 grid grid-cols-2 gap-2 text-[9px] font-bold text-slate-500">
+              <div>
+                <span className="text-slate-400 block mb-0.5">DAILY ROI RETURN</span>
+                <span className={`text-[10px] font-black ${analyticsData.dailyReturn >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                  {analyticsData.dailyReturn >= 0 ? '+' : ''}{analyticsData.dailyReturn.toFixed(2)}%
+                </span>
+              </div>
+              {analyticsData.topGainer && (
+                <div className="text-right">
+                  <span className="text-slate-400 block mb-0.5">🔥 TOP PERFORMER</span>
+                  <span className="text-green-500 truncate block font-extrabold">
+                    {analyticsData.topGainer.symbol.split('.')[0]} (+{analyticsData.topGainer.changePercent.toFixed(1)}%)
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Tag filters */}
@@ -409,7 +549,7 @@ export default function WatchlistSidebar({
         renderSkeleton()
       ) : (
         <VirtualStockList
-          items={filteredWatchlist}
+          items={processedSmartWatchlist}
           itemHeight={STOCK_ROW_HEIGHT}
           containerClassName="flex-1 min-h-0"
           getItemKey={(item) => item.symbol}
