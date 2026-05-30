@@ -137,7 +137,7 @@ export default function SecuritySettingsPage() {
         {/* Cockpit Header */}
         <div className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-md p-6 rounded-3xl border border-slate-200/80 dark:border-slate-800/80 shadow-lg flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
-            <h1 className="text-2xl font-black bg-gradient-to-r from-blue-600 to-cyan-500 bg-clip-text text-transparent flex items-center gap-2">
+            <h1 className="text-2xl font-black text-slate-900 dark:text-white flex items-center gap-2">
               <Shield className="w-6 h-6 text-blue-500" /> Security Command & Device Center
             </h1>
             <p className="text-xs text-slate-500 mt-1 font-semibold">
@@ -289,7 +289,7 @@ export default function SecuritySettingsPage() {
               <button
                 type="submit"
                 disabled={submittingPassword}
-                className="w-full py-2.5 bg-gradient-to-r from-blue-600 to-cyan-500 text-white rounded-xl text-xs font-extrabold transition-all hover:scale-[1.02] shadow"
+                className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-extrabold transition-all hover:scale-[1.02] shadow"
               >
                 {submittingPassword ? 'Validating Entropy...' : 'Save Password'}
               </button>

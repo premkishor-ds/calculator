@@ -70,7 +70,7 @@ export const Navigation = () => {
       <div suppressHydrationWarning className="w-full max-w-6xl flex items-center justify-between gap-4 px-4 sm:px-6 py-3 rounded-2xl sm:rounded-full bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-slate-200 dark:border-slate-800 shadow-lg">
         <Link
           href="/"
-          className="text-sm font-bold bg-gradient-to-r from-cyan-400 to-blue-600 bg-clip-text text-transparent shrink-0"
+          className="text-sm font-extrabold text-slate-900 dark:text-white tracking-wider shrink-0"
         >
           Vision Wealth
         </Link>
@@ -81,10 +81,10 @@ export const Navigation = () => {
               key={href}
               href={href}
               onClick={closeMenu}
-              className={`text-xs font-semibold transition-colors whitespace-nowrap ${
+              className={`text-xs font-bold transition-colors whitespace-nowrap pb-0.5 ${
                 pathname === href || pathname.startsWith(`${href}/`)
-                  ? 'text-blue-600 dark:text-blue-400 font-black'
-                  : 'text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400'
+                  ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400'
+                  : 'text-slate-850 dark:text-slate-100 hover:text-blue-600 dark:hover:text-blue-400'
               }`}
             >
               {label}
@@ -97,11 +97,11 @@ export const Navigation = () => {
           <button
             type="button"
             onClick={toggleTheme}
-            className="p-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:text-slate-950 dark:hover:text-white rounded-xl transition-all flex items-center justify-center cursor-pointer hover:scale-105 active:scale-[0.98]"
+            className="p-2 bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200 hover:text-slate-950 dark:hover:text-white rounded-xl transition-all flex items-center justify-center cursor-pointer hover:scale-105 active:scale-[0.98]"
             aria-label={mounted && theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
             title={mounted && theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
           >
-            {mounted && theme === 'dark' ? <Sun className="w-4.5 h-4.5 text-yellow-400" /> : <Moon className="w-4.5 h-4.5 text-indigo-500" />}
+            {mounted && theme === 'dark' ? <Sun className="w-4.5 h-4.5 text-yellow-500" /> : <Moon className="w-4.5 h-4.5 text-indigo-600" />}
           </button>
 
           {/* Notification Center Bell */}
@@ -112,16 +112,16 @@ export const Navigation = () => {
             <div suppressHydrationWarning className="w-20 h-8" /> // Neutral placeholder during SSR
           ) : user ? (
             <div suppressHydrationWarning className="flex items-center gap-2">
-              <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl">
-                <User className="w-3.5 h-3.5 text-blue-500" />
-                <span className="text-xs font-black text-slate-600 dark:text-slate-300 truncate max-w-[80px]">
+              <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl">
+                <User className="w-3.5 h-3.5 text-blue-600" />
+                <span className="text-xs font-black text-slate-800 dark:text-slate-100 truncate max-w-[80px]">
                   {user.fullName.split(' ')[0]}
                 </span>
               </div>
               <button
                 type="button"
                 onClick={logout}
-                className="p-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20 rounded-xl transition-all hover:scale-105 cursor-pointer"
+                className="p-2 bg-red-600 text-white hover:bg-red-700 rounded-xl transition-all hover:scale-105 cursor-pointer font-bold text-xs"
                 title="Log out session"
               >
                 <LogOut className="w-4 h-4" />
@@ -131,13 +131,13 @@ export const Navigation = () => {
             <div suppressHydrationWarning className="flex items-center gap-1.5">
               <Link
                 href="/login"
-                className="px-3 py-1.5 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-bold rounded-xl transition-colors"
+                className="px-3 py-1.5 border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-900 dark:text-slate-100 text-xs font-bold rounded-xl transition-colors"
               >
                 Login
               </Link>
               <Link
                 href="/register"
-                className="hidden sm:block px-3 py-1.5 bg-gradient-to-r from-blue-600 to-cyan-500 text-white text-xs font-bold rounded-xl hover:opacity-95 transition-opacity"
+                className="hidden sm:block px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition-colors"
               >
                 Register
               </Link>
