@@ -198,6 +198,7 @@ interface Props {
     text?: string;
   }>;
   onDataLoaded?: (data: ChartPoint[]) => void;
+  companyName?: string;
 }
 
 /* ─── Pure helper — no hooks ─────────────────────────────────── */
@@ -628,7 +629,7 @@ export default function AdvancedChart({
   symbol, chartRange, onRangeChange, chartMode, onModeChange, theme,
   controlledInterval, onIntervalChange, controlledStyle, onStyleChange,
   controlledIndicators, onIndicatorsChange, drawingsVersion,
-  onDrawingsChange, markers, onDataLoaded
+  onDrawingsChange, markers, onDataLoaded, companyName
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef     = useRef<IChartApi | null>(null);
@@ -642,6 +643,7 @@ export default function AdvancedChart({
   const [data,     setData]     = useState<ChartPoint[]>([]);
   const [loading,  setLoading]  = useState(false);
   const [error,    setError]    = useState('');
+  const [hoveredPoint, setHoveredPoint] = useState<ChartPoint | null>(null);
 
   // Client-side per-symbol+interval cache to avoid redundant fetches
   const dataCache = useRef<Map<string, ChartPoint[]>>(new Map());
@@ -1214,6 +1216,19 @@ export default function AdvancedChart({
     mainSeriesRef.current = candle;
     volRef.current = vol;
 
+    const handleCrosshairMove = (param: any) => {
+      if (param && param.time) {
+        const pts = dataRef.current;
+        const pt = pts.find(p => p.time === param.time);
+        if (pt) {
+          setHoveredPoint(pt);
+        }
+      } else {
+        setHoveredPoint(null);
+      }
+    };
+    chart.subscribeCrosshairMove(handleCrosshairMove);
+
     const handleRangeChange = () => setViewportTrigger(prev => prev + 1);
     chart.timeScale().subscribeVisibleLogicalRangeChange(handleRangeChange);
 
@@ -1229,6 +1244,7 @@ export default function AdvancedChart({
     return () => {
       ro.disconnect();
       chart.timeScale().unsubscribeVisibleLogicalRangeChange(handleRangeChange);
+      chart.unsubscribeCrosshairMove(handleCrosshairMove);
       chart.remove();
       chartRef.current = null;
       mainSeriesRef.current = null;
@@ -1692,6 +1708,7 @@ export default function AdvancedChart({
   };
 
   const last = data[data.length - 1];
+  const activePoint = hoveredPoint || last;
 
   return (
     <div className="flex flex-col h-full bg-white dark:bg-slate-950 select-none">
@@ -1995,7 +2012,7 @@ export default function AdvancedChart({
           )}
 
           <div 
-            className="relative w-full h-full"
+            className="relative w-full h-full bg-white dark:bg-slate-950"
             onContextMenu={(e) => {
               e.preventDefault();
               const rect = e.currentTarget.getBoundingClientRect();
@@ -2004,7 +2021,63 @@ export default function AdvancedChart({
               eraseAt(x, y);
             }}
           >
-            <div ref={containerRef} className="w-full h-full" />
+            {/* 🌊 TradingView style Watermark */}
+            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none select-none z-0 opacity-[0.03] dark:opacity-[0.04]">
+              <div className="text-[72px] sm:text-[96px] font-black uppercase tracking-tighter leading-none text-slate-900 dark:text-white">
+                {symbol.replace('.NS', '').replace('.BO', '')}
+              </div>
+              <div className="text-[12px] sm:text-[14px] font-extrabold tracking-widest mt-1 opacity-80 text-slate-800 dark:text-slate-200">
+                {companyName || 'VISION WEALTH INDEX'}
+              </div>
+            </div>
+
+            {/* 📊 Floating Legend / Info Overlay */}
+            {activePoint && (
+              <div className="absolute top-3.5 left-3 px-2.5 py-1 rounded bg-white/40 dark:bg-slate-950/40 backdrop-blur-[1px] z-35 pointer-events-none flex flex-col font-mono text-[10px] leading-tight select-none">
+                <div className="flex flex-wrap items-center gap-1 text-slate-800 dark:text-slate-200">
+                  <span className="font-extrabold text-blue-600 dark:text-blue-400">{symbol.replace('.NS', '').replace('.BO', '')}</span>
+                  <span className="font-semibold text-slate-400 dark:text-slate-500">• {interval.toUpperCase()} • NSE</span>
+                  <span className="ml-1.5 text-slate-400 dark:text-slate-500">O</span>
+                  <span className={activePoint.close >= activePoint.open ? 'text-emerald-500 dark:text-emerald-400 font-extrabold' : 'text-red-500 dark:text-red-400 font-extrabold'}>
+                    {activePoint.open.toFixed(2)}
+                  </span>
+                  <span className="text-slate-400 dark:text-slate-500">H</span>
+                  <span className={activePoint.close >= activePoint.open ? 'text-emerald-500 dark:text-emerald-400 font-extrabold' : 'text-red-500 dark:text-red-400 font-extrabold'}>
+                    {activePoint.high.toFixed(2)}
+                  </span>
+                  <span className="text-slate-400 dark:text-slate-500">L</span>
+                  <span className={activePoint.close >= activePoint.open ? 'text-emerald-500 dark:text-emerald-400 font-extrabold' : 'text-red-500 dark:text-red-400 font-extrabold'}>
+                    {activePoint.low.toFixed(2)}
+                  </span>
+                  <span className="text-slate-400 dark:text-slate-500">C</span>
+                  <span className={activePoint.close >= activePoint.open ? 'text-emerald-500 dark:text-emerald-400 font-extrabold' : 'text-red-500 dark:text-red-400 font-extrabold'}>
+                    {activePoint.close.toFixed(2)}
+                  </span>
+                  {(() => {
+                    const change = activePoint.close - activePoint.open;
+                    const changePercent = (change / activePoint.open) * 100;
+                    return (
+                      <span className={`font-black ml-1 ${change >= 0 ? 'text-emerald-500 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}`}>
+                        {change >= 0 ? '+' : ''}{change.toFixed(2)} ({change >= 0 ? '+' : ''}{changePercent.toFixed(2)}%)
+                      </span>
+                    );
+                  })()}
+                </div>
+                <div className="flex items-center gap-1.5 text-[9px] text-slate-400 dark:text-slate-500 mt-0.5">
+                  <span>Vol:</span>
+                  <span className="font-bold text-slate-500 dark:text-slate-350">
+                    {activePoint.volume >= 1e6 ? `${(activePoint.volume / 1e6).toFixed(2)}M` : activePoint.volume.toLocaleString('en-IN')}
+                  </span>
+                  {indicators.size > 0 && (
+                    <span className="ml-1.5 font-bold text-blue-600/70 dark:text-blue-400/50 uppercase tracking-wider text-[8px]">
+                      {Array.from(indicators).join(', ')} Signals
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
+
+            <div ref={containerRef} className="w-full h-full relative z-10" />
             <svg
               ref={svgRef}
               className={`absolute inset-0 w-full h-full z-10 ${
