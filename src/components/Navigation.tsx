@@ -75,7 +75,7 @@ export const Navigation = () => {
           Vision Wealth
         </Link>
 
-        <div className="hidden md:flex items-center gap-4 lg:gap-6">
+        <div className="hidden lg:flex items-center gap-4 xl:gap-6">
           {LINKS.map(({ href, label }) => (
             <Link
               key={href}
@@ -147,7 +147,7 @@ export const Navigation = () => {
           <button
             type="button"
             onClick={() => setOpen((v) => !v)}
-            className="md:hidden p-2 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            className="lg:hidden p-2 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
             aria-expanded={open}
             aria-label={open ? 'Close menu' : 'Open menu'}
           >
@@ -160,11 +160,11 @@ export const Navigation = () => {
         <>
           <button
             type="button"
-            className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm md:hidden"
+            className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm lg:hidden"
             aria-label="Close menu overlay"
             onClick={() => setOpen(false)}
           />
-          <div className="fixed top-[4.5rem] left-4 right-4 z-50 md:hidden rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden">
+          <div className="fixed top-[4.5rem] left-4 right-4 z-50 lg:hidden rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden">
             {LINKS.map(({ href, label }) => (
               <Link
                 key={href}
