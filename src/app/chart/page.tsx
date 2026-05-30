@@ -203,12 +203,17 @@ function getWsUrl() {
 // SECTORS_MAP is now imported centrally from '@/utils/symbols'
 
 function TradingTerminalInner() {
-  /* â”€â”€ Core Theme & Workspace States â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  /* ── Core Theme & Workspace States ──────────────────────── */
   const [theme, setTheme] = useState<'dark' | 'light'>('light');
   const [watchlistStocks, setWatchlistStocks] = useState<StockQuote[]>([]);
   const [livePrices, setLivePrices] = useState<Record<string, number>>({});
   
-  // Floating Toast State â€” useRef tracks timer to prevent stacking multiple timers
+  // Floating Toast State — useRef tracks timer to prevent stacking multiple timers
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const showToast = useCallback((message: string, type: 'success' | 'error' | 'info' = 'success') => {
@@ -1525,6 +1530,17 @@ function TradingTerminalInner() {
     window.dispatchEvent(new CustomEvent('themeChanged', { detail: newTheme }));
   };
 
+  if (!mounted) {
+    return (
+      <div className="min-h-dvh bg-slate-950 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+          <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Initialising Terminal...</span>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-dvh lg:h-dvh lg:overflow-hidden bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans" onClick={() => setTagPopoverSym(null)}>
       <Navigation />
@@ -2417,26 +2433,15 @@ function TradingTerminalInner() {
 }
 
 export default function TradingTerminalPage() {
-  const [mounted, setMounted] = React.useState(false);
-  React.useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  const fallback = (
-    <div className="min-h-dvh bg-slate-950 flex items-center justify-center">
-      <div className="flex flex-col items-center gap-3">
-        <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-        <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Initialising Terminal...</span>
-      </div>
-    </div>
-  );
-
-  if (!mounted) {
-    return fallback;
-  }
-
   return (
-    <React.Suspense fallback={fallback}>
+    <React.Suspense fallback={
+      <div className="min-h-dvh bg-slate-950 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+          <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Initialising Terminal...</span>
+        </div>
+      </div>
+    }>
       <TradingTerminalInner />
     </React.Suspense>
   );
