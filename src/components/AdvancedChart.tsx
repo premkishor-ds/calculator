@@ -1173,25 +1173,25 @@ export default function AdvancedChart({
 
     const chart = createChart(containerRef.current, {
       layout: {
-        background: { type: ColorType.Solid, color: isDark ? '#020617' : '#ffffff' },
-        textColor: isDark ? '#94a3b8' : '#475569',
+        background: { type: ColorType.Solid, color: isDark ? '#131722' : '#ffffff' },
+        textColor: isDark ? '#d1d4dc' : '#475569',
         fontSize: 11,
       },
       grid: {
-        vertLines: { color: isDark ? '#0f172a' : '#f1f5f9' },
-        horzLines: { color: isDark ? '#0f172a' : '#f1f5f9' },
+        vertLines: { color: isDark ? '#1e222d' : '#f1f5f9' },
+        horzLines: { color: isDark ? '#1e222d' : '#f1f5f9' },
       },
       crosshair: {
         mode: CrosshairMode.Normal,
-        vertLine: { color: isDark ? '#475569' : '#cbd5e1', style: 3, labelBackgroundColor: isDark ? '#1e293b' : '#f1f5f9' },
-        horzLine: { color: isDark ? '#475569' : '#cbd5e1', style: 3, labelBackgroundColor: isDark ? '#1e293b' : '#f1f5f9' },
+        vertLine: { color: isDark ? '#758696' : '#cbd5e1', style: 3, labelBackgroundColor: isDark ? '#2a2e39' : '#f1f5f9' },
+        horzLine: { color: isDark ? '#758696' : '#cbd5e1', style: 3, labelBackgroundColor: isDark ? '#2a2e39' : '#f1f5f9' },
       },
       rightPriceScale: {
-        borderColor: isDark ? '#1e293b' : '#e2e8f0',
+        borderColor: isDark ? '#2a2e39' : '#e2e8f0',
         scaleMargins: { top: 0.08, bottom: 0.28 },
       },
       timeScale: {
-        borderColor: isDark ? '#1e293b' : '#e2e8f0',
+        borderColor: isDark ? '#2a2e39' : '#e2e8f0',
         timeVisible: true,
         secondsVisible: true,
       },
@@ -1256,6 +1256,34 @@ export default function AdvancedChart({
       customSeriesRef.current.clear();
     };
   }, []);
+
+  /* Reactively update chart layout options when theme prop updates */
+  useEffect(() => {
+    const chart = chartRef.current;
+    if (!chart) return;
+    const isDark = theme === 'dark';
+
+    chart.applyOptions({
+      layout: {
+        background: { type: ColorType.Solid, color: isDark ? '#131722' : '#ffffff' },
+        textColor: isDark ? '#d1d4dc' : '#475569',
+      },
+      grid: {
+        vertLines: { color: isDark ? '#1e222d' : '#f1f5f9' },
+        horzLines: { color: isDark ? '#1e222d' : '#f1f5f9' },
+      },
+      crosshair: {
+        vertLine: { color: isDark ? '#758696' : '#cbd5e1', labelBackgroundColor: isDark ? '#2a2e39' : '#f1f5f9' },
+        horzLine: { color: isDark ? '#758696' : '#cbd5e1', labelBackgroundColor: isDark ? '#2a2e39' : '#f1f5f9' },
+      },
+      rightPriceScale: {
+        borderColor: isDark ? '#2a2e39' : '#e2e8f0',
+      },
+      timeScale: {
+        borderColor: isDark ? '#2a2e39' : '#e2e8f0',
+      },
+    });
+  }, [theme]);
 
   /* Load historical candles & fetch drawings */
   useEffect(() => {
@@ -1686,18 +1714,18 @@ export default function AdvancedChart({
     const isDark = theme === 'dark';
     chart.applyOptions({
       layout: {
-        background: { type: ColorType.Solid, color: isDark ? '#020617' : '#ffffff' },
-        textColor: isDark ? '#94a3b8' : '#475569',
+        background: { type: ColorType.Solid, color: isDark ? '#131722' : '#ffffff' },
+        textColor: isDark ? '#d1d4dc' : '#475569',
       },
       grid: {
-        vertLines: { color: isDark ? '#0f172a' : '#f1f5f9' },
-        horzLines: { color: isDark ? '#0f172a' : '#f1f5f9' },
+        vertLines: { color: isDark ? '#1e222d' : '#f1f5f9' },
+        horzLines: { color: isDark ? '#1e222d' : '#f1f5f9' },
       },
-      rightPriceScale: { borderColor: isDark ? '#1e293b' : '#e2e8f0' },
-      timeScale: { borderColor: isDark ? '#1e293b' : '#e2e8f0' },
+      rightPriceScale: { borderColor: isDark ? '#2a2e39' : '#e2e8f0' },
+      timeScale: { borderColor: isDark ? '#2a2e39' : '#e2e8f0' },
       crosshair: {
-        vertLine: { color: isDark ? '#475569' : '#cbd5e1', labelBackgroundColor: isDark ? '#1e293b' : '#f1f5f9' },
-        horzLine: { color: isDark ? '#475569' : '#cbd5e1', labelBackgroundColor: isDark ? '#1e293b' : '#f1f5f9' },
+        vertLine: { color: isDark ? '#758696' : '#cbd5e1', labelBackgroundColor: isDark ? '#2a2e39' : '#f1f5f9' },
+        horzLine: { color: isDark ? '#758696' : '#cbd5e1', labelBackgroundColor: isDark ? '#2a2e39' : '#f1f5f9' },
       },
     });
   }, [theme]);
@@ -2049,7 +2077,7 @@ export default function AdvancedChart({
             }}
           >
             {/* 🌊 TradingView style Watermark */}
-            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none select-none z-0 opacity-[0.03] dark:opacity-[0.04]">
+            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none select-none z-0 opacity-[0.06] dark:opacity-[0.04]">
               <div className="text-[72px] sm:text-[96px] font-black uppercase tracking-tighter leading-none text-slate-900 dark:text-white">
                 {symbol.replace('.NS', '').replace('.BO', '')}
               </div>

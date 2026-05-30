@@ -37,7 +37,9 @@ import {
   Check,
   ChevronDown,
   Lock,
-  Unlock
+  Unlock,
+  Bookmark,
+  HelpCircle
 } from 'lucide-react';
 import { DEFAULT_SYMBOLS, DEFAULT_SEEDS } from '@/utils/symbols';
 import { buildAllTags, DEFAULT_CUSTOM_TAGS, CUSTOM_TAG_IDS, type TagDef, type CustomTagRaw } from '@/utils/tags';
@@ -935,7 +937,7 @@ export default function TradingTerminalInner() {
   }, [activeGridIndex, showToast]);
 
   /* â”€â”€ Static tags filtering logic â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
-  type WatchlistSortOption = 'default' | 'nameAsc' | 'nameDesc' | 'priceDesc' | 'priceAsc' | 'changePctDesc' | 'changePctAsc' | 'changeAbsDesc' | 'changeAbsAsc';
+  type WatchlistSortOption = 'default' | 'nameAsc' | 'nameDesc' | 'priceDesc' | 'priceAsc' | 'changePctDesc' | 'changePctAsc' | 'changeAbsDesc' | 'changeAbsAsc' | 'tagAsc' | 'tagDesc';
   const [watchlistSort, setWatchlistSort] = useState<WatchlistSortOption>('default');
   const [searchQuery, setSearchQuery] = useState('');
   const [watchlistLoading, setWatchlistLoading] = useState(true);
@@ -975,7 +977,45 @@ export default function TradingTerminalInner() {
   const [deepLoading, setDeepLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'technicals' | 'fundamentals' | 'profile' | 'proscons' | 'strategy'>('technicals');
 
-  const [sidebarMode, setSidebarMode] = useState<'watchlist' | 'fundamentals'>('watchlist');
+  const [sidebarMode, setSidebarMode] = useState<'watchlist' | 'fundamentals' | 'layout'>('watchlist');
+  const [sidebarWidth, setSidebarWidth] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('sidebarWidth');
+      return saved ? parseInt(saved, 10) : 380;
+    }
+    return 380;
+  });
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      const newWidth = window.innerWidth - moveEvent.clientX;
+      const clampedWidth = Math.max(240, Math.min(600, newWidth));
+      setSidebarWidth(clampedWidth);
+      localStorage.setItem('sidebarWidth', String(clampedWidth));
+    };
+
+    const handleMouseUp = () => {
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+      // Fire a resize event to ensure layout updates
+      window.dispatchEvent(new Event('resize'));
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+  }, []);
+
   const [sidebarSize, setSidebarSize] = useState<'normal' | 'wide'>('normal');
   const [sidebarActiveTab, setSidebarActiveTab] = useState<'overview' | 'dcf' | 'financials' | 'news' | 'backtest' | 'options'>('overview');
   const [dcfDiscountRate, setDcfDiscountRate] = useState<number>(10);
@@ -1031,6 +1071,14 @@ export default function TradingTerminalInner() {
       if (res.ok) {
         const data = await res.json();
         setWatchlists(data);
+        if (data && data.length > 0) {
+          const myWl = data.find((w: any) => w.name.toLowerCase().includes('my watchlist'));
+          if (myWl) {
+            setSelectedWatchlist(myWl.name);
+          } else {
+            setSelectedWatchlist(data[0].name);
+          }
+        }
       }
     } catch (err) {
       console.error('Failed to fetch watchlists:', err);
@@ -1526,6 +1574,22 @@ export default function TradingTerminalInner() {
           case 'changePctAsc': return (a.changePercent || 0) - (b.changePercent || 0);
           case 'changeAbsDesc': return (b.change || 0) - (a.change || 0);
           case 'changeAbsAsc': return (a.change || 0) - (b.change || 0);
+          case 'tagAsc': {
+            const aTag = a.tags?.[0] || '';
+            const bTag = b.tags?.[0] || '';
+            if (!aTag && !bTag) return 0;
+            if (!aTag) return 1;
+            if (!bTag) return -1;
+            return aTag.localeCompare(bTag);
+          }
+          case 'tagDesc': {
+            const aTag = a.tags?.[0] || '';
+            const bTag = b.tags?.[0] || '';
+            if (!aTag && !bTag) return 0;
+            if (!aTag) return 1;
+            if (!bTag) return -1;
+            return bTag.localeCompare(aTag);
+          }
           default: return 0;
         }
       });
@@ -1553,10 +1617,10 @@ export default function TradingTerminalInner() {
 
   return (
     <div suppressHydrationWarning className="min-h-dvh lg:h-dvh lg:overflow-hidden bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans" onClick={() => setTagPopoverSym(null)}>
-      <Navigation />
+      {/* Navigation header hidden here and relocated inside sidebar to optimize chart space */}
 
       {/* â”€â”€ Main Viewport Panel Grid & Drawer â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
-      <main className="flex-1 flex flex-col lg:grid lg:grid-cols-12 lg:overflow-hidden min-h-0 relative">
+      <main className="flex-1 flex flex-col lg:flex-row lg:overflow-hidden min-h-0 relative">
         
         {/* Mobile View Toggle Tabs */}
         <div className="lg:hidden flex border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 shrink-0 p-2 gap-2">
@@ -1575,113 +1639,9 @@ export default function TradingTerminalInner() {
         </div>
 
         {/* LEFT VIEWPORT CANVAS & bottom docking drawer */}
-        <section className={`lg:col-span-9 flex-col lg:min-h-0 lg:overflow-y-auto bg-slate-50 dark:bg-slate-900/40 ${mobileViewTab === 'chart' ? 'flex flex-1 min-h-0' : 'hidden lg:flex'}`}>
+        <section className={`flex-1 flex flex-col lg:min-h-0 lg:overflow-y-auto bg-slate-50 dark:bg-slate-900/40 ${mobileViewTab === 'chart' ? 'flex min-h-0' : 'hidden lg:flex'}`}>
           
-          {/* Cockpit State Synchroniser Toolbar */}
-          <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-2 bg-white dark:bg-slate-950 border-b border-slate-200 dark:border-slate-850 shrink-0 select-none z-30 shadow-sm">
-            
-            {/* Grid Layout Canvas Selection Buttons */}
-            <div className="flex items-center gap-1.5">
-              <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest mr-1.5 flex items-center gap-1">
-                <Grid className="w-3.5 h-3.5" /> Grid:
-              </span>
-              {[1, 2, 4, 6, 8].map(slots => (
-                <button
-                  key={slots}
-                  onClick={() => {
-                    setGridLayout(slots as any);
-                    setActiveGridIndex(0);
-                  }}
-                  className={`px-3 py-1.5 rounded-lg text-[10px] font-black tracking-tight border transition-all ${
-                    gridLayout === slots
-                      ? 'bg-blue-500/10 border-blue-500/30 text-blue-600 dark:text-blue-455 shadow-sm font-black'
-                      : 'bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-500 hover:border-slate-350 dark:hover:border-slate-750'
-                  }`}
-                >
-                  {slots === 1 ? '1 Screen' : `${slots} Charts`}
-                </button>
-              ))}
-            </div>
 
-            {/* Sync Variables Checkboxes */}
-            <div className="flex items-center gap-3.5">
-              <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1">
-                <RefreshCw className="w-3 h-3" /> Sync Cockpit:
-              </span>
-              <div className="flex items-center gap-3 text-[10px] font-bold text-slate-500 dark:text-slate-400">
-                <label className="flex items-center gap-1.5 cursor-pointer">
-                  <input type="checkbox" checked={syncSymbol} onChange={e => setSyncSymbol(e.target.checked)} className="rounded border-slate-300 dark:border-slate-700 text-blue-500 accent-blue-500" />
-                  Symbol
-                </label>
-                <label className="flex items-center gap-1.5 cursor-pointer">
-                  <input type="checkbox" checked={syncTimeframe} onChange={e => setSyncTimeframe(e.target.checked)} className="rounded border-slate-300 dark:border-slate-700 text-blue-500 accent-blue-500" />
-                  Timeframe
-                </label>
-                <label className="flex items-center gap-1.5 cursor-pointer">
-                  <input type="checkbox" checked={syncStyle} onChange={e => setSyncStyle(e.target.checked)} className="rounded border-slate-300 dark:border-slate-700 text-blue-500 accent-blue-500" />
-                  Style
-                </label>
-                <label className="flex items-center gap-1.5 cursor-pointer">
-                  <input type="checkbox" checked={syncDrawings} onChange={e => setSyncDrawings(e.target.checked)} className="rounded border-slate-300 dark:border-slate-700 text-blue-500 accent-blue-500" />
-                  Drawings
-                </label>
-                <label className="flex items-center gap-1.5 cursor-pointer">
-                  <input type="checkbox" checked={syncIndicators} onChange={e => setSyncIndicators(e.target.checked)} className="rounded border-slate-300 dark:border-slate-700 text-blue-500 accent-blue-500" />
-                  Plots
-                </label>
-              </div>
-            </div>
-
-            {/* Cloud Workspace Templates Dropdown */}
-            <div className="relative">
-              <button
-                type="button"
-                onClick={() => setShowTemplatesDropdown(prev => !prev)}
-                className="flex items-center gap-1 px-3 py-1.5 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-850 rounded-xl text-[10px] font-black transition-all"
-              >
-                <Save className="w-3.5 h-3.5 text-indigo-500" /> Layout Templates <ChevronDown className="w-3 h-3" />
-              </button>
-              {showTemplatesDropdown && (
-                <div className="absolute right-0 top-full mt-2 w-64 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-2xl p-3 z-50 animate-fade-in">
-                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">Cloud Save Workspace</p>
-                  <form onSubmit={handleSaveWorkspaceLayout} className="flex gap-1.5 mb-3">
-                    <input
-                      type="text"
-                      placeholder="Template name..."
-                      value={newTemplateName}
-                      onChange={e => setNewTemplateName(e.target.value)}
-                      className="flex-1 px-2.5 py-1 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-blue-500/40 rounded-lg text-[10px] font-semibold focus:outline-none"
-                    />
-                    <button type="submit" className="px-2.5 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-[10px] font-bold">Save</button>
-                  </form>
-                  <div className="w-full h-[1px] bg-slate-100 dark:bg-slate-800/80 my-2" />
-                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Load Saved Template</p>
-                  {savedTemplates.length === 0 ? (
-                    <span className="text-[9px] text-slate-400 block text-center py-2">No templates saved in cloud.</span>
-                  ) : (
-                    <div className="max-h-36 overflow-y-auto space-y-1">
-                      {savedTemplates.map(tmpl => (
-                        <div
-                          key={tmpl._id}
-                          onClick={() => handleLoadWorkspaceLayout(tmpl)}
-                          className="flex items-center justify-between px-2 py-1.5 hover:bg-slate-55 dark:hover:bg-slate-800/80 rounded-lg cursor-pointer transition-colors"
-                        >
-                          <span className="text-[10px] font-bold text-slate-700 dark:text-slate-300">{tmpl.name}</span>
-                          <button
-                            type="button"
-                            onClick={(e) => handleDeleteWorkspaceLayout(tmpl.name, e)}
-                            className="text-slate-400 hover:text-red-500 transition-colors p-0.5 rounded"
-                          >
-                            âœ•
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
 
           {/* Grid Canvas Area */}
           <div className="h-[480px] lg:h-[800px] shrink-0 relative">
@@ -1700,10 +1660,10 @@ export default function TradingTerminalInner() {
                   <div
                     key={idx}
                     onClick={() => setActiveGridIndex(idx)}
-                    className={`relative flex flex-col bg-white dark:bg-slate-950 rounded-xl overflow-hidden border-2 transition-all min-h-[220px] ${
+                    className={`relative flex flex-col bg-white dark:bg-slate-950 rounded-xl overflow-hidden border transition-all min-h-[220px] ${
                       isActive 
-                        ? 'border-blue-500 shadow-md ring-1 ring-blue-500/20' 
-                        : 'border-slate-205 dark:border-slate-850 hover:border-slate-350 dark:hover:border-slate-750'
+                        ? 'border-blue-500 shadow-sm ring-1 ring-blue-500/10' 
+                        : 'border-slate-200 dark:border-slate-850 hover:border-slate-350 dark:hover:border-slate-750'
                     }`}
                   >
                     {/* Top slot indicator strip */}
@@ -1775,43 +1735,48 @@ export default function TradingTerminalInner() {
 
         </section>
 
+        {/* Draggable Resizer Bar */}
+        <div
+          onMouseDown={handleMouseDown}
+          className="hidden lg:block w-[4px] hover:w-[6px] hover:bg-blue-500/80 active:bg-blue-600 cursor-col-resize transition-all duration-150 relative z-30 shrink-0 border-l border-r border-slate-200 dark:border-slate-800 hover:border-transparent active:border-transparent"
+          title="Drag to resize sidebar"
+        />
+
         {/* RIGHT WATCHLIST & FUNDAMENTALS SIDEBAR PANEL */}
-        <section className={`lg:col-span-3 bg-white dark:bg-slate-950 flex-col overflow-hidden lg:max-h-none lg:min-h-0 safe-bottom border-t lg:border-t-0 lg:border-l border-slate-200 dark:border-slate-850 shadow-xl transition-all duration-300 ${mobileViewTab === 'list' ? 'flex flex-1 min-h-0 max-h-none' : 'hidden lg:flex'}`}>
+        <section
+          style={isMounted && mobileViewTab !== 'list' ? { width: `${sidebarWidth}px` } : {}}
+          className={`bg-white dark:bg-slate-950 flex flex-row overflow-hidden lg:max-h-none lg:min-h-0 safe-bottom border-t lg:border-t-0 border-slate-200 dark:border-slate-800 shadow-xl shrink-0 ${mobileViewTab === 'list' ? 'flex flex-1 min-h-0 max-h-none' : 'hidden lg:flex'}`}
+        >
           
-          {/* Sidebar Mode Panel tabs */}
-          <div className="px-4 py-2 border-b border-slate-100 dark:border-slate-850 bg-slate-50 dark:bg-slate-900/40 flex items-center justify-between shrink-0 select-none">
-            <div className="flex items-center gap-1.5">
+          {/* Main Sidebar Active Panel Content (left part) */}
+          <div className="flex-1 flex flex-col min-h-0 overflow-hidden bg-white dark:bg-slate-950">
+
+            {/* Brand Logo & simplified navigation bar */}
+          <div className="px-4 py-2.5 bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between shrink-0 select-none">
+            <Link href="/" className="text-xs font-black uppercase tracking-wider text-slate-800 dark:text-white flex items-center gap-1.5 hover:opacity-85 transition-opacity">
+              <span className="w-1.5 h-1.5 rounded-full bg-blue-550 animate-pulse" />
+              Vision Wealth
+            </Link>
+            <div className="flex items-center gap-1">
+              <Link href="/" className="px-1.5 py-0.5 text-[8.5px] font-black text-slate-450 hover:text-blue-500 dark:hover:text-blue-400 transition-colors uppercase">
+                Home
+              </Link>
+              <Link href="/portfolio" className="px-1.5 py-0.5 text-[8.5px] font-black text-slate-450 hover:text-blue-500 dark:hover:text-blue-400 transition-colors uppercase">
+                Risk
+              </Link>
+              <div className="w-[1px] h-3 bg-slate-200 dark:bg-slate-800 mx-1" />
               <button
                 type="button"
-                onClick={() => setSidebarMode('watchlist')}
-                className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider flex items-center gap-1 transition-all ${
-                  sidebarMode === 'watchlist'
-                    ? 'bg-blue-500/10 text-blue-655 dark:text-blue-400 border border-blue-500/20'
-                    : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-300 border border-transparent'
-                }`}
+                onClick={toggleTheme}
+                className="p-1 text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
+                title={theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
               >
-                📋 Watchlist
-              </button>
-              <button
-                type="button"
-                onClick={() => setSidebarMode('fundamentals')}
-                className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider flex items-center gap-1 transition-all ${
-                  sidebarMode === 'fundamentals'
-                    ? 'bg-blue-500/10 text-blue-655 dark:text-blue-400 border border-blue-500/20'
-                    : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-300 border border-transparent'
-                }`}
-              >
-                🏛️ Fundamentals
+                {theme === 'dark' ? <Sun className="w-3.5 h-3.5 text-yellow-500" /> : <Moon className="w-3.5 h-3.5 text-indigo-500" />}
               </button>
             </div>
-            <button
-              type="button"
-              onClick={() => setSidebarSize(sidebarSize === 'wide' ? 'normal' : 'wide')}
-              className="hidden lg:flex px-2 py-1 text-[9px] font-extrabold text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 bg-slate-100 dark:bg-slate-905 border border-slate-200 dark:border-slate-800 rounded-lg items-center gap-1 transition-all"
-            >
-              <span>{sidebarSize === 'wide' ? 'Narrow ➔' : '« Wide'}</span>
-            </button>
           </div>
+
+
 
           {/* Render Watchlist panel content */}
           {sidebarMode === 'watchlist' ? (
@@ -1846,7 +1811,7 @@ export default function TradingTerminalInner() {
               showToast={showToast}
               onMobileSwitchToChart={() => setMobileViewTab('chart')}
             />
-          ) : (
+          ) : sidebarMode === 'fundamentals' ? (
             
             // FUNDAMENTALS PANEL (One-stop research station)
             <div className="flex-1 flex flex-col min-h-0 overflow-hidden bg-white dark:bg-slate-950">
@@ -1911,30 +1876,30 @@ export default function TradingTerminalInner() {
                       <div className="grid grid-cols-2 gap-3">
                         <div className="bg-slate-50 dark:bg-slate-900/60 p-2.5 rounded-xl border border-slate-150 dark:border-slate-800/80">
                           <span className="text-slate-400 font-extrabold uppercase block tracking-wider text-[8px] mb-0.5">Sector</span>
-                          <span className="font-extrabold text-slate-800 dark:text-slate-200 block truncate">{deepData?.profile?.sector || 'â€”'}</span>
+                          <span className="font-extrabold text-slate-800 dark:text-slate-200 block truncate">{deepData?.profile?.sector || '—'}</span>
                         </div>
                         <div className="bg-slate-50 dark:bg-slate-900/60 p-2.5 rounded-xl border border-slate-150 dark:border-slate-800/80">
                           <span className="text-slate-400 font-extrabold uppercase block tracking-wider text-[8px] mb-0.5">Industry</span>
-                          <span className="font-extrabold text-slate-800 dark:text-slate-200 block truncate">{deepData?.profile?.industry || 'â€”'}</span>
+                          <span className="font-extrabold text-slate-800 dark:text-slate-200 block truncate">{deepData?.profile?.industry || '—'}</span>
                         </div>
                       </div>
 
                       <div className="grid grid-cols-2 gap-3">
                         <div className="bg-slate-50 dark:bg-slate-900/60 p-2.5 rounded-xl border border-slate-150 dark:border-slate-800/80">
                           <span className="text-slate-400 font-extrabold uppercase block tracking-wider text-[8px] mb-0.5">P/E Ratio</span>
-                          <span className="font-extrabold text-slate-850 dark:text-slate-205 block font-mono">{selectedStock.pe > 0 ? selectedStock.pe.toFixed(1) : 'â€”'}</span>
+                          <span className="font-extrabold text-slate-855 dark:text-slate-205 block font-mono">{selectedStock.pe > 0 ? selectedStock.pe.toFixed(1) : '—'}</span>
                         </div>
                         <div className="bg-slate-50 dark:bg-slate-900/60 p-2.5 rounded-xl border border-slate-150 dark:border-slate-800/80">
                           <span className="text-slate-400 font-extrabold uppercase block tracking-wider text-[8px] mb-0.5">ROE</span>
-                          <span className="font-extrabold text-slate-850 dark:text-slate-205 block font-mono">{deepData?.ratios?.roe ? `${deepData.ratios.roe.toFixed(1)}%` : 'â€”'}</span>
+                          <span className="font-extrabold text-slate-855 dark:text-slate-205 block font-mono">{deepData?.ratios?.roe ? `${deepData.ratios.roe.toFixed(1)}%` : '—'}</span>
                         </div>
                         <div className="bg-slate-50 dark:bg-slate-900/60 p-2.5 rounded-xl border border-slate-150 dark:border-slate-800/80">
                           <span className="text-slate-400 font-extrabold uppercase block tracking-wider text-[8px] mb-0.5">Debt/Equity</span>
-                          <span className="font-extrabold text-slate-850 dark:text-slate-205 block font-mono">{deepData?.ratios?.debtToEquity !== undefined ? (deepData.ratios.debtToEquity / 100).toFixed(2) : 'â€”'}</span>
+                          <span className="font-extrabold text-slate-855 dark:text-slate-205 block font-mono">{deepData?.ratios?.debtToEquity !== undefined ? (deepData.ratios.debtToEquity / 100).toFixed(2) : '—'}</span>
                         </div>
                         <div className="bg-slate-50 dark:bg-slate-900/60 p-2.5 rounded-xl border border-slate-150 dark:border-slate-800/80">
                           <span className="text-slate-400 font-extrabold uppercase block tracking-wider text-[8px] mb-0.5">Div Yield</span>
-                          <span className="font-extrabold text-slate-850 dark:text-slate-205 block font-mono">{selectedStock.divYield > 0 ? `${selectedStock.divYield.toFixed(2)}%` : '0.00%'}</span>
+                          <span className="font-extrabold text-slate-855 dark:text-slate-205 block font-mono">{selectedStock.divYield > 0 ? `${selectedStock.divYield.toFixed(2)}%` : '0.00%'}</span>
                         </div>
                       </div>
 
@@ -1942,7 +1907,7 @@ export default function TradingTerminalInner() {
                         <div className="bg-slate-50 dark:bg-slate-900/60 p-3 rounded-xl border border-slate-150 dark:border-slate-800/80">
                           <div className="flex justify-between items-center text-[8px] text-slate-400 font-extrabold uppercase tracking-widest mb-1.5">
                             <span>52-Week Range</span>
-                            <span className="font-mono">â‚¹{deepData.ratios.fiftyTwoWeekLow.toFixed(0)} - â‚¹{deepData.ratios.fiftyTwoWeekHigh.toFixed(0)}</span>
+                            <span className="font-mono font-bold">₹{deepData.ratios.fiftyTwoWeekLow.toFixed(0)} - ₹{deepData.ratios.fiftyTwoWeekHigh.toFixed(0)}</span>
                           </div>
                           <div className="w-full bg-slate-200 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden relative">
                             <div 
@@ -1966,10 +1931,10 @@ export default function TradingTerminalInner() {
                       <div className="bg-slate-50 dark:bg-slate-900/60 p-3.5 rounded-2xl border border-slate-150 dark:border-slate-800/80 text-center">
                         <span className="text-slate-400 font-black uppercase block tracking-widest text-[8px] mb-1.5">IMPLIED COMPASS CAGR</span>
                         <span className="text-2xl font-black text-blue-600 dark:text-blue-400 block tracking-tight font-mono">
-                          {impliedGrowth !== undefined ? `${impliedGrowth.toFixed(2)}%` : 'â€”'}
+                          {impliedGrowth !== undefined ? `${impliedGrowth.toFixed(2)}%` : '—'}
                         </span>
                         <p className="text-[9px] text-slate-400 mt-2 leading-relaxed font-semibold">
-                          To justify spot price <span className="font-extrabold font-mono">â‚¹{selectedStock.price}</span>, this enterprise must compound EPS at <span className="font-extrabold text-blue-600 dark:text-blue-400 font-mono">{impliedGrowth.toFixed(2)}%</span> annually.
+                          To justify spot price <span className="font-extrabold font-mono">₹{selectedStock.price}</span>, this enterprise must compound EPS at <span className="font-extrabold text-blue-600 dark:text-blue-400 font-mono">{impliedGrowth.toFixed(2)}%</span> annually.
                         </p>
                       </div>
 
@@ -1982,7 +1947,7 @@ export default function TradingTerminalInner() {
                           type="range" min="6" max="20" step="0.5"
                           value={dcfDiscountRate}
                           onChange={(e) => setDcfDiscountRate(parseFloat(e.target.value))}
-                          className="w-full h-1.5 bg-slate-200 dark:bg-slate-850 rounded-lg appearance-none accent-blue-500"
+                          className="w-full h-1.5 bg-slate-200 dark:bg-slate-850 rounded-lg appearance-none accent-blue-550"
                         />
                       </div>
                     </div>
@@ -2026,11 +1991,11 @@ export default function TradingTerminalInner() {
                                   </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100 dark:divide-slate-900 font-bold font-mono">
-                                  {rows.map((r: QuarterlyItem, idx: number) => (
+                                  {rows.map((r: any, idx: number) => (
                                     <tr key={idx} className="hover:bg-slate-100 dark:hover:bg-slate-900/50">
                                       <td className="py-1.5 px-2 font-bold font-sans text-slate-700 dark:text-slate-350">{r.date}</td>
-                                      <td className="py-1.5 px-2 text-right">â‚¹{(r.revenue / 10000000).toFixed(1)}Cr</td>
-                                      <td className="py-1.5 px-2 text-right text-emerald-600">â‚¹{(r.netIncome / 10000000).toFixed(1)}Cr</td>
+                                      <td className="py-1.5 px-2 text-right">₹{(r.revenue / 10000000).toFixed(1)}Cr</td>
+                                      <td className="py-1.5 px-2 text-right text-emerald-600">₹{(r.netIncome / 10000000).toFixed(1)}Cr</td>
                                     </tr>
                                   ))}
                                 </tbody>
@@ -2050,11 +2015,11 @@ export default function TradingTerminalInner() {
                                   </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100 dark:divide-slate-900/50 font-bold font-mono">
-                                  {rows.map((r: ProfitLossItem, idx: number) => (
+                                  {rows.map((r: any, idx: number) => (
                                     <tr key={idx} className="hover:bg-slate-100 dark:hover:bg-slate-900/50">
                                       <td className="py-1.5 px-2 font-bold font-sans text-slate-700 dark:text-slate-350">{r.date}</td>
-                                      <td className="py-1.5 px-2 text-right">â‚¹{(r.revenue / 10000000).toFixed(1)}Cr</td>
-                                      <td className="py-1.5 px-2 text-right text-emerald-600">â‚¹{(r.netIncome / 10000000).toFixed(1)}Cr</td>
+                                      <td className="py-1.5 px-2 text-right">₹{(r.revenue / 10000000).toFixed(1)}Cr</td>
+                                      <td className="py-1.5 px-2 text-right text-emerald-600">₹{(r.netIncome / 10000000).toFixed(1)}Cr</td>
                                     </tr>
                                   ))}
                                 </tbody>
@@ -2063,22 +2028,22 @@ export default function TradingTerminalInner() {
                           }
                           if (financialTable === 'bs') {
                             const rows = deepData?.balanceSheet || [];
-                            if (!rows.length) return <div className="text-center py-4 font-semibold text-slate-400">No balance sheets.</div>;
+                            if (!rows.length) return <div className="text-center py-4 font-semibold text-slate-400">No balance sheets filed.</div>;
                             return (
                               <table className="w-full text-left whitespace-nowrap">
                                 <thead>
                                   <tr className="border-b border-slate-205 dark:border-slate-800 text-slate-400 font-black">
-                                    <th className="py-1 px-2">Year</th>
-                                    <th className="py-1 px-2 text-right">Assets</th>
-                                    <th className="py-1 px-2 text-right">Equity</th>
+                                    <th className="py-1 px-2">Assets/Liabilities</th>
+                                    <th className="py-1 px-2 text-right">Total Equity</th>
+                                    <th className="py-1 px-2 text-right">Total Liabilities</th>
                                   </tr>
                                 </thead>
-                                <tbody className="divide-y divide-slate-100 dark:divide-slate-900/50 font-bold font-mono">
-                                  {rows.map((r: BalanceSheetItem, idx: number) => (
+                                <tbody className="divide-y divide-slate-100 dark:divide-slate-900 font-bold font-mono">
+                                  {rows.map((r: any, idx: number) => (
                                     <tr key={idx} className="hover:bg-slate-100 dark:hover:bg-slate-900/50">
                                       <td className="py-1.5 px-2 font-bold font-sans text-slate-700 dark:text-slate-350">{r.date}</td>
-                                      <td className="py-1.5 px-2 text-right">â‚¹{(r.totalAssets / 10000000).toFixed(1)}Cr</td>
-                                      <td className="py-1.5 px-2 text-right text-indigo-500">â‚¹{(r.equity / 10000000).toFixed(1)}Cr</td>
+                                      <td className="py-1.5 px-2 text-right">₹{(r.totalStockholdersEquity / 10000000).toFixed(1)}Cr</td>
+                                      <td className="py-1.5 px-2 text-right">₹{(r.totalLiabilities / 10000000).toFixed(1)}Cr</td>
                                     </tr>
                                   ))}
                                 </tbody>
@@ -2132,7 +2097,212 @@ export default function TradingTerminalInner() {
                 </>
               )}
             </div>
+          ) : (
+            // LAYOUT PANEL (Grid, Sync Cockpit, Templates settings)
+            <div className="flex-1 flex flex-col min-h-0 overflow-y-auto bg-slate-50 dark:bg-slate-950 p-4 space-y-5 select-none animate-fade-in">
+              
+              {/* Grid Layout Cards */}
+              <div className="space-y-2">
+                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 block">
+                  🖥️ Screen Grid Splitting
+                </span>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { count: 1, label: '1 Screen' },
+                    { count: 2, label: '2 Charts' },
+                    { count: 4, label: '4 Charts' },
+                    { count: 6, label: '6 Charts' },
+                    { count: 8, label: '8 Charts' }
+                  ].map((gridOpt) => (
+                    <button
+                      key={gridOpt.count}
+                      type="button"
+                      onClick={() => setGridLayout(gridOpt.count as any)}
+                      className={`px-3 py-2.5 rounded-xl border text-[10px] font-extrabold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                        gridLayout === gridOpt.count
+                          ? 'bg-blue-500/10 border-blue-500 text-blue-600 dark:text-blue-400 font-black shadow-sm ring-1 ring-blue-500/20'
+                          : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-slate-350 dark:hover:border-slate-700 text-slate-650 dark:text-slate-300'
+                      }`}
+                    >
+                      <Grid className="w-3.5 h-3.5 text-blue-550 dark:text-blue-400" />
+                      <span>{gridOpt.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Sync Cockpit Section */}
+              <div className="space-y-3.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 rounded-2xl p-4 shadow-sm">
+                <div className="flex items-center gap-1.5 border-b border-slate-100 dark:border-slate-800 pb-2 mb-1">
+                  <RefreshCw className="w-3.5 h-3.5 text-blue-550 dark:text-blue-400" />
+                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-755 dark:text-slate-300">
+                    🔄 Sync Cockpit
+                  </span>
+                </div>
+                
+                <div className="space-y-2.5">
+                  {[
+                    { label: 'Symbol', value: syncSymbol, setter: setSyncSymbol },
+                    { label: 'Timeframe', value: syncTimeframe, setter: setSyncTimeframe },
+                    { label: 'Style', value: syncStyle, setter: setSyncStyle },
+                    { label: 'Drawings', value: syncDrawings, setter: setSyncDrawings },
+                    { label: 'Plots', value: syncIndicators, setter: setSyncIndicators }
+                  ].map((syncOpt) => (
+                    <label
+                      key={syncOpt.label}
+                      className="flex items-center justify-between p-1 hover:bg-slate-50 dark:hover:bg-slate-900/50 rounded-lg cursor-pointer transition-colors"
+                    >
+                      <span className="text-[10px] font-extrabold text-slate-650 dark:text-slate-300">{syncOpt.label}</span>
+                      <input
+                        type="checkbox"
+                        checked={syncOpt.value}
+                        onChange={(e) => syncOpt.setter(e.target.checked)}
+                        className="w-4 h-4 rounded border-slate-300 dark:border-slate-700 text-blue-600 focus:ring-blue-500 accent-blue-550 cursor-pointer"
+                      />
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {/* Layout Templates Cloud Storage */}
+              <div className="space-y-3.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 rounded-2xl p-4 shadow-sm">
+                <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2 mb-1">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-750 dark:text-slate-300 flex items-center gap-1.5">
+                    💾 Layout Templates
+                  </span>
+                </div>
+
+                <form onSubmit={handleSaveWorkspaceLayout} className="space-y-2">
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      placeholder="Template name..."
+                      value={newTemplateName}
+                      onChange={(e) => setNewTemplateName(e.target.value)}
+                      className="flex-1 px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-blue-500/50 rounded-xl text-xs font-semibold focus:outline-none text-slate-800 dark:text-slate-100 placeholder:text-slate-500 transition-all"
+                    />
+                    <button
+                      type="submit"
+                      disabled={!newTemplateName.trim()}
+                      className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-600/40 text-white text-[10px] font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer shadow-sm"
+                    >
+                      Save
+                    </button>
+                  </div>
+                </form>
+
+                <div className="space-y-1.5 max-h-48 overflow-y-auto scrollbar-none pt-1">
+                  {savedTemplates.length === 0 ? (
+                    <p className="text-[9px] text-slate-400 font-semibold italic text-center py-2">No saved cloud templates.</p>
+                  ) : (
+                    savedTemplates.map((tmpl) => (
+                      <div
+                        key={tmpl._id}
+                        onClick={() => handleLoadWorkspaceLayout(tmpl)}
+                        className="flex items-center justify-between px-3 py-2 bg-slate-50 hover:bg-blue-50/40 dark:bg-slate-950 dark:hover:bg-blue-950/10 border border-slate-150 dark:border-slate-800/80 rounded-xl cursor-pointer transition-all group"
+                      >
+                        <span className="text-[10px] font-extrabold text-slate-700 dark:text-slate-250 truncate max-w-[150px]">
+                          ☁️ {tmpl.name}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={(e) => handleDeleteWorkspaceLayout(tmpl.name, e)}
+                          className="p-1 text-slate-400 hover:text-rose-500 rounded transition-colors"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+
+            </div>
           )}
+          </div>
+
+          {/* Vertical Icon Strip Toolbar (right part) */}
+          <div className="w-11 shrink-0 bg-slate-50 dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 flex flex-col items-center justify-between py-4 select-none h-full z-20">
+            {/* Top icon buttons */}
+            <div className="flex flex-col items-center gap-4">
+              {/* Watchlist Bookmark Button */}
+              <button
+                type="button"
+                onClick={() => setSidebarMode('watchlist')}
+                className={`p-2 rounded-xl transition-all cursor-pointer ${
+                  sidebarMode === 'watchlist'
+                    ? 'bg-blue-500/10 text-blue-550 dark:text-blue-400 shadow-sm ring-1 ring-blue-500/20'
+                    : 'text-slate-405 hover:text-slate-850 dark:hover:text-slate-250'
+                }`}
+                title="Watchlist"
+              >
+                <Bookmark className="w-4.5 h-4.5" />
+              </button>
+
+              {/* Fundamentals Button */}
+              <button
+                type="button"
+                onClick={() => setSidebarMode('fundamentals')}
+                className={`p-2 rounded-xl transition-all cursor-pointer ${
+                  sidebarMode === 'fundamentals'
+                    ? 'bg-blue-500/10 text-blue-550 dark:text-blue-400 shadow-sm ring-1 ring-blue-500/20'
+                    : 'text-slate-405 hover:text-slate-850 dark:hover:text-slate-250'
+                }`}
+                title="Fundamentals research"
+              >
+                <Layers className="w-4.5 h-4.5" />
+              </button>
+
+              {/* Layout Button */}
+              <button
+                type="button"
+                onClick={() => setSidebarMode('layout')}
+                className={`p-2 rounded-xl transition-all cursor-pointer ${
+                  sidebarMode === 'layout'
+                    ? 'bg-blue-500/10 text-blue-550 dark:text-blue-400 shadow-sm ring-1 ring-blue-500/20'
+                    : 'text-slate-405 hover:text-slate-850 dark:hover:text-slate-250'
+                }`}
+                title="Layout settings"
+              >
+                <Grid className="w-4.5 h-4.5" />
+              </button>
+
+              {/* Alerts Slide Drawer Toggle Button */}
+              <button
+                type="button"
+                onClick={() => setShowAlertsSidebar(prev => !prev)}
+                className={`p-2 rounded-xl transition-all cursor-pointer ${
+                  showAlertsSidebar
+                    ? 'bg-rose-500/10 text-rose-555 dark:text-rose-455 shadow-sm ring-1 ring-rose-500/20'
+                    : 'text-slate-405 hover:text-slate-850 dark:hover:text-slate-250'
+                }`}
+                title="Alert triggers"
+              >
+                <Bell className="w-4.5 h-4.5" />
+              </button>
+            </div>
+
+            {/* Bottom help & layout controls */}
+            <div className="flex flex-col items-center gap-3.5">
+              <button
+                type="button"
+                onClick={() => setSidebarSize(sidebarSize === 'wide' ? 'normal' : 'wide')}
+                className="p-2 text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-xl transition-all cursor-pointer"
+                title={sidebarSize === 'wide' ? 'Narrow Sidebar' : 'Wide Sidebar'}
+              >
+                <Sliders className="w-4.5 h-4.5" />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => showToast('Shortcut Keys: Alt+T (Trendline), Alt+F (Fibonacci), Ctrl+Z (Undo), Delete (Erase)', 'info')}
+                className="p-2 text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-xl transition-all cursor-pointer"
+                title="Hotkeys help"
+              >
+                <HelpCircle className="w-4.5 h-4.5" />
+              </button>
+            </div>
+          </div>
         </section>
       </main>
 

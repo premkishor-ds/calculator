@@ -71,7 +71,9 @@ export type WatchlistSortOption =
   | 'changePctDesc'
   | 'changePctAsc'
   | 'changeAbsDesc'
-  | 'changeAbsAsc';
+  | 'changeAbsAsc'
+  | 'tagAsc'
+  | 'tagDesc';
 
 export type ToastType = 'success' | 'error' | 'info';
 export interface Toast { message: string; type: ToastType; }
