@@ -24,11 +24,13 @@ export const Navigation = () => {
   const { user, logout } = useAuth();
   const [open, setOpen] = useState(false);
   const [theme, setTheme] = useState<'dark' | 'light'>('light');
+  const [mounted, setMounted] = useState(false);
 
   const closeMenu = () => setOpen(false);
 
   // Initialize theme from storage/system on mount
   useEffect(() => {
+    setMounted(true);
     const timer = setTimeout(() => {
       const savedTheme = localStorage.getItem('theme') as 'dark' | 'light' | null;
       const isSystemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -65,7 +67,7 @@ export const Navigation = () => {
 
   return (
     <nav className="sticky top-0 z-50 flex justify-center px-4 pt-4 pb-2 safe-top">
-      <div className="w-full max-w-4xl flex items-center justify-between gap-4 px-4 sm:px-6 py-3 rounded-2xl sm:rounded-full bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-slate-200 dark:border-slate-800 shadow-lg">
+      <div className="w-full max-w-6xl flex items-center justify-between gap-4 px-4 sm:px-6 py-3 rounded-2xl sm:rounded-full bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-slate-200 dark:border-slate-800 shadow-lg">
         <Link
           href="/"
           className="text-sm font-bold bg-gradient-to-r from-cyan-400 to-blue-600 bg-clip-text text-transparent shrink-0"
@@ -73,7 +75,7 @@ export const Navigation = () => {
           Vision Wealth
         </Link>
 
-        <div className="hidden md:flex items-center gap-6">
+        <div className="hidden md:flex items-center gap-4 lg:gap-6">
           {LINKS.map(({ href, label }) => (
             <Link
               key={href}
@@ -96,21 +98,23 @@ export const Navigation = () => {
             type="button"
             onClick={toggleTheme}
             className="p-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:text-slate-950 dark:hover:text-white rounded-xl transition-all flex items-center justify-center cursor-pointer hover:scale-105 active:scale-[0.98]"
-            aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-            title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+            aria-label={mounted && theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+            title={mounted && theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
           >
-            {theme === 'dark' ? <Sun className="w-4.5 h-4.5 text-yellow-400" /> : <Moon className="w-4.5 h-4.5 text-indigo-500" />}
+            {mounted && theme === 'dark' ? <Sun className="w-4.5 h-4.5 text-yellow-400" /> : <Moon className="w-4.5 h-4.5 text-indigo-500" />}
           </button>
 
           {/* Notification Center Bell */}
-          <NotificationCenter />
+          {mounted && <NotificationCenter />}
 
           {/* Dynamic Authenticated Session Buttons */}
-          {user ? (
+          {!mounted ? (
+            <div className="w-20 h-8" /> // Neutral placeholder during SSR
+          ) : user ? (
             <div className="flex items-center gap-2">
               <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl">
                 <User className="w-3.5 h-3.5 text-blue-500" />
-                <span className="text-[10px] font-black text-slate-600 dark:text-slate-300 truncate max-w-[80px]">
+                <span className="text-xs font-black text-slate-600 dark:text-slate-300 truncate max-w-[80px]">
                   {user.fullName.split(' ')[0]}
                 </span>
               </div>
@@ -127,13 +131,13 @@ export const Navigation = () => {
             <div className="flex items-center gap-1.5">
               <Link
                 href="/login"
-                className="px-3 py-1.5 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-[10px] font-bold rounded-xl transition-colors"
+                className="px-3 py-1.5 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-bold rounded-xl transition-colors"
               >
                 Login
               </Link>
               <Link
                 href="/register"
-                className="hidden sm:block px-3 py-1.5 bg-gradient-to-r from-blue-600 to-cyan-500 text-white text-[10px] font-bold rounded-xl hover:opacity-95 transition-opacity"
+                className="hidden sm:block px-3 py-1.5 bg-gradient-to-r from-blue-600 to-cyan-500 text-white text-xs font-bold rounded-xl hover:opacity-95 transition-opacity"
               >
                 Register
               </Link>
