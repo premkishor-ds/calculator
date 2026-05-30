@@ -70,9 +70,10 @@ interface AIMarketIntelligenceProps {
   livePrice?: number;
   liveOrderBook?: { bids: OrderBookLevel[], asks: OrderBookLevel[] };
   isLoading?: boolean;
+  isSidebar?: boolean;
 }
 
-export default function AIMarketIntelligence({ data, livePrice, liveOrderBook, isLoading }: AIMarketIntelligenceProps) {
+export default function AIMarketIntelligence({ data, livePrice, liveOrderBook, isLoading, isSidebar }: AIMarketIntelligenceProps) {
   // Defensive guard — ratios may be undefined during initial load before deepData resolves
   const safeRatios = data?.ratios || {};
   const symbol = safeRatios.symbol || 'STOCK';
@@ -385,6 +386,113 @@ export default function AIMarketIntelligence({ data, livePrice, liveOrderBook, i
     ACCUMULATION: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20',
     DISTRIBUTION: 'text-purple-500 bg-purple-500/10 border-purple-500/20',
   }[aiResult.marketRegime.state];
+
+  if (isSidebar && (!mounted || isLoading)) {
+    return (
+      <div className="space-y-4 animate-pulse">
+        <div className="h-24 bg-slate-100 dark:bg-slate-900/60 rounded-2xl border border-slate-200/50 dark:border-slate-800/50"></div>
+        <div className="h-32 bg-slate-100 dark:bg-slate-900/60 rounded-2xl border border-slate-200/50 dark:border-slate-800/50"></div>
+      </div>
+    );
+  }
+
+  if (isSidebar) {
+    return (
+      <div className="space-y-4 text-slate-900 dark:text-slate-100 font-sans">
+        {/* COMPACT HEADER */}
+        <div className={`p-4 bg-white/60 dark:bg-slate-900/40 backdrop-blur-md rounded-2xl border border-slate-200/50 dark:border-slate-800/50 shadow-sm transition-all duration-300 ${sentimentStyles.glow}`}>
+          <div className="flex justify-between items-center mb-2">
+            <span className="text-[9px] font-extrabold uppercase tracking-widest text-slate-500 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded border border-slate-200/50 dark:border-slate-700/50">
+              AI COGNITION
+            </span>
+            <span className={`text-[9px] font-black px-2 py-0.5 rounded border ${sentimentStyles.bg} ${sentimentStyles.text} ${sentimentStyles.border}`}>
+              {sentimentStyles.badge}
+            </span>
+          </div>
+          <div className="flex justify-between items-end">
+            <div>
+              <span className="text-xs text-slate-400 font-extrabold uppercase block tracking-tight">Active Price</span>
+              <span className="text-lg font-black text-slate-800 dark:text-white block mt-0.5">₹{currentPrice.toFixed(2)}</span>
+            </div>
+            <div className="text-right">
+              <span className="text-[10px] text-slate-400 font-extrabold uppercase block tracking-tight">AI Confidence</span>
+              <span className={`text-lg font-black block mt-0.5 ${sentimentStyles.text}`}>{confidence}%</span>
+            </div>
+          </div>
+        </div>
+
+        {/* BULL VS BEAR POWER METER */}
+        <div className="p-4 bg-white/60 dark:bg-slate-900/40 backdrop-blur-md rounded-2xl border border-slate-200/50 dark:border-slate-800/50 shadow-sm">
+          <h4 className="text-[10px] font-extrabold text-slate-900 dark:text-white uppercase tracking-wider mb-3 flex items-center gap-1.5">
+            <Activity className="w-3.5 h-3.5 text-blue-500" /> Bull vs Bear Power Meter
+          </h4>
+          <div className="space-y-2.5">
+            <div>
+              <div className="flex justify-between text-[10px] font-bold text-slate-650 dark:text-slate-400 mb-1">
+                <span>Demand</span>
+                <span className="text-emerald-500 font-black">{aiResult.bullPower}%</span>
+              </div>
+              <div className="h-2 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden border border-slate-200/30 dark:border-slate-700/30">
+                <div className="h-full bg-gradient-to-r from-emerald-400 to-teal-500 transition-all duration-1000" style={{ width: `${aiResult.bullPower}%` }} />
+              </div>
+            </div>
+            <div>
+              <div className="flex justify-between text-[10px] font-bold text-slate-650 dark:text-slate-400 mb-1">
+                <span>Supply</span>
+                <span className="text-rose-500 font-black">{aiResult.bearPower}%</span>
+              </div>
+              <div className="h-2 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden border border-slate-200/30 dark:border-slate-700/30">
+                <div className="h-full bg-gradient-to-r from-rose-400 to-red-500 transition-all duration-1000" style={{ width: `${aiResult.bearPower}%` }} />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* TECHNICAL & FUNDAMENTAL SCORES */}
+        <div className="grid grid-cols-2 gap-3">
+          <div className="p-3 bg-white/60 dark:bg-slate-900/40 backdrop-blur-md rounded-2xl border border-slate-200/50 dark:border-slate-800/50 shadow-sm flex items-center justify-between">
+            <div className="min-w-0">
+              <span className="text-[9px] font-extrabold text-slate-400 block uppercase tracking-wider">Technicals</span>
+              <span className="text-base font-black text-slate-800 dark:text-white mt-0.5 block">{technicalScore}%</span>
+            </div>
+            <div className="w-8 h-8 rounded-full border-2 border-blue-500/20 border-t-blue-500 flex items-center justify-center text-[9px] font-black text-blue-500">
+              {technicalScore >= 70 ? 'BUY' : technicalScore <= 40 ? 'SELL' : 'HOLD'}
+            </div>
+          </div>
+          <div className="p-3 bg-white/60 dark:bg-slate-900/40 backdrop-blur-md rounded-2xl border border-slate-200/50 dark:border-slate-800/50 shadow-sm flex items-center justify-between">
+            <div className="min-w-0">
+              <span className="text-[9px] font-extrabold text-slate-400 block uppercase tracking-wider">Valuation</span>
+              <span className="text-base font-black text-slate-800 dark:text-white mt-0.5 block">{fundamentalScore}%</span>
+            </div>
+            <div className="w-8 h-8 rounded-full border-2 border-emerald-500/20 border-t-emerald-500 flex items-center justify-center text-[9px] font-black text-emerald-500">
+              {fundamentalScore >= 65 ? 'GOOD' : fundamentalScore <= 45 ? 'EXP' : 'FAIR'}
+            </div>
+          </div>
+        </div>
+
+        {/* PATTERNS AND SCENARIOS ACCORDIONS or small badges */}
+        <div className="p-4 bg-white/60 dark:bg-slate-900/40 backdrop-blur-md rounded-2xl border border-slate-200/50 dark:border-slate-800/50 shadow-sm space-y-2">
+          <h4 className="text-[10px] font-extrabold text-slate-900 dark:text-white uppercase tracking-wider mb-2">
+            AI Outlook & Scenarios
+          </h4>
+          <div className="flex flex-col gap-2">
+            <div className="flex justify-between items-center text-[10px] p-2 bg-emerald-500/5 border border-emerald-500/10 rounded-xl">
+              <span className="font-extrabold text-emerald-600">Bull Target</span>
+              <span className="font-black font-mono">₹{aiResult.scenarios.bullCase.targetPrice}</span>
+            </div>
+            <div className="flex justify-between items-center text-[10px] p-2 bg-slate-500/5 border border-slate-500/10 rounded-xl">
+              <span className="font-extrabold text-slate-500">Base Target</span>
+              <span className="font-black font-mono">₹{aiResult.scenarios.baseCase.targetPrice}</span>
+            </div>
+            <div className="flex justify-between items-center text-[10px] p-2 bg-rose-500/5 border border-rose-500/10 rounded-xl">
+              <span className="font-extrabold text-rose-600">Bear Target</span>
+              <span className="font-black font-mono">₹{aiResult.scenarios.bearCase.targetPrice}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (!mounted || isLoading) {
     return (

@@ -1819,6 +1819,7 @@ export default function TradingTerminalInner() {
                     }}
                     livePrice={livePrices[selectedSymbol] || selectedStock.price || 500} 
                     isLoading={deepLoading}
+                    isSidebar={true}
                   />
                 </div>
               )}
