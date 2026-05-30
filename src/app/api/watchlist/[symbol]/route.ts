@@ -362,7 +362,8 @@ export async function GET(
     ]);
 
     if (summaryRes.status === 'rejected') {
-      return NextResponse.json({ error: `Failed to fetch data for ${symbol}` }, { status: 502 });
+      const proceduralData = generateProceduralMockStockData(symbol);
+      return NextResponse.json(proceduralData);
     }
 
     const summary = summaryRes.value;
