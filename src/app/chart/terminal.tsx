@@ -989,6 +989,19 @@ export default function TradingTerminalInner() {
 
   useEffect(() => {
     setIsMounted(true);
+    const handleResize = () => {
+      if (window.innerWidth >= 1024) {
+        document.body.style.overflow = 'hidden';
+      } else {
+        document.body.style.overflow = '';
+      }
+    };
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => {
+      document.body.style.overflow = '';
+      window.removeEventListener('resize', handleResize);
+    };
   }, []);
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
@@ -1616,7 +1629,7 @@ export default function TradingTerminalInner() {
   };
 
   return (
-    <div suppressHydrationWarning className="min-h-dvh lg:h-dvh lg:overflow-hidden bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans" onClick={() => setTagPopoverSym(null)}>
+    <div suppressHydrationWarning className="h-screen max-h-screen overflow-hidden bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans" onClick={() => setTagPopoverSym(null)}>
       {/* Navigation header hidden here and relocated inside sidebar to optimize chart space */}
 
       {/* â”€â”€ Main Viewport Panel Grid & Drawer â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
@@ -1639,12 +1652,12 @@ export default function TradingTerminalInner() {
         </div>
 
         {/* LEFT VIEWPORT CANVAS & bottom docking drawer */}
-        <section className={`flex-1 flex flex-col lg:min-h-0 lg:overflow-y-auto bg-slate-50 dark:bg-slate-900/40 ${mobileViewTab === 'chart' ? 'flex min-h-0' : 'hidden lg:flex'}`}>
+        <section className={`flex-1 flex flex-col lg:min-h-0 lg:h-full lg:max-h-full lg:overflow-hidden bg-slate-50 dark:bg-slate-900/40 ${mobileViewTab === 'chart' ? 'flex min-h-0' : 'hidden lg:flex'}`}>
           
 
 
           {/* Grid Canvas Area */}
-          <div className="h-[480px] lg:h-[800px] shrink-0 relative">
+          <div className="h-[420px] lg:h-auto lg:flex-1 lg:min-h-[250px] relative">
             <div className={`grid gap-2 p-2 w-full h-full bg-slate-100 dark:bg-slate-900/60 ${
               gridLayout === 1 ? 'grid-cols-1 grid-rows-1' :
               gridLayout === 2 ? 'grid-cols-1 md:grid-cols-2 grid-rows-1' :
@@ -1704,35 +1717,6 @@ export default function TradingTerminalInner() {
               })}
             </div>
           </div>
-
-          {/* AI Market Intelligence Section */}
-          {selectedStock && (
-            <div className="shrink-0 p-6 bg-slate-50/50 dark:bg-slate-950/50 border-t border-slate-200 dark:border-slate-850 shadow-inner mt-4">
-              <div className="max-w-7xl mx-auto">
-                <AIMarketIntelligence 
-                  data={{
-                    ratios: {
-                      symbol: selectedStock.symbol,
-                      price: livePrices[selectedSymbol] || selectedStock.price || 500,
-                      ...(deepData?.ratios || {})
-                    },
-                    profile: deepData?.profile || {},
-                    balanceSheet: deepData?.balanceSheet || [],
-                    profitLoss: deepData?.profitLoss || [],
-                    cashFlow: deepData?.cashFlow || [],
-                    quarterlyProfitLoss: deepData?.quarterlyProfitLoss || [],
-                    chartData: gridDataCache[activeGridIndex]?.length > 0 ? gridDataCache[activeGridIndex] : (deepData?.chartData || []),
-                    peers: deepData?.peers || [],
-                    pros: deepData?.pros || [],
-                    cons: deepData?.cons || []
-                  }}
-                  livePrice={livePrices[selectedSymbol] || selectedStock.price || 500} 
-                  isLoading={deepLoading}
-                />
-              </div>
-            </div>
-          )}
-
         </section>
 
         {/* Draggable Resizer Bar */}
@@ -1745,7 +1729,7 @@ export default function TradingTerminalInner() {
         {/* RIGHT WATCHLIST & FUNDAMENTALS SIDEBAR PANEL */}
         <section
           style={isMounted && mobileViewTab !== 'list' ? { width: `${sidebarWidth}px` } : {}}
-          className={`bg-white dark:bg-slate-950 flex flex-row overflow-hidden lg:max-h-none lg:min-h-0 safe-bottom border-t lg:border-t-0 border-slate-200 dark:border-slate-800 shadow-xl shrink-0 ${mobileViewTab === 'list' ? 'flex flex-1 min-h-0 max-h-none' : 'hidden lg:flex'}`}
+          className={`bg-white dark:bg-slate-950 flex flex-row overflow-hidden lg:h-full lg:max-h-full lg:min-h-0 safe-bottom border-t lg:border-t-0 border-slate-200 dark:border-slate-800 shadow-xl shrink-0 ${mobileViewTab === 'list' ? 'flex flex-1 min-h-0 max-h-none' : 'hidden lg:flex'}`}
         >
           
           {/* Main Sidebar Active Panel Content (left part) */}
@@ -1780,37 +1764,65 @@ export default function TradingTerminalInner() {
 
           {/* Render Watchlist panel content */}
           {sidebarMode === 'watchlist' ? (
-            <WatchlistSidebar
-              watchlists={watchlists}
-              selectedWatchlist={selectedWatchlist}
-              onSelectWatchlist={(name) => { setSelectedWatchlist(name); setActiveTagFilter('all'); }}
-              onCreateWatchlist={handleCreateWatchlist}
-              onRenameWatchlist={handleRenameWatchlist}
-              onDeleteWatchlist={handleDeleteWatchlist}
-              watchlistStocks={watchlistStocks}
-              filteredWatchlist={filteredWatchlist}
-              watchlistLoading={watchlistLoading}
-              livePrices={livePrices}
-              searchQuery={searchQuery}
-              onSearchChange={setSearchQuery}
-              activeTagFilter={activeTagFilter}
-              onSetTagFilter={setActiveTagFilter}
-              watchlistSort={watchlistSort}
-              onSortChange={setWatchlistSort}
-              selectedSymbol={selectedSymbol}
-              onSelectSymbol={selectSymbolRoot}
-              onAddStock={handleAddStockSidebar}
-              onRemoveStock={handleRemoveStockSidebar}
-              onToggleTag={handleToggleTagSidebar}
-              suggestions={sidebarSuggestions}
-              suggestLoading={sidebarSuggestLoading}
-              onFetchSuggestions={fetchSidebarSuggestions}
-              onClearSuggestions={clearSidebarSuggestions}
-              customTagRaw={customTagRaw}
-              onEditCustomTag={(tag) => { setEditingTag(tag); setEditLabel(tag.label); setEditColor(tag.color); }}
-              showToast={showToast}
-              onMobileSwitchToChart={() => setMobileViewTab('chart')}
-            />
+            <div className="flex-1 flex flex-col min-h-0 overflow-hidden bg-white dark:bg-slate-950">
+              <WatchlistSidebar
+                watchlists={watchlists}
+                selectedWatchlist={selectedWatchlist}
+                onSelectWatchlist={(name) => { setSelectedWatchlist(name); setActiveTagFilter('all'); }}
+                onCreateWatchlist={handleCreateWatchlist}
+                onRenameWatchlist={handleRenameWatchlist}
+                onDeleteWatchlist={handleDeleteWatchlist}
+                watchlistStocks={watchlistStocks}
+                filteredWatchlist={filteredWatchlist}
+                watchlistLoading={watchlistLoading}
+                livePrices={livePrices}
+                searchQuery={searchQuery}
+                onSearchChange={setSearchQuery}
+                activeTagFilter={activeTagFilter}
+                onSetTagFilter={setActiveTagFilter}
+                watchlistSort={watchlistSort}
+                onSortChange={setWatchlistSort}
+                selectedSymbol={selectedSymbol}
+                onSelectSymbol={selectSymbolRoot}
+                onAddStock={handleAddStockSidebar}
+                onRemoveStock={handleRemoveStockSidebar}
+                onToggleTag={handleToggleTagSidebar}
+                suggestions={sidebarSuggestions}
+                suggestLoading={sidebarSuggestLoading}
+                onFetchSuggestions={fetchSidebarSuggestions}
+                onClearSuggestions={clearSidebarSuggestions}
+                customTagRaw={customTagRaw}
+                onEditCustomTag={(tag) => { setEditingTag(tag); setEditLabel(tag.label); setEditColor(tag.color); }}
+                showToast={showToast}
+                onMobileSwitchToChart={() => setMobileViewTab('chart')}
+              />
+              
+              {/* AI Market Intelligence Section (relocated to bottom of watchlist sidebar like TradingView) */}
+              {selectedStock && (
+                <div className="shrink-0 p-4 bg-slate-50/70 dark:bg-slate-900/40 border-t border-slate-200 dark:border-slate-800 overflow-y-auto h-[260px] max-h-[260px] min-h-[260px]">
+                  <AIMarketIntelligence 
+                    data={{
+                      ratios: {
+                        symbol: selectedStock.symbol,
+                        price: livePrices[selectedSymbol] || selectedStock.price || 500,
+                        ...(deepData?.ratios || {})
+                      },
+                      profile: deepData?.profile || {},
+                      balanceSheet: deepData?.balanceSheet || [],
+                      profitLoss: deepData?.profitLoss || [],
+                      cashFlow: deepData?.cashFlow || [],
+                      quarterlyProfitLoss: deepData?.quarterlyProfitLoss || [],
+                      chartData: gridDataCache[activeGridIndex]?.length > 0 ? gridDataCache[activeGridIndex] : (deepData?.chartData || []),
+                      peers: deepData?.peers || [],
+                      pros: deepData?.pros || [],
+                      cons: deepData?.cons || []
+                    }}
+                    livePrice={livePrices[selectedSymbol] || selectedStock.price || 500} 
+                    isLoading={deepLoading}
+                  />
+                </div>
+              )}
+            </div>
           ) : sidebarMode === 'fundamentals' ? (
             
             // FUNDAMENTALS PANEL (One-stop research station)

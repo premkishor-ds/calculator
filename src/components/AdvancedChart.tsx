@@ -1188,7 +1188,7 @@ export default function AdvancedChart({
       },
       rightPriceScale: {
         borderColor: isDark ? '#2a2e39' : '#e2e8f0',
-        scaleMargins: { top: 0.08, bottom: 0.28 },
+        scaleMargins: { top: 0.08, bottom: 0.1 },
       },
       timeScale: {
         borderColor: isDark ? '#2a2e39' : '#e2e8f0',
