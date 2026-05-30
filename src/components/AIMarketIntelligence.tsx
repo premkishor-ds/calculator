@@ -73,8 +73,10 @@ interface AIMarketIntelligenceProps {
 }
 
 export default function AIMarketIntelligence({ data, livePrice, liveOrderBook, isLoading }: AIMarketIntelligenceProps) {
-  const symbol = data.ratios.symbol || 'STOCK';
-  const currentPrice = livePrice || data.ratios.price || 100;
+  // Defensive guard — ratios may be undefined during initial load before deepData resolves
+  const safeRatios = data?.ratios || {};
+  const symbol = safeRatios.symbol || 'STOCK';
+  const currentPrice = livePrice || safeRatios.price || 100;
 
   const [mounted, setMounted] = useState(false);
   useEffect(() => {

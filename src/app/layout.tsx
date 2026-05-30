@@ -33,6 +33,11 @@ export const metadata: Metadata = {
     follow: true,
   },
   manifest: '/manifest.webmanifest',
+  icons: {
+    icon: '/icons/icon-96.png',
+    shortcut: '/icons/icon-192.png',
+    apple: '/icons/icon-192.png',
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
@@ -67,6 +72,8 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <head>
         <link rel="canonical" href="https://worth-calculator.netlify.app/" />
+        <link rel="icon" type="image/png" href="/icons/icon-96.png" />
+        <link rel="apple-touch-icon" href="/icons/icon-192.png" />
         <script
           dangerouslySetInnerHTML={{
             __html: `(function(){try{var s=localStorage.getItem('theme');var d=s?s==='dark':window.matchMedia('(prefers-color-scheme: dark)').matches;if(d)document.documentElement.classList.add('dark');}catch(e){}})();`,

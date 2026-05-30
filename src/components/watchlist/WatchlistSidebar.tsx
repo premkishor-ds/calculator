@@ -10,6 +10,7 @@ import { TagPopover, TagFilterBar } from '@/components/watchlist/TagManager';
 import WatchlistSwitcher from '@/components/watchlist/WatchlistSwitcher';
 import { buildAllTags, DEFAULT_CUSTOM_TAGS, CUSTOM_TAG_IDS, type CustomTagRaw, type TagDef } from '@/utils/tags';
 import type { StockQuote, WatchlistSortOption } from '@/hooks/useWatchlistStore';
+import { getBackendApiUrl } from '@/lib/backend-config';
 
 /* ── Props ──────────────────────────────────────────────── */
 
@@ -112,13 +113,16 @@ export default function WatchlistSidebar({
     setLimit(10);
   }, [selectedWatchlist, searchQuery, smartFilter, activeTagFilter]);
 
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || '/api';
-
   const fetchAnalytics = useCallback(async () => {
     if (!selectedWatchlist) return;
     try {
       setLoadingAnalytics(true);
-      const res = await fetch(`${API_URL}/watchlists/${encodeURIComponent(selectedWatchlist)}/analytics`);
+      const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+      const res = await fetch(`${getBackendApiUrl()}/watchlists/${encodeURIComponent(selectedWatchlist)}/analytics`, {
+        headers: {
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        }
+      });
       if (res.ok) {
         const data = await res.json();
         setAnalyticsData(data);
@@ -128,7 +132,7 @@ export default function WatchlistSidebar({
     } finally {
       setLoadingAnalytics(false);
     }
-  }, [selectedWatchlist, API_URL]);
+  }, [selectedWatchlist]);
 
   useEffect(() => {
     fetchAnalytics();
@@ -137,11 +141,12 @@ export default function WatchlistSidebar({
   const handleCloneWatchlist = async () => {
     if (!cloningName.trim()) return;
     try {
-      const res = await fetch(`${API_URL}/watchlists/${encodeURIComponent(selectedWatchlist)}/clone`, {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+      const res = await fetch(`${getBackendApiUrl()}/watchlists/${encodeURIComponent(selectedWatchlist)}/clone`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
         },
         body: JSON.stringify({ targetName: cloningName.trim() })
       });
