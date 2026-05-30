@@ -651,6 +651,8 @@ export default function AdvancedChart({
   // Chart Styles states
   const [selectedStyle, setSelectedStyle] = useState<string>('Candlestick');
   const [showStyleMenu, setShowStyleMenu] = useState(false);
+  const [showIndicatorsMenu, setShowIndicatorsMenu] = useState(false);
+  const [showCompareMenu, setShowCompareMenu] = useState(false);
 
   // Indicators states
   const [activeIndicators, setActiveIndicators] = useState<Set<string>>(new Set(['EMA9', 'EMA20', 'EMA50', 'EMA100', 'EMA200']));
@@ -1713,43 +1715,27 @@ export default function AdvancedChart({
   return (
     <div className="flex flex-col h-full bg-white dark:bg-slate-950 select-none">
       
-      {/* 📋 Dynamic Timeframe, Chart Style & Replay Controls Strip */}
-      <div className="flex flex-wrap items-center justify-between gap-2 px-3 sm:px-4 py-2 border-b border-slate-200 dark:border-slate-800/80 shrink-0 bg-slate-50 dark:bg-slate-950">
+      {/* 📋 TradingView Unified Sleek Controls Strip */}
+      <div className="flex items-center justify-between gap-1.5 px-3 py-1 border-b border-slate-200 dark:border-slate-800/80 shrink-0 bg-slate-50 dark:bg-slate-950 font-sans select-none text-[11px] h-9">
         
-        <div className="flex flex-wrap items-center gap-2">
-          {/* Chart Style Picker Dropdown */}
-          <div className="relative">
-            <button
-              onClick={() => setShowStyleMenu(!showStyleMenu)}
-              className="px-3 py-1.5 rounded-lg text-[11px] font-extrabold border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-850 transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
-            >
-              <Activity className="w-3 h-3" /> {style} <ChevronDown className="w-3 h-3" />
-            </button>
-            {showStyleMenu && (
-              <ul className="absolute top-full left-0 mt-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden z-30 shadow-xl w-44 font-semibold text-[10px]">
-                {CHART_STYLES.map(s => (
-                  <li
-                    key={s}
-                    onClick={() => { changeStyle(s); setShowStyleMenu(false); }}
-                    className="flex items-center justify-between px-3.5 py-2 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200 cursor-pointer"
-                  >
-                    {s} {style === s && <Check className="w-3.5 h-3.5 text-blue-500" />}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
+        <div className="flex items-center gap-1 min-w-0 overflow-x-auto scrollbar-none">
+          {/* Active Symbol Display */}
+          <span className="px-2 py-0.5 font-black text-slate-800 dark:text-slate-100 rounded bg-slate-200/50 dark:bg-slate-800 text-[9px] uppercase tracking-wider shrink-0">
+            {symbol.replace('.NS', '').replace('.BO', '')}
+          </span>
+          
+          <div className="w-[1px] h-3.5 bg-slate-200 dark:bg-slate-800 mx-1 shrink-0" />
 
-          {/* Time Intervals Selector */}
-          <div className="flex max-w-full items-center gap-1 overflow-x-auto bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-1 rounded-xl">
+          {/* Timeframe selector (Compact Pill Group) */}
+          <div className="flex items-center gap-0.5 shrink-0 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800/50 p-0.5 rounded-lg">
             {INTERVAL_OPTIONS.map(({ label, val }) => (
               <button
                 key={val}
                 onClick={() => changeInterval(val)}
-                className={`shrink-0 px-2.5 py-1 rounded-lg text-[10px] font-extrabold transition-all cursor-pointer ${
+                className={`shrink-0 px-2 py-0.5 rounded text-[8px] font-black uppercase transition-all cursor-pointer ${
                   interval === val
-                    ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-white shadow-sm border border-slate-200 dark:border-slate-600'
-                    : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                    ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm border border-slate-200 dark:border-slate-600'
+                    : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-250'
                 }`}
               >
                 {label}
@@ -1757,126 +1743,167 @@ export default function AdvancedChart({
             ))}
           </div>
 
-        </div>
+          <div className="w-[1px] h-3.5 bg-slate-200 dark:bg-slate-800 mx-1 shrink-0" />
 
-        {/* 🎬 Historical Replay Mode Controller */}
-        <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-1 rounded-xl">
-          <button
-            onClick={() => {
-              setReplayMode(!replayMode);
-              if (!replayMode) {
-                setReplayIndex(Math.floor(dataRef.current.length * 0.7));
-                feedReplayData(Math.floor(dataRef.current.length * 0.7));
-              } else {
-                applyChartConfigurations(dataRef.current);
-              }
-            }}
-            className={`px-2.5 py-1 rounded-lg text-[10px] font-extrabold transition-all cursor-pointer ${
-              replayMode
-                ? 'bg-amber-500/20 text-amber-600 dark:bg-amber-500/30 dark:text-amber-400 border border-amber-300 dark:border-amber-550/30 shadow-sm'
-                : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
-            }`}
-            title="Replay historical candles step-by-step"
-          >
-            Replay {replayMode && 'ON'}
-          </button>
-          
-          {replayMode && (
-            <div className="flex items-center gap-1.5 pl-1.5 border-l border-slate-200 dark:border-slate-800">
-              <button
-                onClick={() => setReplayPlaying(!replayPlaying)}
-                className="p-1 rounded bg-white dark:bg-slate-800 hover:scale-105 cursor-pointer shadow-sm"
-              >
-                {replayPlaying ? <Pause className="w-3 h-3 text-red-500" /> : <Play className="w-3 h-3 text-emerald-500 fill-emerald-500" />}
-              </button>
-              <button
-                onClick={() => {
-                  setReplayIndex(prev => {
-                    const nextIdx = Math.min(dataRef.current.length - 1, prev + 1);
-                    feedReplayData(nextIdx);
-                    return nextIdx;
-                  });
-                }}
-                className="p-1 rounded bg-white dark:bg-slate-800 hover:scale-105 cursor-pointer shadow-sm"
-                title="Step forward 1 candle"
-              >
-                <SkipForward className="w-3 h-3 text-slate-700 dark:text-slate-300" />
-              </button>
-              
-              <span className="text-[9px] font-mono font-bold text-slate-400">
-                Speed: 
+          {/* Chart Style Selector Dropdown */}
+          <div className="relative shrink-0">
+            <button
+              onClick={() => setShowStyleMenu(!showStyleMenu)}
+              className="px-2 py-0.5 rounded border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-850 transition-all flex items-center gap-1 cursor-pointer font-bold text-[8px] uppercase tracking-wider"
+            >
+              <Activity className="w-2 h-2" /> {style} <ChevronDown className="w-1.5 h-1.5 text-slate-500" />
+            </button>
+            {showStyleMenu && (
+              <ul className="absolute top-full left-0 mt-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden z-50 shadow-2xl w-36 font-bold text-[8px]">
+                {CHART_STYLES.map(s => (
+                  <li
+                    key={s}
+                    onClick={() => { changeStyle(s); setShowStyleMenu(false); }}
+                    className="flex items-center justify-between px-2.5 py-1 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200 cursor-pointer"
+                  >
+                    {s} {style === s && <Check className="w-2.5 h-2.5 text-blue-500" />}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          <div className="w-[1px] h-3.5 bg-slate-200 dark:bg-slate-800 mx-1 shrink-0" />
+
+          {/* Indicators Toggle Dropdown Popover */}
+          <div className="relative shrink-0">
+            <button
+              onClick={() => setShowIndicatorsMenu(!showIndicatorsMenu)}
+              className="px-2 py-0.5 rounded border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-850 transition-all flex items-center gap-1 cursor-pointer font-bold text-[8px] uppercase tracking-wider"
+            >
+              <Activity className="w-2 h-2 text-indigo-550" /> Indicators <span className="text-indigo-400">({indicators.size})</span> <ChevronDown className="w-1.5 h-1.5 text-slate-500" />
+            </button>
+            {showIndicatorsMenu && (
+              <div className="absolute top-full left-0 mt-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 z-50 shadow-2xl w-56 max-h-[220px] overflow-y-auto font-semibold text-[8px]">
+                <div className="flex justify-between items-center mb-1.5 pb-1 border-b border-slate-100 dark:border-slate-800">
+                  <span className="font-black uppercase tracking-wider text-slate-400 text-[8px]">Indicators List</span>
+                  <button onClick={() => { setShowPineModal(true); setShowIndicatorsMenu(false); }} className="text-purple-500 hover:underline">Pine Script</button>
+                </div>
+                <div className="grid grid-cols-2 gap-1">
+                  {INDICATOR_OPTIONS.map(ind => (
+                    <label key={ind} className="flex items-center gap-1 cursor-pointer py-0.5 hover:text-slate-900 dark:hover:text-white">
+                      <input
+                        type="checkbox"
+                        checked={indicators.has(ind)}
+                        onChange={() => toggleIndicator(ind)}
+                        className="rounded border-slate-300 text-blue-500 focus:ring-blue-400 w-2.5 h-2.5"
+                      />
+                      <span className="truncate">{ind}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="w-[1px] h-3.5 bg-slate-200 dark:bg-slate-800 mx-1 shrink-0" />
+
+          {/* Replay controller inline */}
+          <div className="flex items-center gap-1 shrink-0">
+            <button
+              onClick={() => {
+                setReplayMode(!replayMode);
+                if (!replayMode) {
+                  setReplayIndex(Math.floor(dataRef.current.length * 0.7));
+                  feedReplayData(Math.floor(dataRef.current.length * 0.7));
+                } else {
+                  applyChartConfigurations(dataRef.current);
+                }
+              }}
+              className={`px-2 py-0.5 rounded text-[8px] font-black transition-all cursor-pointer border ${
+                replayMode
+                  ? 'bg-amber-500/20 text-amber-600 border-amber-500/30'
+                  : 'bg-white dark:bg-slate-900 text-slate-500 border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-850'
+              }`}
+            >
+              Replay
+            </button>
+            {replayMode && (
+              <div className="flex items-center gap-0.5 bg-slate-100 dark:bg-slate-900 p-0.5 rounded border border-slate-200 dark:border-slate-800/80">
+                <button
+                  onClick={() => setReplayPlaying(!replayPlaying)}
+                  className="p-0.5 rounded bg-white dark:bg-slate-800 hover:scale-105"
+                >
+                  {replayPlaying ? <Pause className="w-2 h-2 text-red-500" /> : <Play className="w-2 h-2 text-emerald-500 fill-emerald-500" />}
+                </button>
+                <button
+                  onClick={() => {
+                    setReplayIndex(prev => {
+                      const nextIdx = Math.min(dataRef.current.length - 1, prev + 1);
+                      feedReplayData(nextIdx);
+                      return nextIdx;
+                    });
+                  }}
+                  className="p-0.5 rounded bg-white dark:bg-slate-800 hover:scale-105"
+                >
+                  <SkipForward className="w-2 h-2 text-slate-700" />
+                </button>
                 <select
                   value={replaySpeed}
                   onChange={e => setReplaySpeed(parseInt(e.target.value))}
-                  className="bg-transparent border-none text-[9px] font-bold text-slate-600 dark:text-slate-300 focus:outline-none ml-1 font-mono cursor-pointer"
+                  className="bg-transparent border-none text-[8px] font-bold text-slate-600 dark:text-slate-300 focus:outline-none font-mono"
                 >
                   <option value="2000">2.0s</option>
                   <option value="1000">1.0s</option>
                   <option value="500">0.5s</option>
                   <option value="200">0.2s</option>
                 </select>
-              </span>
-            </div>
-          )}
-        </div>
+              </div>
+            )}
+          </div>
 
-        {/* Dynamic Study Indicators & Custom Pine Compiler */}
-        <div className="flex max-w-full items-center gap-1 overflow-x-auto bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-1 rounded-xl">
-          {INDICATOR_OPTIONS.map(ind => (
+          <div className="w-[1px] h-3.5 bg-slate-200 dark:bg-slate-800 mx-1 shrink-0" />
+
+          {/* Compare Tickers Mode Trigger */}
+          <div className="relative shrink-0">
             <button
-              key={ind}
-              onClick={() => toggleIndicator(ind)}
-              className={`shrink-0 px-2 py-0.5 rounded-lg text-[9px] font-extrabold cursor-pointer transition-all ${
-                indicators.has(ind)
-                  ? 'bg-blue-500/10 text-blue-600 border border-blue-500/20'
-                  : 'text-slate-400 hover:text-slate-600'
-              }`}
+              onClick={() => setShowCompareMenu(!showCompareMenu)}
+              className="px-2 py-0.5 rounded border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-850 transition-all flex items-center gap-1 cursor-pointer font-bold text-[8px] uppercase tracking-wider"
             >
-              {ind}
+              <Plus className="w-2 h-2 text-blue-500" /> Compare
             </button>
-          ))}
-          
-          <button
-            onClick={() => setShowPineModal(true)}
-            className="shrink-0 px-2.5 py-1 text-purple-600 dark:text-purple-400 hover:bg-purple-500/10 rounded-lg text-[10px] font-black cursor-pointer"
-            title="Open Pine Script Study Sandbox Editor"
-          >
-            Pine Script {customPlots.length > 0 && '(*)'}
-          </button>
+            {showCompareMenu && (
+              <div className="absolute top-full left-0 mt-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-2 z-50 shadow-2xl w-44 font-semibold text-[8px]">
+                <form
+                  onSubmit={(e) => { e.preventDefault(); handleAddCompare(); setShowCompareMenu(false); }}
+                  className="flex gap-1"
+                >
+                  <input
+                    type="text"
+                    placeholder="Compare Ticker..."
+                    value={compareInput}
+                    onChange={e => setCompareInput(e.target.value)}
+                    className="flex-1 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 px-1.5 py-0.5 rounded text-[8px] font-bold outline-none uppercase"
+                  />
+                  <button type="submit" className="px-1.5 py-0.5 bg-blue-600 hover:bg-blue-700 text-white rounded font-bold">Add</button>
+                </form>
+                {compareSymbols.length > 0 && (
+                  <div className="mt-1.5 pt-1.5 border-t border-slate-100 dark:border-slate-800">
+                    <button
+                      onClick={() => { handleClearCompare(); setShowCompareMenu(false); }}
+                      className="w-full py-0.5 text-center border border-red-500/20 bg-red-500/5 hover:bg-red-500/10 text-red-500 rounded text-[8px] font-bold"
+                    >
+                      Clear Comparison
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* Compare Tickers Mode Row */}
-        <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-1 rounded-xl">
-          <input
-            type="text"
-            placeholder="Compare Ticker (e.g. INFY.NS)"
-            value={compareInput}
-            onChange={e => setCompareInput(e.target.value)}
-            className="w-32 bg-white dark:bg-slate-950 border border-slate-250 dark:border-slate-850 px-2 py-1 rounded-lg text-[9px] font-bold outline-none uppercase"
-          />
-          <button
-            onClick={handleAddCompare}
-            className="px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-[9px] font-bold"
-          >
-            Add Compare
-          </button>
-          {compareSymbols.length > 0 && (
-            <button
-              onClick={handleClearCompare}
-              className="px-2 py-1 border border-red-500/20 bg-red-500/5 hover:bg-red-500/10 text-red-500 rounded-lg text-[9px] font-bold"
-            >
-              Clear Comparison
-            </button>
-          )}
-        </div>
-
-        {/* Global actions */}
-        <div className="flex items-center gap-1.5">
+        {/* Global actions (Reset / Fit view) */}
+        <div className="flex items-center gap-1 shrink-0">
           <button
             onClick={handleResetView}
-            className="p-1.5 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-500 hover:text-slate-800 dark:hover:text-white rounded-lg transition-all flex items-center gap-1 text-[10px] font-black cursor-pointer shadow-sm"
+            className="p-1 px-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-500 hover:text-slate-800 dark:hover:text-white rounded transition-all flex items-center gap-1 text-[8px] font-black cursor-pointer shadow-sm uppercase tracking-wider"
           >
-            <RotateCcw className="w-3 h-3" /> Reset
+            <RotateCcw className="w-2 h-2" /> Reset
           </button>
         </div>
       </div>
