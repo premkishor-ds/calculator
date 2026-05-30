@@ -79,7 +79,7 @@ export const Navigation = () => {
               key={href}
               href={href}
               onClick={closeMenu}
-              className={`text-xs font-semibold transition-colors ${
+              className={`text-xs font-semibold transition-colors whitespace-nowrap ${
                 pathname === href || pathname.startsWith(`${href}/`)
                   ? 'text-blue-600 dark:text-blue-400 font-black'
                   : 'text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400'
