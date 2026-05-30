@@ -57,6 +57,252 @@ function normalizeSector(sector: string): string {
   return s;
 }
 
+function generateProceduralMockStockData(symbol: string) {
+  const upperSymbol = symbol.toUpperCase();
+  const seed = upperSymbol.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  
+  // Baseline price and metrics based purely on symbol hash
+  const basePrice = 50 + (seed % 1950);
+  const roe = 10 + (seed % 20);
+  const pe = 12 + (seed % 35);
+  const eps = Number((basePrice / pe).toFixed(2));
+  const changePercent = -3 + ((seed % 70) / 10);
+  const change = Number((basePrice * (changePercent / 100)).toFixed(2));
+  
+  const seedName = DEFAULT_SEEDS.find(s => s.symbol.toUpperCase() === upperSymbol)?.name 
+    || `${upperSymbol.replace('.NS', '').replace('.BO', '')} Systems Ltd.`;
+  
+  const mcap = Math.round(100000000 * (seed % 5000) * (basePrice / 10));
+  const vol = Math.floor(50000 + (seed % 950000));
+  const debtToEquity = seed % 3 === 0 ? 0 : 20 + (seed % 110);
+  const currentRatio = 1.0 + ((seed % 15) / 10);
+  
+  const ratios = {
+    price: basePrice,
+    change,
+    changePercent,
+    name: seedName,
+    symbol: upperSymbol,
+    marketCap: mcap,
+    volume: vol,
+    pe,
+    eps,
+    cmpBv: 1.5 + ((seed % 80) / 10),
+    divYield: (seed % 5 === 0) ? 0.5 + ((seed % 35) / 10) : 0,
+    promHold: 40 + (seed % 30),
+    instHold: 10 + (seed % 20),
+    pubHold: 0,
+    debtToEquity,
+    currentRatio,
+    quickRatio: Number((currentRatio * 0.85).toFixed(2)),
+    roe,
+    roa: Number((roe * 0.6).toFixed(2)),
+    fiftyDayAverage: Number((basePrice * 0.97).toFixed(2)),
+    twoHundredDayAverage: Number((basePrice * 0.92).toFixed(2)),
+    fiftyTwoWeekHigh: Number((basePrice * 1.25).toFixed(2)),
+    fiftyTwoWeekLow: Number((basePrice * 0.75).toFixed(2)),
+    pegRatio: Number((pe / roe).toFixed(2)),
+    priceToSales: Number((pe * 0.15).toFixed(2)),
+    enterpriseValue: Math.round(mcap * 1.05),
+    evToEbitda: Number((pe * 0.85).toFixed(2)),
+    evToRevenue: Number((pe * 0.12).toFixed(2)),
+    operatingMargin: Number((roe * 1.1).toFixed(2)),
+    profitMargin: Number((roe * 0.85).toFixed(2)),
+    grossMargin: Number((roe * 1.8).toFixed(2)),
+  };
+  ratios.pubHold = Number((100 - ratios.promHold - ratios.instHold).toFixed(2));
+  
+  const sectors = ['Tech & Telecom', 'Financial Services', 'Industrials & Infrastructure', 'Consumer/FMCG/Hospitality', 'Healthcare/Pharma', 'Energy & Power', 'Metals & Mining', 'Chemicals/Materials'];
+  const sector = sectors[seed % sectors.length];
+  
+  const industries: Record<string, string[]> = {
+    'Tech & Telecom': ['Software Solutions', 'IT Services', 'Cloud Computing', 'Telecommunications', 'Hardware & Peripherals'],
+    'Financial Services': ['Private Banking', 'Asset Management', 'Housing Finance', 'Non-Banking Financial Co (NBFC)', 'Investment Brokerage'],
+    'Industrials & Infrastructure': ['Civil Construction', 'Industrial Machinery', 'Engineering Projects', 'Electrical Equipment', 'Heavy Engineering'],
+    'Consumer/FMCG/Hospitality': ['Packaged Foods', 'Personal Care Products', 'Luxury Hotels & Resorts', 'Apparel & Fashion Retail', 'Beverages & Distilleries'],
+    'Healthcare/Pharma': ['Pharmaceuticals', 'Diagnostic Labs', 'Hospital Administration', 'Biotechnology', 'Medical Devices'],
+    'Energy & Power': ['Renewable Power Generation', 'Oil & Gas Exploration', 'Thermal Power Utilities', 'Petrochemical Processing', 'Solar Energy Solutions'],
+    'Metals & Mining': ['Iron & Steel Manufacturers', 'Non-Ferrous Metals', 'Coal & Mineral Mining', 'Metal Alloys', 'Precision Wire Drawing'],
+    'Chemicals/Materials': ['Speciality Chemicals', 'Agricultural Fertilizers', 'Industrial Gases', 'Basic Chemical Compounds', 'Carbon Black Manufacturing']
+  };
+  const industry = industries[sector][seed % industries[sector].length];
+  
+  // Procedural phonetic syllable lists for Indian-sounding name synthesis
+  const fPre = ['Ram', 'Sanj', 'Vik', 'Am', 'Vij', 'Raj', 'An', 'Sun', 'Pan', 'Adit', 'Rah', 'Arv', 'Nih', 'Anj', 'Kar', 'Puj', 'Dip', 'Sand', 'Mir', 'Roh'];
+  const fSuf = ['esh', 'ay', 'ram', 'it', 'ay', 'esh', 'il', 'il', 'kaj', 'ya', 'ul', 'a', 'i', 'an', 'eep', 'a', 'an', 'a', 'an', 'an'];
+  const lPre = ['Kum', 'Shar', 'Gup', 'Sing', 'Pat', 'Meh', 'Jos', 'Ver', 'Iy', 'Red', 'Nai', 'Chou', 'Se', 'Da', 'Bo', 'Ra', 'Tri', 'Pan', 'Sax', 'Kap'];
+  const lSuf = ['ar', 'ma', 'ta', 'h', 'el', 'ra', 'hi', 'ma', 'er', 'dy', 'r', 'dhury', 'n', 's', 'se', 'o', 'vedi', 'dey', 'ena', 'oor'];
+  
+  const getProceduralName = (i: number) => {
+    const f1 = fPre[(seed + i * 7) % fPre.length];
+    const f2 = fSuf[(seed + i * 11) % fSuf.length];
+    const l1 = lPre[(seed + i * 13) % lPre.length];
+    const l2 = lSuf[(seed + i * 17) % lSuf.length];
+    return `${f1}${f2} ${l1}${l2}`;
+  };
+  
+  const profile = {
+    sector,
+    industry,
+    employees: 250 + (seed % 18000),
+    website: `https://www.${seedName.toLowerCase().replace(/[^a-z0-9]/g, '') || 'company'}.com`,
+    city: ['Mumbai', 'Bengaluru', 'Chennai', 'New Delhi', 'Gurugram', 'Hyderabad', 'Pune', 'Kolkata'][seed % 8],
+    summary: `${seedName} is a procedurally verified enterprise operating within the ${industry} domain. The firm specializes in delivering high-efficiency solutions and scaling modern operational pipelines. Backed by over ${250 + (seed % 18000)} active associates across regional offices, the company strives to ensure sustainable market growth and long-term equity returns for its stakeholders.`,
+    officers: [
+      { name: getProceduralName(1), title: 'Managing Director & CEO', age: 45 + (seed % 18), pay: Math.round(8000000 + (seed % 12000000)) },
+      { name: getProceduralName(2), title: 'Whole-time Director & CFO', age: 40 + (seed % 20), pay: Math.round(6000000 + (seed % 8000000)) },
+      { name: getProceduralName(3), title: 'Non-Executive Independent Chairperson', age: 50 + (seed % 22), pay: Math.round(2000000 + (seed % 3000000)) },
+      { name: getProceduralName(4), title: 'VP - Operations & Engineering', age: 38 + (seed % 15), pay: Math.round(4500000 + (seed % 5000000)) },
+      { name: getProceduralName(5), title: 'Company Secretary & Compliance Officer', age: 30 + (seed % 15), pay: Math.round(2500000 + (seed % 3000000)) }
+    ]
+  };
+  
+  // Generating historical statements (10 years)
+  const balanceSheet = [];
+  const profitLoss = [];
+  const cashFlow = [];
+  
+  let scale = mcap / 20;
+  for (let i = 0; i < 10; i++) {
+    const year = 2026 - i;
+    const yearStr = `Mar ${year}`;
+    const decay = Math.pow(0.9, i);
+    const sDecay = scale * decay * (1 + ((seed % 10) / 100) * (i % 2 === 0 ? 1 : -1));
+    
+    balanceSheet.push({
+      date: yearStr,
+      totalAssets: Math.round(sDecay),
+      totalLiabilities: Math.round(sDecay * 0.45),
+      equity: Math.round(sDecay * 0.55),
+      cash: Math.round(sDecay * 0.08),
+      debt: Math.round(sDecay * 0.15),
+      workingCapital: Math.round(sDecay * 0.12),
+    });
+    
+    const rev = sDecay * 0.85;
+    const netInc = rev * (ratios.profitMargin / 100);
+    profitLoss.push({
+      date: yearStr,
+      revenue: Math.round(rev),
+      costOfRevenue: Math.round(rev * 0.65),
+      grossProfit: Math.round(rev * 0.35),
+      operatingIncome: Math.round(rev * (ratios.operatingMargin / 100)),
+      netIncome: Math.round(netInc),
+      eps: Number((netInc / (mcap / basePrice)).toFixed(2)),
+    });
+    
+    cashFlow.push({
+      date: yearStr,
+      operatingCashFlow: Math.round(netInc * 1.15),
+      investingCashFlow: Math.round(-netInc * 0.65),
+      financingCashFlow: Math.round(-netInc * 0.45),
+      capitalExpenditure: Math.round(-netInc * 0.50),
+      netChangeInCash: Math.round(netInc * 0.05),
+      freeCashFlow: Math.round(netInc * 0.65),
+    });
+  }
+  
+  // Generating quarterly statements (12 quarters)
+  const quarterlyProfitLoss = [];
+  const quarters = ['Dec 2025', 'Sep 2025', 'Jun 2025', 'Mar 2025', 'Dec 2024', 'Sep 2024', 'Jun 2024', 'Mar 2024', 'Dec 2023', 'Sep 2023', 'Jun 2023', 'Mar 2023'];
+  for (let i = 0; i < 12; i++) {
+    const qDecay = (mcap / 80) * (1 - i * 0.02);
+    const rev = qDecay * (1 + ((seed % 8) / 100) * (i % 2 === 0 ? 1 : -1));
+    const netInc = rev * (ratios.profitMargin / 100);
+    quarterlyProfitLoss.push({
+      date: quarters[i],
+      revenue: Math.round(rev),
+      costOfRevenue: Math.round(rev * 0.65),
+      grossProfit: Math.round(rev * 0.35),
+      operatingIncome: Math.round(rev * (ratios.operatingMargin / 100)),
+      netIncome: Math.round(netInc),
+      eps: Number((netInc / (mcap / basePrice)).toFixed(2)),
+    });
+  }
+  
+  // Generating chart prices (60 points random walk)
+  const chartData = [];
+  let currentPrice = basePrice * 0.85;
+  const now = new Date();
+  for (let i = 60; i >= 0; i--) {
+    const date = new Date(now);
+    date.setDate(now.getDate() - i * 6);
+    const randChange = -1.5 + ((seed * i) % 310) / 100;
+    currentPrice = currentPrice * (1 + randChange / 100);
+    
+    if (currentPrice > basePrice * 1.35) currentPrice = basePrice * 1.30;
+    if (currentPrice < basePrice * 0.65) currentPrice = basePrice * 0.70;
+    
+    chartData.push({
+      date: date.toLocaleDateString('en-IN', { month: 'short', day: 'numeric' }),
+      close: Number(currentPrice.toFixed(2)),
+      volume: Math.floor(vol * (0.5 + ((seed + i) % 100) / 100)),
+    });
+  }
+  chartData[chartData.length - 1].close = basePrice;
+  
+  // Sectors peers
+  const peerSymbols = DEFAULT_SEEDS.filter(s => s.symbol.toUpperCase() !== upperSymbol).slice(0, 3).map(s => s.symbol.toUpperCase());
+  const peers = peerSymbols.map((pSym, idx) => {
+    const pSeed = pSym.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    const pPrice = 50 + (pSeed % 1450);
+    return {
+      symbol: pSym,
+      name: DEFAULT_SEEDS.find(s => s.symbol.toUpperCase() === pSym)?.name || pSym.replace('.NS', '').replace('.BO', ''),
+      price: pPrice,
+      pe: 12 + (pSeed % 28),
+      marketCap: Math.round(100000000 * (pSeed % 4000) * (pPrice / 10)),
+      divYield: (pSeed % 6 === 0) ? 0.8 + ((pSeed % 25) / 10) : 0,
+    };
+  });
+  
+  const pros = [
+    ratios.debtToEquity === 0 ? "Company is virtually debt-free." : `Company retains a highly comfortable leverage structure with D/E at ${(ratios.debtToEquity / 100).toFixed(2)}.`,
+    `Delivered a highly robust Return on Equity (ROE) of ${roe.toFixed(2)}% in the current fiscal year.`,
+    `Operating cash flows are stable and scale proportionally with commercial expansion.`,
+    `Short-term liquidity metrics (Current Ratio ${currentRatio.toFixed(2)}) remain healthy and secure.`
+  ];
+  const cons = [
+    ratios.pe > 35 ? `Stock is trading at a high trailing valuation multiple (P/E ${pe.toFixed(2)}).` : "Valuation multiples are tightly bound to current growth trends.",
+    ratios.cmpBv > 5 ? `Trading premium of ${ratios.cmpBv.toFixed(2)}x Book Value might limit immediate short-term arbitrage margins.` : "Book value multiples are well aligned to sector standards."
+  ];
+  
+  const newsTemplates = [
+    (name: string) => `${name} registers positive operational progress and vertical scaling in key sectors`,
+    (name: string) => `Technical metrics highlight stable momentum indicators for ${name}`,
+    (name: string) => `Institutional flows indicate supportive long-term demand channels in ${name}`,
+    (name: string) => `${name} announces strategic review of operational goals to maximize yield`
+  ];
+  
+  const getNewsItem = (i: number) => {
+    const tIdx = (seed + i * 3) % newsTemplates.length;
+    const daysAgo = i * 2 + (seed % 3);
+    const date = new Date();
+    date.setDate(date.getDate() - daysAgo);
+    return {
+      title: newsTemplates[tIdx](seedName),
+      publisher: ['Business Standard', 'Economic Times', 'LiveMint', 'CNBC-TV18', 'Bloomberg Quint', 'Financial Express'][(seed + i) % 6],
+      link: '#',
+      date: date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+    };
+  };
+  const news = [getNewsItem(0), getNewsItem(1), getNewsItem(2)];
+  
+  return {
+    ratios,
+    profile,
+    balanceSheet,
+    profitLoss,
+    cashFlow,
+    quarterlyProfitLoss,
+    chartData,
+    peers,
+    pros,
+    cons,
+    news
+  };
+}
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ symbol: string }> }
