@@ -79,6 +79,14 @@ export interface Toast { message: string; type: ToastType; }
 /* ── Helper ─────────────────────────────────────────────── */
 function getApiUrl() { return getBackendApiUrl(); }
 
+const getHeaders = (withJson = true) => {
+  const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+  return {
+    ...(withJson ? { 'Content-Type': 'application/json' } : {}),
+    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+  };
+};
+
 /* ── Hook ───────────────────────────────────────────────── */
 export function useWatchlistStore() {
   /* — Core state — */
@@ -106,7 +114,9 @@ export function useWatchlistStore() {
   /* — Watchlist CRUD — */
   const fetchWatchlists = useCallback(async () => {
     try {
-      const res = await fetch(`${getApiUrl()}/watchlists`);
+      const res = await fetch(`${getApiUrl()}/watchlists`, {
+        headers: getHeaders(false)
+      });
       if (res.ok) {
         const data = await res.json();
         setWatchlists(data);
@@ -122,7 +132,7 @@ export function useWatchlistStore() {
     try {
       const res = await fetch(`${getApiUrl()}/watchlists`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getHeaders(true),
         body: JSON.stringify({ name: clean })
       });
       if (res.ok) {
@@ -145,7 +155,7 @@ export function useWatchlistStore() {
     try {
       const res = await fetch(`${getApiUrl()}/watchlists/${encodeURIComponent(oldName)}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getHeaders(true),
         body: JSON.stringify({ name: clean })
       });
       if (res.ok) {
@@ -164,7 +174,10 @@ export function useWatchlistStore() {
 
   const deleteWatchlist = useCallback(async (name: string): Promise<boolean> => {
     try {
-      const res = await fetch(`${getApiUrl()}/watchlists/${encodeURIComponent(name)}`, { method: 'DELETE' });
+      const res = await fetch(`${getApiUrl()}/watchlists/${encodeURIComponent(name)}`, {
+        method: 'DELETE',
+        headers: getHeaders(false)
+      });
       if (res.ok) {
         setWatchlists(prev => prev.filter(w => w.name !== name));
         if (selectedWatchlist === name) setSelectedWatchlist('default');
@@ -182,7 +195,9 @@ export function useWatchlistStore() {
       setWatchlistLoading(true);
       setApiFailed(false);
 
-      const backendRes = await fetch(`${getApiUrl()}/stocks?watchlist=${encodeURIComponent(wlName)}`);
+      const backendRes = await fetch(`${getApiUrl()}/stocks?watchlist=${encodeURIComponent(wlName)}`, {
+        headers: getHeaders(false)
+      });
       if (!backendRes.ok) throw new Error();
       const backendStocks = (await backendRes.json()) as BackendStock[];
       const symbols = backendStocks.map(s => s.symbol);
@@ -260,7 +275,7 @@ export function useWatchlistStore() {
         try {
           const backendRes = await fetch(`${getApiUrl()}/stocks`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: getHeaders(true),
             body: JSON.stringify({ symbol: stock.symbol, name: stock.name, isFavourite: false, watchlist: selectedWatchlist })
           });
           if (backendRes.ok) {
@@ -284,7 +299,10 @@ export function useWatchlistStore() {
   const removeStock = useCallback(async (symbol: string): Promise<boolean> => {
     try {
       if (!apiFailed) {
-        const res = await fetch(`${getApiUrl()}/stocks/${encodeURIComponent(symbol)}?watchlist=${encodeURIComponent(selectedWatchlist)}`, { method: 'DELETE' });
+        const res = await fetch(`${getApiUrl()}/stocks/${encodeURIComponent(symbol)}?watchlist=${encodeURIComponent(selectedWatchlist)}`, {
+          method: 'DELETE',
+          headers: getHeaders(false)
+        });
         if (!res.ok) throw new Error();
       }
       setWatchlistStocks(prev => prev.filter(s => s.symbol.toUpperCase() !== symbol.toUpperCase()));
@@ -307,7 +325,7 @@ export function useWatchlistStore() {
       try {
         await fetch(`${getApiUrl()}/stocks/${encodeURIComponent(symbol)}?watchlist=${encodeURIComponent(selectedWatchlist)}`, {
           method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
+          headers: getHeaders(true),
           body: JSON.stringify({ isFavourite: nextFav, watchlist: selectedWatchlist })
         });
       } catch {
@@ -335,7 +353,7 @@ export function useWatchlistStore() {
       try {
         await fetch(`${getApiUrl()}/stocks/${encodeURIComponent(symbol)}?watchlist=${encodeURIComponent(selectedWatchlist)}`, {
           method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
+          headers: getHeaders(true),
           body: JSON.stringify({ tags: nextTags, watchlist: selectedWatchlist })
         });
       } catch {

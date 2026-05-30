@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
@@ -53,10 +53,14 @@ const AdvancedChart = dynamic(() => import('@/components/AdvancedChart'), {
     <div className="flex-1 flex items-center justify-center bg-slate-950 min-h-[300px]">
       <div className="flex flex-col items-center gap-3">
         <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-        <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Initialising Chart Engineâ€¦</span>
+        <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Initialising Chart Engine...</span>
       </div>
     </div>
   ),
+});
+
+const Navigation = dynamic(() => import('@/components/Navigation').then(mod => mod.Navigation), {
+  ssr: false
 });
 
 interface StockQuote {
@@ -1523,6 +1527,7 @@ function TradingTerminalInner() {
 
   return (
     <div className="min-h-dvh lg:h-dvh lg:overflow-hidden bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans" onClick={() => setTagPopoverSym(null)}>
+      <Navigation />
       
       {/* â”€â”€ Header â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <header className="flex flex-wrap items-center justify-between gap-3 px-4 sm:px-6 py-2.5 bg-white dark:bg-slate-950 border-b border-slate-200 dark:border-slate-850 shadow-sm shrink-0 z-40">
@@ -1532,7 +1537,7 @@ function TradingTerminalInner() {
           </Link>
           <div className="flex items-center gap-2 min-w-0">
             <Link href="/" className="flex items-center gap-2 min-w-0 group/logo">
-              <span className="bg-gradient-to-r from-cyan-400 to-blue-600 bg-clip-text text-transparent font-extrabold text-lg sm:text-xl tracking-tight truncate">
+              <span className="text-slate-900 dark:text-white font-extrabold text-sm sm:text-base tracking-wide truncate">
                 VISION TERMINAL
               </span>
             </Link>
@@ -2412,15 +2417,26 @@ function TradingTerminalInner() {
 }
 
 export default function TradingTerminalPage() {
-  return (
-    <React.Suspense fallback={
-      <div className="min-h-dvh bg-slate-950 flex items-center justify-center">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-          <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Initialising Terminalâ€¦</span>
-        </div>
+  const [mounted, setMounted] = React.useState(false);
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const fallback = (
+    <div className="min-h-dvh bg-slate-950 flex items-center justify-center">
+      <div className="flex flex-col items-center gap-3">
+        <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+        <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Initialising Terminal...</span>
       </div>
-    }>
+    </div>
+  );
+
+  if (!mounted) {
+    return fallback;
+  }
+
+  return (
+    <React.Suspense fallback={fallback}>
       <TradingTerminalInner />
     </React.Suspense>
   );

@@ -24,7 +24,7 @@ export const Navigation = () => {
   const { user, logout } = useAuth();
   const [open, setOpen] = useState(false);
   const [theme, setTheme] = useState<'dark' | 'light'>('light');
-  const [mounted, setMounted] = useState(false);
+  const [mounted, setMounted] = useState(true);
 
   const closeMenu = () => setOpen(false);
 

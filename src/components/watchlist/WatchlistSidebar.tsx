@@ -106,6 +106,11 @@ export default function WatchlistSidebar({
   const [analyticsData, setAnalyticsData] = useState<{ dailyReturn: number; topGainer: any; topLoser: any } | null>(null);
   const [loadingAnalytics, setLoadingAnalytics] = useState(false);
   const [smartFilter, setSmartFilter] = useState<'all' | 'high_volume' | 'breakout' | 'momentum'>('all');
+  const [limit, setLimit] = useState(10);
+
+  useEffect(() => {
+    setLimit(10);
+  }, [selectedWatchlist, searchQuery, smartFilter, activeTagFilter]);
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL || '/api';
 
@@ -548,31 +553,46 @@ export default function WatchlistSidebar({
       {watchlistLoading ? (
         renderSkeleton()
       ) : (
-        <VirtualStockList
-          items={processedSmartWatchlist}
-          itemHeight={STOCK_ROW_HEIGHT}
-          containerClassName="flex-1 min-h-0"
-          getItemKey={(item) => item.symbol}
-          renderItem={renderStockRow}
-          emptyState={
-            <div className="p-8 text-center">
-              <div className="w-12 h-12 mx-auto mb-3 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
-                <Search className="w-5 h-5 text-slate-400" />
+        <>
+          <VirtualStockList
+            items={processedSmartWatchlist.slice(0, limit)}
+            itemHeight={STOCK_ROW_HEIGHT}
+            containerClassName="flex-1 min-h-0"
+            getItemKey={(item) => item.symbol}
+            renderItem={renderStockRow}
+            emptyState={
+              <div className="p-8 text-center">
+                <div className="w-12 h-12 mx-auto mb-3 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+                  <Search className="w-5 h-5 text-slate-400" />
+                </div>
+                <p className="text-xs font-bold text-slate-500 mb-1">No stocks found</p>
+                <p className="text-[10px] text-slate-400 font-medium">
+                  {searchQuery ? `No results for "${searchQuery}"` : 'This watchlist is empty'}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setShowAddModal(true)}
+                  className="mt-3 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white text-[10px] font-bold rounded-xl transition-colors shadow-md"
+                >
+                  + Add Stock
+                </button>
               </div>
-              <p className="text-xs font-bold text-slate-500 mb-1">No stocks found</p>
-              <p className="text-[10px] text-slate-400 font-medium">
-                {searchQuery ? `No results for "${searchQuery}"` : 'This watchlist is empty'}
-              </p>
+            }
+          />
+
+          {/* Load More Button */}
+          {processedSmartWatchlist.length > limit && (
+            <div className="p-3 bg-white dark:bg-slate-950 border-t border-slate-100 dark:border-slate-850 flex justify-center shrink-0">
               <button
                 type="button"
-                onClick={() => setShowAddModal(true)}
-                className="mt-3 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white text-[10px] font-bold rounded-xl transition-colors shadow-md"
+                onClick={() => setLimit(prev => prev + 10)}
+                className="w-full py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-850 dark:text-slate-150 text-xs font-extrabold rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-sm border border-slate-200 dark:border-slate-800 hover:scale-[1.01]"
               >
-                + Add Stock
+                Load More <ChevronDown className="w-4 h-4 text-slate-500" />
               </button>
             </div>
-          }
-        />
+          )}
+        </>
       )}
 
       {/* Add Stock Modal */}
