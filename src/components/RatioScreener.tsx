@@ -3,7 +3,7 @@
 import React, { useState, useMemo } from 'react';
 import { 
   Search, Info, CheckCircle, AlertCircle, BarChart2, 
-  Sliders, Terminal, HelpCircle, ChevronLeft, ChevronRight,
+  Sliders, Terminal, ChevronLeft, ChevronRight,
   TrendingUp, Layers, Sparkles, Filter, Database
 } from 'lucide-react';
 import { DEFAULT_SEEDS } from '@/utils/symbols';

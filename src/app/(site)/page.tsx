@@ -353,7 +353,7 @@ function WealthDashboardContent() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors duration-300 font-sans animate-fadeIn">
+    <div className="min-h-screen bg-slate-50 dark:bg-zinc-950 text-slate-900 dark:text-slate-100 transition-colors duration-300 font-sans animate-fadeIn">
       <div className="w-full px-4 sm:px-8 lg:px-12 py-8 sm:py-12 max-w-[1600px] mx-auto min-w-0">
         
         <Header />
@@ -467,7 +467,7 @@ function WealthDashboardContent() {
 export default function WealthDashboard() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center gap-4">
+      <div className="min-h-screen bg-slate-50 dark:bg-zinc-950 flex flex-col items-center justify-center gap-4">
         <div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
         <div className="text-sm font-semibold text-slate-500 animate-pulse">Initializing Wealth Cockpit...</div>
       </div>

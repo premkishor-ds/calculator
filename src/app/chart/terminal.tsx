@@ -39,7 +39,7 @@ import {
   Lock,
   Unlock,
   Bookmark,
-  HelpCircle
+  CircleQuestionMark as HelpCircle
 } from 'lucide-react';
 import { DEFAULT_SYMBOLS, DEFAULT_SEEDS } from '@/utils/symbols';
 import { buildAllTags, DEFAULT_CUSTOM_TAGS, CUSTOM_TAG_IDS, type TagDef, type CustomTagRaw } from '@/utils/tags';

@@ -23,7 +23,6 @@ import {
   Sparkles,
   BarChart3,
   Eye,
-  HelpCircle,
   Coins,
   ChevronRight
 } from 'lucide-react';

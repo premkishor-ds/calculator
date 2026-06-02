@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import dynamic from 'next/dynamic';
-import { TrendingUp, Sun, Landmark, Zap, HelpCircle, CheckCircle2, Circle, Percent, Award, Briefcase, ShieldAlert, Heart, Calendar } from 'lucide-react';
+import { TrendingUp, Sun, Landmark, Zap, CheckCircle2, Circle, Percent, Award, Briefcase, ShieldAlert, Heart, Calendar } from 'lucide-react';
 import { formatINR, SummaryResult } from '@/utils/calculations';
 import { FIRESummary } from '@/utils/solvers';
 
@@ -151,43 +151,7 @@ export const WealthChart: React.FC<VisualsProps> = ({ chartData, theme }) => {
     <section className="mb-12">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div className="flex items-center gap-3">
-          <h2 className="text-xl sm:text-2xl font-bold text-blue-500">Interactive Projections</h2>
-        </div>
-        
-        {/* Chart View Switcher */}
-        <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-x-auto gap-1">
-          <button 
-            onClick={() => setChartMode('growth')}
-            className={`px-3 py-1.5 text-[10px] font-black uppercase rounded-xl transition-all ${
-              chartMode === 'growth' ? 'bg-blue-500 text-white shadow' : 'text-slate-500 hover:text-slate-850'
-            }`}
-          >
-            Growth Trajectory
-          </button>
-          <button 
-            onClick={() => setChartMode('tax')}
-            className={`px-3 py-1.5 text-[10px] font-black uppercase rounded-xl transition-all ${
-              chartMode === 'tax' ? 'bg-red-500 text-white shadow' : 'text-slate-500 hover:text-slate-850'
-            }`}
-          >
-            Tax Impact
-          </button>
-          <button 
-            onClick={() => setChartMode('inflation')}
-            className={`px-3 py-1.5 text-[10px] font-black uppercase rounded-xl transition-all ${
-              chartMode === 'inflation' ? 'bg-orange-500 text-white shadow' : 'text-slate-500 hover:text-slate-850'
-            }`}
-          >
-            Inflation Impact
-          </button>
-          <button 
-            onClick={() => setChartMode('yearly')}
-            className={`px-3 py-1.5 text-[10px] font-black uppercase rounded-xl transition-all ${
-              chartMode === 'yearly' ? 'bg-indigo-500 text-white shadow' : 'text-slate-500 hover:text-slate-850'
-            }`}
-          >
-            Yearly Growth
-          </button>
+          <h2 className="text-xl sm:text-2xl font-bold text-blue-500">Wealth Projections</h2>
         </div>
       </div>
 

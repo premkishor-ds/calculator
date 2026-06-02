@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { HelpCircle, ChevronDown, ChevronUp, Lock, RefreshCw, Layers } from 'lucide-react';
+import { RotateCw, Layers, Sparkles, Check, DollarSign, Calendar, TrendingUp, Lock } from 'lucide-react';
 import { formatINR } from '@/utils/calculations';
 
 interface ControlsProps {
@@ -79,7 +79,8 @@ export const Controls: React.FC<ControlsProps> = (props) => {
     resetAll
   } = props;
 
-  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [activePreset, setActivePreset] = useState<string | null>(null);
+  const requiredRetirementCorpus = (currentMonthlyExpenses * 12) / (swr / 100 || 0.04);
 
   const handleNumberChange = (value: string, setter: (v: number) => void, maxVal: number) => {
     const clean = value.replace(/[^0-9]/g, '');
@@ -95,478 +96,496 @@ export const Controls: React.FC<ControlsProps> = (props) => {
     }
   };
 
+  const presets = [
+    {
+      id: 'it_pro',
+      label: '🚀 IT Pro Wealth Builder',
+      desc: 'High returns & high step-up',
+      config: () => {
+        setStartSip(30000);
+        setInitialLumpsum(100000);
+        setStepUp(15);
+        setCagr(18);
+        setYears(15);
+      }
+    },
+    {
+      id: 'child_edu',
+      label: '🎓 Child Education Plan',
+      desc: 'Safe & steady compounding',
+      config: () => {
+        setStartSip(15000);
+        setInitialLumpsum(50000);
+        setStepUp(10);
+        setCagr(13);
+        setYears(12);
+      }
+    },
+    {
+      id: 'home_buyer',
+      label: '🏡 Dream Home Fund',
+      desc: 'Short term targeted growth',
+      config: () => {
+        setStartSip(40000);
+        setInitialLumpsum(500000);
+        setStepUp(10);
+        setCagr(12);
+        setYears(8);
+      }
+    },
+    {
+      id: 'early_retire',
+      label: '🔥 Early Retirement FIRE',
+      desc: 'Maximize compounding duration',
+      config: () => {
+        setStartSip(50000);
+        setInitialLumpsum(200000);
+        setStepUp(12);
+        setCagr(15);
+        setYears(20);
+        setActiveTab('fire');
+        setCurrentAge(28);
+        setRetirementAge(48);
+        setCurrentMonthlyExpenses(60000);
+      }
+    }
+  ];
+
+  const handlePresetSelect = (id: string, configFn: () => void) => {
+    configFn();
+    setActivePreset(id);
+  };
+
   return (
-    <section className="bg-white dark:bg-slate-900/50 backdrop-blur-md p-4 sm:p-6 lg:p-8 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xl mb-12">
+    <section className="bg-white dark:bg-zinc-900 p-5 sm:p-8 rounded-3xl border border-slate-100 dark:border-zinc-800/80 shadow-2xl mb-12">
       
-      {/* 🧭 Master Calculator Mode Tab Switcher */}
-      <div className="flex border-b border-slate-150 dark:border-slate-800 mb-6 sm:mb-8 overflow-x-auto gap-2 scrollbar-none">
-        <button 
-          onClick={() => setActiveTab('corpus')} 
-          className={`pb-4 px-4 text-xs font-black uppercase tracking-wider whitespace-nowrap border-b-2 transition-all ${
-            activeTab === 'corpus' ? 'border-blue-500 text-blue-500' : 'border-transparent text-slate-400 hover:text-slate-650'
-          }`}
-        >
-          💰 Corpus Calculator
-        </button>
-        <button 
-          onClick={() => setActiveTab('years')} 
-          className={`pb-4 px-4 text-xs font-black uppercase tracking-wider whitespace-nowrap border-b-2 transition-all ${
-            activeTab === 'years' ? 'border-purple-500 text-purple-500' : 'border-transparent text-slate-400 hover:text-slate-650'
-          }`}
-        >
-          🕒 Years Calculator
-        </button>
-        <button 
-          onClick={() => setActiveTab('cagr')} 
-          className={`pb-4 px-4 text-xs font-black uppercase tracking-wider whitespace-nowrap border-b-2 transition-all ${
-            activeTab === 'cagr' ? 'border-emerald-500 text-emerald-500' : 'border-transparent text-slate-400 hover:text-slate-650'
-          }`}
-        >
-          📈 CAGR Calculator
-        </button>
-        <button 
-          onClick={() => setActiveTab('target')} 
-          className={`pb-4 px-4 text-xs font-black uppercase tracking-wider whitespace-nowrap border-b-2 transition-all ${
-            activeTab === 'target' ? 'border-pink-500 text-pink-500' : 'border-transparent text-slate-400 hover:text-slate-650'
-          }`}
-        >
-          🎯 Target Solver
-        </button>
-        <button 
-          onClick={() => setActiveTab('fire')} 
-          className={`pb-4 px-4 text-xs font-black uppercase tracking-wider whitespace-nowrap border-b-2 transition-all ${
-            activeTab === 'fire' ? 'border-orange-500 text-orange-500' : 'border-transparent text-slate-400 hover:text-slate-650'
-          }`}
-        >
-          🔥 FIRE Calculator
-        </button>
+      {/* 🧭 Master Tab Selector - Segmented Capsule Pill Style */}
+      <div className="bg-slate-100 dark:bg-zinc-950 p-1.5 rounded-2xl flex gap-1 mb-8 overflow-x-auto scrollbar-none border border-slate-200/40 dark:border-zinc-800/50">
+        {(['corpus', 'years', 'cagr', 'target', 'fire'] as const).map((tab) => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            className={`flex-1 py-3 px-4 text-xs font-bold uppercase tracking-wider rounded-xl transition-all whitespace-nowrap ${
+              activeTab === tab 
+                ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' 
+                : 'text-slate-500 dark:text-zinc-400 hover:text-slate-800 dark:hover:text-zinc-200'
+            }`}
+          >
+            {tab === 'corpus' && '💰 Corpus Calculator'}
+            {tab === 'years' && '🕒 Years Calculator'}
+            {tab === 'cagr' && '📈 CAGR Calculator'}
+            {tab === 'target' && '🎯 Target Solver'}
+            {tab === 'fire' && '🔥 FIRE Calculator'}
+          </button>
+        ))}
       </div>
 
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-6 sm:mb-8">
-        <h3 className="text-sm font-bold uppercase tracking-widest text-slate-400 flex items-center gap-2">
-          <Layers className="w-4 h-4 text-slate-400" />
-          {activeTab === 'corpus' && 'Corpus Modeling Parameters'}
-          {activeTab === 'years' && 'Years Destination Parameters'}
-          {activeTab === 'cagr' && 'Returns Requirement Configuration'}
-          {activeTab === 'target' && 'Required Investment Solver'}
-          {activeTab === 'fire' && 'FIRE early Retirement Parameters'}
+
+
+      <div className="flex justify-between items-center gap-3 mb-6">
+        <h3 className="text-xs font-black uppercase tracking-widest text-slate-400 dark:text-zinc-550 flex items-center gap-2">
+          <Layers className="w-4 h-4 text-indigo-500" />
+          Calculator Parameters
         </h3>
         <button 
           onClick={resetAll}
-          className="self-start sm:self-auto text-[10px] font-bold uppercase tracking-wider px-4 py-2 rounded-full border border-slate-200 dark:border-slate-800 hover:bg-red-500/10 hover:text-red-500 hover:border-red-500/20 transition-all flex items-center gap-1.5 touch-manipulation"
+          className="text-[9px] font-black uppercase tracking-wider px-3.5 py-1.5 rounded-xl border border-slate-200 dark:border-zinc-800 text-slate-550 dark:text-zinc-400 hover:bg-red-500/10 hover:text-red-500 hover:border-red-500/20 transition-all flex items-center gap-1"
         >
-          <RefreshCw className="w-3 h-3" />
+          <RotateCw className="w-3 h-3" />
           Reset Configs
         </button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
+      {/* 🚀 Single Unified Configurations Column Flow */}
+      <div className="space-y-8 bg-slate-50/50 dark:bg-zinc-950/20 p-6 rounded-3xl border border-slate-100 dark:border-zinc-800/40">
         
-        {/* Core Inputs Section */}
-        <div className="space-y-8">
+        {/* Row 1: Core Sliders (Gorgeously Rounded, Indigo accents) */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 pb-8 border-b border-slate-200/40 dark:border-zinc-800/40">
           {activeTab !== 'fire' ? (
             <>
               {/* Standard SIP slider */}
-              {activeTab !== 'target' && (
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center">
-                    <label className="text-xs font-bold uppercase tracking-wider text-blue-500 flex items-center gap-1">
-                      Monthly SIP <span title="Monthly savings contribution."><HelpCircle className="w-3 h-3 cursor-help text-slate-400" /></span>
-                    </label>
-                    <span className="text-lg font-bold text-blue-600 dark:text-cyan-400">{formatINR(startSip)}</span>
+              {activeTab !== 'target' ? (
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="font-extrabold uppercase tracking-wider text-slate-555">Monthly SIP</span>
+                    <div className="flex items-center gap-1 font-black text-indigo-650 dark:text-indigo-400 text-base">
+                      <span>₹</span>
+                      <input 
+                        type="text"
+                        inputMode="numeric"
+                        value={startSip === 0 ? '' : startSip.toLocaleString('en-IN')}
+                        onChange={(e) => {
+                          const num = Number(e.target.value.replace(/[^0-9]/g, ''));
+                          setStartSip(isNaN(num) ? 0 : Math.min(100000000, num));
+                          setActivePreset(null);
+                        }}
+                        className="w-24 bg-transparent border-b border-dashed border-indigo-400 focus:border-indigo-650 outline-none text-right font-black"
+                      />
+                    </div>
                   </div>
                   <input 
                     type="range" min="1000" max="500000" step="1000" 
-                    value={startSip} onChange={(e) => setStartSip(Number(e.target.value))}
-                    className="w-full h-2 bg-slate-200 dark:bg-slate-800 rounded-lg appearance-none cursor-pointer accent-blue-500"
+                    value={startSip} onChange={(e) => { setStartSip(Number(e.target.value)); setActivePreset(null); }}
+                    className="w-full h-2 bg-slate-200 dark:bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-indigo-600"
                   />
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-pink-500 block">Target Solver Mode</label>
+                  <select 
+                    value={targetMode} 
+                    onChange={(e) => setTargetMode(e.target.value as any)}
+                    className="w-full bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl p-3 outline-none text-xs font-bold text-pink-650"
+                  >
+                    <option value="sip">Mode A: Solve Required SIP</option>
+                    <option value="lumpsum">Mode B: Solve Required Lump Sum</option>
+                    <option value="combo">Mode C: 50/50 Combo Split</option>
+                  </select>
                 </div>
               )}
 
               {/* Expected return slider */}
-              {activeTab !== 'cagr' && (
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center">
-                    <label className="text-xs font-bold uppercase tracking-wider text-blue-500 flex items-center gap-1">
-                      Expected Return % <span title="Expected Annual CAGR percentage."><HelpCircle className="w-3 h-3 cursor-help text-slate-400" /></span>
-                    </label>
-                    <span className="text-lg font-bold text-blue-600 dark:text-cyan-400">{cagr}%</span>
+              {activeTab !== 'cagr' ? (
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="font-extrabold uppercase tracking-wider text-slate-555">Expected Return (CAGR)</span>
+                    <div className="flex items-center gap-1 font-black text-indigo-655 dark:text-indigo-400 text-base">
+                      <input 
+                        type="text"
+                        inputMode="decimal"
+                        value={cagr === 0 ? '' : cagr}
+                        onChange={(e) => {
+                          const num = Number(e.target.value.replace(/[^0-9.]/g, ''));
+                          setCagr(isNaN(num) ? 0 : Math.min(100, num));
+                          setActivePreset(null);
+                        }}
+                        className="w-12 bg-transparent border-b border-dashed border-indigo-400 focus:border-indigo-655 outline-none text-right font-black"
+                      />
+                      <span>%</span>
+                    </div>
                   </div>
                   <input 
                     type="range" min="5" max="30" step="1" 
-                    value={cagr} onChange={(e) => setCagr(Number(e.target.value))}
-                    className="w-full h-2 bg-slate-200 dark:bg-slate-800 rounded-lg appearance-none cursor-pointer accent-blue-500"
+                    value={cagr} onChange={(e) => { setCagr(Number(e.target.value)); setActivePreset(null); }}
+                    className="w-full h-2 bg-slate-200 dark:bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-indigo-600"
                   />
+                </div>
+              ) : (
+                <div className="flex flex-col justify-center">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 block mb-1">CAGR Solver Enabled</span>
+                  <span className="text-xs text-slate-500 font-semibold leading-normal">System is dynamically solving for the required compounding rate.</span>
                 </div>
               )}
 
-              {/* Tenure slider */}
-              {activeTab !== 'years' && (
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center">
-                    <label className="text-xs font-bold uppercase tracking-wider text-blue-500 flex items-center gap-1">
-                      Investment Duration <span title="Target time period in years."><HelpCircle className="w-3 h-3 cursor-help text-slate-400" /></span>
-                    </label>
-                    <span className="text-lg font-bold text-blue-600 dark:text-cyan-400">{years} Years</span>
+              {/* Duration slider */}
+              {activeTab !== 'years' ? (
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="font-extrabold uppercase tracking-wider text-slate-555">Duration (Years)</span>
+                    <div className="flex items-center gap-1 font-black text-indigo-655 dark:text-indigo-400 text-base">
+                      <input 
+                        type="text"
+                        inputMode="numeric"
+                        value={years === 0 ? '' : years}
+                        onChange={(e) => {
+                          const num = Number(e.target.value.replace(/[^0-9]/g, ''));
+                          setYears(isNaN(num) ? 0 : Math.min(100, num));
+                          setActivePreset(null);
+                        }}
+                        className="w-12 bg-transparent border-b border-dashed border-indigo-400 focus:border-indigo-655 outline-none text-right font-black"
+                      />
+                      <span>Years</span>
+                    </div>
                   </div>
                   <input 
                     type="range" min="1" max="50" step="1" 
-                    value={years} onChange={(e) => setYears(Number(e.target.value))}
-                    className="w-full h-2 bg-slate-200 dark:bg-slate-800 rounded-lg appearance-none cursor-pointer accent-blue-500"
+                    value={years} onChange={(e) => { setYears(Number(e.target.value)); setActivePreset(null); }}
+                    className="w-full h-2 bg-slate-200 dark:bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-indigo-600"
                   />
+                </div>
+              ) : (
+                <div className="flex flex-col justify-center">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 block mb-1">Duration Solver Enabled</span>
+                  <span className="text-xs text-slate-500 font-semibold leading-normal">System is dynamically solving for the required compounding duration.</span>
                 </div>
               )}
             </>
           ) : (
-            // FIRE CALCULATOR CORE SLIDERS
+            // FIRE Calculator Sliders
             <>
-              <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <label className="text-xs font-bold uppercase tracking-wider text-orange-500 flex items-center gap-1">
-                    Current Age <span title="Your current age."><HelpCircle className="w-3 h-3 cursor-help text-slate-400" /></span>
-                  </label>
-                  <span className="text-lg font-bold text-orange-600 dark:text-orange-400">{currentAge} Years</span>
+              <div className="space-y-3">
+                <div className="flex justify-between items-center text-xs">
+                  <span className="font-extrabold uppercase tracking-wider text-orange-555">Current Age</span>
+                  <div className="flex items-center gap-1 font-black text-orange-600 dark:text-orange-450 text-base">
+                    <input 
+                      type="text"
+                      inputMode="numeric"
+                      value={currentAge === 0 ? '' : currentAge}
+                      onChange={(e) => {
+                        const num = Number(e.target.value.replace(/[^0-9]/g, ''));
+                        setCurrentAge(isNaN(num) ? 0 : Math.min(100, num));
+                        setActivePreset(null);
+                      }}
+                      className="w-12 bg-transparent border-b border-dashed border-orange-400 focus:border-orange-600 outline-none text-right font-black"
+                    />
+                    <span>Years</span>
+                  </div>
                 </div>
                 <input 
                   type="range" min="18" max="75" step="1" 
-                  value={currentAge} onChange={(e) => setCurrentAge(Number(e.target.value))}
-                  className="w-full h-2 bg-slate-200 dark:bg-slate-800 rounded-lg appearance-none cursor-pointer accent-orange-500"
+                  value={currentAge} onChange={(e) => { setCurrentAge(Number(e.target.value)); setActivePreset(null); }}
+                  className="w-full h-2 bg-slate-200 dark:bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-orange-500"
                 />
               </div>
 
-              <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <label className="text-xs font-bold uppercase tracking-wider text-orange-500 flex items-center gap-1">
-                    Retirement Age <span title="Target early retirement age."><HelpCircle className="w-3 h-3 cursor-help text-slate-400" /></span>
-                  </label>
-                  <span className="text-lg font-bold text-orange-600 dark:text-orange-400">{retirementAge} Years</span>
+              <div className="space-y-3">
+                <div className="flex justify-between items-center text-xs">
+                  <span className="font-extrabold uppercase tracking-wider text-orange-555">Retirement Age</span>
+                  <div className="flex items-center gap-1 font-black text-orange-600 dark:text-orange-455 text-base">
+                    <input 
+                      type="text"
+                      inputMode="numeric"
+                      value={retirementAge === 0 ? '' : retirementAge}
+                      onChange={(e) => {
+                        const num = Number(e.target.value.replace(/[^0-9]/g, ''));
+                        setRetirementAge(isNaN(num) ? 0 : Math.min(100, num));
+                        setActivePreset(null);
+                      }}
+                      className="w-12 bg-transparent border-b border-dashed border-orange-400 focus:border-orange-600 outline-none text-right font-black"
+                    />
+                    <span>Years</span>
+                  </div>
                 </div>
                 <input 
                   type="range" min={Math.max(25, currentAge + 1)} max="85" step="1" 
-                  value={retirementAge} onChange={(e) => setRetirementAge(Number(e.target.value))}
-                  className="w-full h-2 bg-slate-200 dark:bg-slate-800 rounded-lg appearance-none cursor-pointer accent-orange-500"
+                  value={retirementAge} onChange={(e) => { setRetirementAge(Number(e.target.value)); setActivePreset(null); }}
+                  className="w-full h-2 bg-slate-200 dark:bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-orange-500"
                 />
               </div>
 
-              <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <label className="text-xs font-bold uppercase tracking-wider text-orange-500 flex items-center gap-1">
-                    Current Monthly Expenses <span title="Your current typical monthly living budget."><HelpCircle className="w-3 h-3 cursor-help text-slate-400" /></span>
-                  </label>
-                  <span className="text-lg font-bold text-orange-600 dark:text-orange-400">{formatINR(currentMonthlyExpenses)}</span>
+              <div className="space-y-3">
+                <div className="flex justify-between items-center text-xs">
+                  <span className="font-extrabold uppercase tracking-wider text-orange-555">Monthly Expenses</span>
+                  <div className="flex items-center gap-1 font-black text-orange-600 dark:text-orange-455 text-base">
+                    <span>₹</span>
+                    <input 
+                      type="text"
+                      inputMode="numeric"
+                      value={currentMonthlyExpenses === 0 ? '' : currentMonthlyExpenses.toLocaleString('en-IN')}
+                      onChange={(e) => {
+                        const num = Number(e.target.value.replace(/[^0-9]/g, ''));
+                        setCurrentMonthlyExpenses(isNaN(num) ? 0 : Math.min(10000000, num));
+                        setActivePreset(null);
+                      }}
+                      className="w-24 bg-transparent border-b border-dashed border-orange-400 focus:border-orange-600 outline-none text-right font-black"
+                    />
+                  </div>
                 </div>
                 <input 
                   type="range" min="10000" max="1000000" step="5000" 
-                  value={currentMonthlyExpenses} onChange={(e) => setCurrentMonthlyExpenses(Number(e.target.value))}
-                  className="w-full h-2 bg-slate-200 dark:bg-slate-800 rounded-lg appearance-none cursor-pointer accent-orange-500"
+                  value={currentMonthlyExpenses} onChange={(e) => { setCurrentMonthlyExpenses(Number(e.target.value)); setActivePreset(null); }}
+                  className="w-full h-2 bg-slate-200 dark:bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-orange-500"
                 />
               </div>
             </>
           )}
         </div>
+        
+        {/* Row 2: Standard Financial Inputs (Beautifully Spacious, Premium Grays) */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 pb-8 border-b border-slate-200/40 dark:border-zinc-800/40">
+          
+          <div className="flex flex-col gap-2">
+            <label className="text-[10px] font-black uppercase tracking-wider text-slate-400 dark:text-zinc-500">Initial Lumpsum</label>
+            <input 
+              type="text" 
+              inputMode="numeric"
+              value={initialLumpsum === 0 ? '' : initialLumpsum} 
+              onChange={(e) => { handleNumberChange(e.target.value, setInitialLumpsum, 1000000000); setActivePreset(null); }}
+              onFocus={(e) => e.target.select()}
+              placeholder="₹0"
+              className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl p-3.5 outline-none focus:ring-2 ring-indigo-500 transition-all text-xs font-semibold"
+            />
+          </div>
 
-        {/* Input Parameters Fields Box */}
-        <div className="flex flex-col justify-between p-6 rounded-3xl bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-            
-            {activeTab !== 'fire' ? (
-              <>
-                <div className="flex flex-col gap-2">
-                  <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500">Initial Lumpsum</label>
-                  <input 
-                    type="text" 
-                    inputMode="numeric"
-                    value={initialLumpsum === 0 ? '' : initialLumpsum} 
-                    onChange={(e) => handleNumberChange(e.target.value, setInitialLumpsum, 1000000000)}
-                    onFocus={(e) => e.target.select()}
-                    placeholder="₹0"
-                    className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3 outline-none focus:ring-2 ring-blue-500 transition-all text-sm font-semibold"
-                  />
-                </div>
-                <div className="flex flex-col gap-2">
-                  <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500">Step-Up % (Annual)</label>
-                  <input 
-                    type="text" 
-                    inputMode="numeric"
-                    value={stepUp === 0 ? '' : stepUp} 
-                    onChange={(e) => handleNumberChange(e.target.value, setStepUp, 100)}
-                    onFocus={(e) => e.target.select()}
-                    placeholder="10%"
-                    className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3 outline-none focus:ring-2 ring-blue-500 transition-all text-sm font-semibold"
-                  />
-                </div>
+          <div className="flex flex-col gap-2">
+            <label className="text-[10px] font-black uppercase tracking-wider text-slate-400 dark:text-zinc-500">Step-Up % (Annual)</label>
+            <input 
+              type="text" 
+              inputMode="numeric"
+              value={stepUp === 0 ? '' : stepUp} 
+              onChange={(e) => { handleNumberChange(e.target.value, setStepUp, 100); setActivePreset(null); }}
+              onFocus={(e) => e.target.select()}
+              placeholder="10%"
+              className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl p-3.5 outline-none focus:ring-2 ring-indigo-500 transition-all text-xs font-semibold"
+            />
+          </div>
 
-                {/* Target Corpus for CAGR and Years Solver */}
-                {(activeTab === 'years' || activeTab === 'cagr') && (
-                  <div className="flex flex-col gap-2 sm:col-span-2">
-                    <label className="text-[10px] font-extrabold uppercase tracking-wider text-purple-500">Target Corpus (₹)</label>
-                    <input 
-                      type="text" 
-                      inputMode="numeric"
-                      value={targetGoal === 0 ? '' : targetGoal} 
-                      onChange={(e) => handleNumberChange(e.target.value, setTargetGoal, 10000000000)}
-                      onFocus={(e) => e.target.select()}
-                      placeholder="e.g. ₹1,00,00,000"
-                      className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3 outline-none focus:ring-2 ring-purple-500 transition-all text-sm font-bold text-purple-600 dark:text-purple-400"
-                    />
-                  </div>
-                )}
+          <div className="flex flex-col gap-2">
+            <label className="text-[10px] font-black uppercase tracking-wider text-orange-500 flex items-center gap-1">
+              Expected Inflation (%)
+            </label>
+            <div className="flex gap-2 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl p-1">
+              <input 
+                type="text" 
+                inputMode="numeric"
+                disabled={!considerInflation}
+                value={considerInflation ? (inflation === 0 ? '' : inflation) : 'OFF'} 
+                onChange={(e) => handleNumberChange(e.target.value, setInflation, 50)}
+                className="flex-1 bg-transparent px-3 outline-none text-xs font-semibold disabled:opacity-50"
+              />
+              <button 
+                onClick={() => setConsiderInflation(!considerInflation)}
+                className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase transition-all ${
+                  considerInflation ? 'bg-orange-500 text-white shadow' : 'text-slate-400'
+                }`}
+              >
+                Toggle
+              </button>
+            </div>
+          </div>
 
-                {/* Mode Selector for Target Solver */}
-                {activeTab === 'target' && (
-                  <>
-                    <div className="flex flex-col gap-2">
-                      <label className="text-[10px] font-extrabold uppercase tracking-wider text-pink-500">Target Solver Mode</label>
-                      <select 
-                        value={targetMode} 
-                        onChange={(e) => setTargetMode(e.target.value as any)}
-                        className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3 outline-none text-xs font-bold text-pink-600 dark:text-pink-400"
-                      >
-                        <option value="sip">Mode A: Solve Required SIP</option>
-                        <option value="lumpsum">Mode B: Solve Required Lump Sum</option>
-                        <option value="combo">Mode C: 50/50 Combo Split</option>
-                      </select>
-                    </div>
-                    <div className="flex flex-col gap-2">
-                      <label className="text-[10px] font-extrabold uppercase tracking-wider text-pink-500">Target Corpus (₹)</label>
-                      <input 
-                        type="text" 
-                        inputMode="numeric"
-                        value={targetGoal === 0 ? '' : targetGoal} 
-                        onChange={(e) => handleNumberChange(e.target.value, setTargetGoal, 10000000000)}
-                        onFocus={(e) => e.target.select()}
-                        placeholder="₹5,00,00,000"
-                        className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3 outline-none focus:ring-2 ring-pink-500 transition-all text-sm font-bold text-pink-600 dark:text-pink-400"
-                      />
-                    </div>
-                  </>
-                )}
-              </>
-            ) : (
-              // FIRE CALCULATOR SPECIFIC CONFIGS
-              <>
-                <div className="flex flex-col gap-2">
-                  <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500">Current Investments</label>
-                  <input 
-                    type="text" 
-                    inputMode="numeric"
-                    value={initialLumpsum === 0 ? '' : initialLumpsum} 
-                    onChange={(e) => handleNumberChange(e.target.value, setInitialLumpsum, 1000000000)}
-                    onFocus={(e) => e.target.select()}
-                    placeholder="₹0"
-                    className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3 outline-none focus:ring-2 ring-blue-500 transition-all text-sm font-semibold"
-                  />
-                </div>
-                <div className="flex flex-col gap-2">
-                  <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500">Monthly Savings (SIP)</label>
-                  <input 
-                    type="text" 
-                    inputMode="numeric"
-                    value={startSip === 0 ? '' : startSip} 
-                    onChange={(e) => handleNumberChange(e.target.value, setStartSip, 1000000)}
-                    onFocus={(e) => e.target.select()}
-                    placeholder="₹10,000"
-                    className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3 outline-none focus:ring-2 ring-blue-500 transition-all text-sm font-semibold"
-                  />
-                </div>
-                <div className="flex flex-col gap-2">
-                  <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500">Savings Step-Up %</label>
-                  <input 
-                    type="text" 
-                    inputMode="numeric"
-                    value={stepUp === 0 ? '' : stepUp} 
-                    onChange={(e) => handleNumberChange(e.target.value, setStepUp, 100)}
-                    onFocus={(e) => e.target.select()}
-                    placeholder="10%"
-                    className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3 outline-none focus:ring-2 ring-blue-500 transition-all text-sm font-semibold"
-                  />
-                </div>
-                <div className="flex flex-col gap-2">
-                  <label className="text-[10px] font-extrabold uppercase tracking-wider text-orange-500 flex items-center gap-1">
-                    Safe Withdrawal Rate (SWR)
-                  </label>
-                  <select 
-                    value={swr} 
-                    onChange={(e) => setSwr(parseFloat(e.target.value))}
-                    className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3 outline-none text-xs font-bold text-orange-600 dark:text-orange-400"
-                  >
-                    <option value="3.0">3.0% (Ultra Conservative)</option>
-                    <option value="3.5">3.5% (Conservative)</option>
-                    <option value="4.0">4.0% (Standard FIRE Preset)</option>
-                    <option value="4.5">4.5% (Aggressive)</option>
-                    <option value="5.0">5.0% (High Withdrawal)</option>
-                  </select>
-                </div>
-
-                {/* Extra Buffer settings for FIRE tab */}
-                <div className="flex flex-col gap-2 sm:col-span-2">
-                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-orange-500">Target Safety Buffers</span>
-                  <div className="grid grid-cols-2 gap-4 mt-1">
-                    <label className="flex items-center gap-2 text-xs font-bold text-slate-650 cursor-pointer">
-                      <input 
-                        type="checkbox" 
-                        checked={healthcareBuffer} 
-                        onChange={(e) => setHealthcareBuffer(e.target.checked)}
-                        className="w-4 h-4 accent-orange-500 rounded"
-                      />
-                      +15% Healthcare Buffer
-                    </label>
-                    <label className="flex items-center gap-2 text-xs font-bold text-slate-650 cursor-pointer">
-                      <input 
-                        type="checkbox" 
-                        checked={emergencyBuffer} 
-                        onChange={(e) => setEmergencyBuffer(e.target.checked)}
-                        className="w-4 h-4 accent-orange-500 rounded"
-                      />
-                      +10% Emergency Buffer
-                    </label>
-                  </div>
-                </div>
-              </>
-            )}
-
-            {/* Standard Inflation Switch */}
-            <div className="flex flex-col gap-2 sm:col-span-2">
-              <label className="text-[10px] font-extrabold uppercase tracking-wider text-orange-500 flex items-center gap-1">
-                Expected Inflation (%)
-              </label>
-              <div className="flex gap-2">
+          {/* Tab specific dynamic input fields */}
+          {activeTab !== 'fire' ? (
+            (activeTab === 'years' || activeTab === 'cagr' || activeTab === 'target') && (
+              <div className="flex flex-col gap-2">
+                <label className="text-[10px] font-black uppercase tracking-wider text-purple-500">Target Corpus (₹)</label>
                 <input 
                   type="text" 
                   inputMode="numeric"
-                  disabled={!considerInflation}
-                  value={considerInflation ? (inflation === 0 ? '' : inflation) : 'Disabled'} 
-                  onChange={(e) => handleNumberChange(e.target.value, setInflation, 50)}
+                  value={targetGoal === 0 ? '' : targetGoal} 
+                  onChange={(e) => { handleNumberChange(e.target.value, setTargetGoal, 10000000000); setActivePreset(null); }}
                   onFocus={(e) => e.target.select()}
-                  placeholder="6%"
-                  className="flex-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3 outline-none focus:ring-2 ring-orange-500 transition-all text-sm font-semibold disabled:opacity-50"
+                  placeholder="₹1,00,00,000"
+                  className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl p-3.5 outline-none focus:ring-2 ring-purple-500 transition-all text-xs font-bold text-purple-600 dark:text-purple-400"
                 />
+              </div>
+            )
+          ) : (
+            <div className="flex flex-col gap-2">
+              <label className="text-[10px] font-black uppercase tracking-wider text-orange-500">Retirement Yield (SWR)</label>
+              <select 
+                value={swr} 
+                onChange={(e) => { setSwr(parseFloat(e.target.value)); setActivePreset(null); }}
+                className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl p-3.5 outline-none text-xs font-bold text-orange-600"
+              >
+                <option value="3.0">3.0% (Lean / Safe)</option>
+                <option value="3.5">3.5% (Conservative)</option>
+                <option value="4.0">4.0% (Standard FIRE)</option>
+                <option value="4.5">4.5% (Aggressive)</option>
+                <option value="5.0">5.0% (Fat FIRE / Yield)</option>
+              </select>
+            </div>
+          )}
+        </div>
+        
+        {/* Row 3: Frequencies & Tax Rule Parameters */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          
+          {/* SIP Frequency Configuration */}
+          <div className="flex flex-col gap-2">
+            <label className="text-[10px] font-black uppercase tracking-wider text-slate-400 dark:text-zinc-550">SIP Investment Frequency</label>
+            <div className="flex bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 p-1 rounded-xl">
+              {(['monthly', 'quarterly', 'yearly'] as const).map((freq) => (
                 <button 
-                  onClick={() => setConsiderInflation(!considerInflation)}
-                  className={`px-4 rounded-xl text-xs font-bold uppercase border transition-all ${
-                    considerInflation 
-                      ? 'bg-orange-500/10 border-orange-500/20 text-orange-600' 
-                      : 'bg-slate-100 border-slate-200 text-slate-400'
+                  key={freq}
+                  onClick={() => setSipFrequency(freq)}
+                  className={`flex-1 py-2 text-[9px] font-black uppercase rounded-lg transition-all whitespace-nowrap ${
+                    sipFrequency === freq 
+                      ? 'bg-indigo-650 text-white shadow' 
+                      : 'text-slate-400 hover:text-slate-600'
                   }`}
                 >
-                  {considerInflation ? 'ON' : 'OFF'}
+                  {freq}
                 </button>
-              </div>
+              ))}
             </div>
-
           </div>
-        </div>
 
-      </div>
-
-      {/* ⚙️ Expandable Advanced configurations Panel */}
-      <div className="mt-6 border-t border-slate-200 dark:border-slate-800/80 pt-4">
-        <button 
-          onClick={() => setShowAdvanced(!showAdvanced)}
-          className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-500 hover:text-slate-850 dark:hover:text-slate-200 transition-colors"
-        >
-          {showAdvanced ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-          Advanced Calculator Configuration Settings
-        </button>
-
-        {showAdvanced && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6 p-6 rounded-3xl bg-slate-50 dark:bg-slate-900/40 border border-slate-150 dark:border-slate-800 animate-slideDown">
-            
-            {/* SIP Frequency Configuration */}
-            <div className="flex flex-col gap-2">
-              <label className="text-[10px] font-black uppercase tracking-wider text-slate-500 flex items-center gap-1">
-                SIP Frequency
-              </label>
-              <div className="flex bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-1 rounded-xl">
-                {(['monthly', 'quarterly', 'yearly'] as const).map((freq) => (
-                  <button 
-                    key={freq}
-                    onClick={() => setSipFrequency(freq)}
-                    className={`flex-1 py-2 text-[10px] font-bold uppercase rounded-lg transition-all whitespace-nowrap ${
-                      sipFrequency === freq 
-                        ? 'bg-blue-500 text-white shadow' 
-                        : 'text-slate-400 hover:text-slate-650'
-                    }`}
-                  >
-                    {freq}
-                  </button>
-                ))}
-              </div>
+          {/* Compounding Frequency Configuration */}
+          <div className="flex flex-col gap-2">
+            <label className="text-[10px] font-black uppercase tracking-wider text-slate-400 dark:text-zinc-555">Compounding Frequency</label>
+            <div className="flex bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 p-1 rounded-xl">
+              {(['monthly', 'quarterly', 'yearly'] as const).map((freq) => (
+                <button 
+                  key={freq}
+                  onClick={() => setCompoundingFrequency(freq)}
+                  className={`flex-1 py-2 text-[9px] font-black uppercase rounded-lg transition-all whitespace-nowrap ${
+                    compoundingFrequency === freq 
+                      ? 'bg-indigo-650 text-white shadow' 
+                      : 'text-slate-400 hover:text-slate-655'
+                  }`}
+                >
+                  {freq}
+                </button>
+              ))}
             </div>
+          </div>
 
-            {/* Compounding Frequency Configuration */}
-            <div className="flex flex-col gap-2">
-              <label className="text-[10px] font-black uppercase tracking-wider text-slate-500 flex items-center gap-1">
-                Compounding Frequency
-              </label>
-              <div className="flex bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-1 rounded-xl">
-                {(['monthly', 'quarterly', 'yearly'] as const).map((freq) => (
-                  <button 
-                    key={freq}
-                    onClick={() => setCompoundingFrequency(freq)}
-                    className={`flex-1 py-2 text-[10px] font-bold uppercase rounded-lg transition-all whitespace-nowrap ${
-                      compoundingFrequency === freq 
-                        ? 'bg-blue-500 text-white shadow' 
-                        : 'text-slate-400 hover:text-slate-650'
-                    }`}
-                  >
-                    {freq}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Custom Tax Rules Panel */}
-            <div className="flex flex-col gap-2 md:col-span-2 lg:col-span-1">
-              <label className="text-[10px] font-black uppercase tracking-wider text-red-500 flex items-center gap-1">
-                LTCG Tax Configurations
-              </label>
-              <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl space-y-3">
-                <div className="flex justify-between items-center text-[10px] font-bold text-slate-500">
-                  <span>CONSIDER LTCG TAX</span>
-                  <input 
-                    type="checkbox" 
-                    checked={considerTax} 
-                    onChange={(e) => setConsiderTax(e.target.checked)}
-                    className="w-4 h-4 accent-red-500 cursor-pointer"
-                  />
-                </div>
+          {/* Custom Tax Rules Panel */}
+          <div className="flex flex-col gap-2">
+            <label className="text-[10px] font-black uppercase tracking-wider text-red-500 flex items-center gap-1">
+              LTCG Tax Configurations
+            </label>
+            <div className="p-3 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-slate-800 rounded-xl flex items-center justify-between gap-4">
+              <span className="text-[9px] font-black text-slate-400 uppercase">Consider Taxes</span>
+              <div className="flex gap-2">
+                <input 
+                  type="checkbox" 
+                  checked={considerTax} 
+                  onChange={(e) => setConsiderTax(e.target.checked)}
+                  className="w-4 h-4 accent-red-500 cursor-pointer"
+                />
                 {considerTax && (
-                  <div className="grid grid-cols-2 gap-2 text-xs">
-                    <div className="flex flex-col gap-1">
-                      <span className="text-[8px] font-bold text-slate-455">TAX RATE %</span>
-                      <input 
-                        type="number" 
-                        value={taxRate} 
-                        onChange={(e) => setTaxRate(Math.min(50, Math.max(0, parseFloat(e.target.value) || 0)))}
-                        className="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded p-1.5 outline-none font-bold"
-                      />
-                    </div>
-                    <div className="flex flex-col gap-1">
-                      <span className="text-[8px] font-bold text-slate-455">EXEMPTION LIMIT</span>
-                      <input 
-                        type="number" 
-                        value={taxExemption} 
-                        onChange={(e) => setTaxExemption(Math.max(0, parseInt(e.target.value) || 0))}
-                        className="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded p-1.5 outline-none font-bold"
-                      />
-                    </div>
-                  </div>
+                  <span className="text-[9px] font-black text-red-500">({taxRate}% LTCG)</span>
                 )}
               </div>
             </div>
+          </div>
 
+        </div>
+
+        {/* FIRE Buffers and Target Corpus HUD */}
+        {activeTab === 'fire' && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6 rounded-3xl bg-orange-500/5 border border-orange-500/10">
+            <div className="flex flex-col gap-2">
+              <span className="text-[10px] font-black uppercase tracking-wider text-orange-500">Target Safety Buffers</span>
+              <div className="flex gap-4 mt-1">
+                <label className="flex items-center gap-2 text-xs font-bold text-slate-650 cursor-pointer">
+                  <input 
+                    type="checkbox" 
+                    checked={healthcareBuffer} 
+                    onChange={(e) => setHealthcareBuffer(e.target.checked)}
+                    className="w-4 h-4 accent-orange-500 rounded"
+                  />
+                  +15% Healthcare
+                </label>
+                <label className="flex items-center gap-2 text-xs font-bold text-slate-655 cursor-pointer">
+                  <input 
+                    type="checkbox" 
+                    checked={emergencyBuffer} 
+                    onChange={(e) => setEmergencyBuffer(e.target.checked)}
+                    className="w-4 h-4 accent-orange-500 rounded"
+                  />
+                  +10% Emergency
+                </label>
+              </div>
+            </div>
+            <div>
+              <span className="text-[10px] font-black uppercase tracking-wider text-orange-550 block">Required FIRE Target Corpus</span>
+              <span className="text-xl font-black text-orange-600 dark:text-orange-400 mt-1 block">{formatINR(requiredRetirementCorpus)}</span>
+            </div>
           </div>
         )}
+
       </div>
 
       {/* 🔒 100% Private Sandbox Badge */}
-      <div className="mt-8 pt-6 border-t border-slate-200 dark:border-slate-800/80 flex flex-col sm:flex-row items-center justify-between gap-4">
-        <div className="flex items-center gap-3 text-slate-500 dark:text-slate-400">
+      <div className="mt-8 pt-6 border-t border-slate-200 dark:border-zinc-800/80 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="flex items-center gap-3 text-slate-500 dark:text-zinc-400">
           <span className="text-xl"><Lock className="w-5 h-5 text-slate-400" /></span>
           <div className="text-left">
-            <p className="text-[11px] font-black uppercase tracking-wider text-slate-700 dark:text-slate-200">100% Client-Side Private Sandbox</p>
-            <p className="text-[10px] text-slate-400 dark:text-slate-500 font-semibold leading-relaxed">All computations run locally on your device. Your financial worth asset details are never recorded or sent to any server.</p>
+            <p className="text-[11px] font-black uppercase tracking-wider text-slate-700 dark:text-zinc-200">100% Client-Side Private Sandbox</p>
+            <p className="text-[10px] text-slate-400 dark:text-zinc-500 font-semibold leading-relaxed">All computations run locally on your device. Your financial worth asset details are never recorded or sent to any server.</p>
           </div>
         </div>
         <div className="shrink-0 px-3.5 py-1.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 text-[10px] font-black uppercase tracking-wider rounded-xl">

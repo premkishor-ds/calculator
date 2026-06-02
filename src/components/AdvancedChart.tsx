@@ -5,7 +5,7 @@ import { getBackendWsUrl } from '@/lib/backend-config';
 import { 
   RotateCcw, MousePointer, Slash, Minus, Eraser, Trash2,
   TrendingUp, TrendingDown, RefreshCw, Settings, Play, Pause,
-  SkipForward, Calendar, Eye, EyeOff, Lock, Unlock, HelpCircle,
+  SkipForward, Calendar, Eye, EyeOff, Lock, Unlock,
   Activity, Sliders, ChevronDown, Check, Plus, Undo2, Redo2, X
 } from 'lucide-react';
 import {
