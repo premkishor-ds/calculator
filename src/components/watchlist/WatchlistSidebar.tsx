@@ -233,81 +233,93 @@ export default function WatchlistSidebar({
     const firstTagDef = firstTagId ? tagMap[firstTagId] : null;
     const borderLeftColor = firstTagDef ? firstTagDef.dot : null;
 
+    // Generate dynamic hash color for logo initials background to make it look premium
+    const getLogoBgColor = (sym: string) => {
+      const colors = [
+        'bg-indigo-500/10 text-indigo-500',
+        'bg-emerald-500/10 text-emerald-500',
+        'bg-rose-500/10 text-rose-500',
+        'bg-amber-500/10 text-amber-500',
+        'bg-blue-500/10 text-blue-500',
+        'bg-purple-500/10 text-purple-500',
+        'bg-pink-500/10 text-pink-500',
+        'bg-cyan-500/10 text-cyan-500'
+      ];
+      const charSum = sym.split('').reduce((sum, char) => sum + char.charCodeAt(0), 0);
+      return colors[charSum % colors.length];
+    };
+
     return (
       <div
         onClick={() => {
           onSelectSymbol(stock.symbol);
           onMobileSwitchToChart?.();
         }}
-        className={`w-full h-full text-left px-4 flex items-center justify-between gap-3 transition-all border-l-4 touch-manipulation cursor-pointer group/item ${
+        className={`w-full h-full text-left px-4 flex items-center justify-between gap-3 transition-all touch-manipulation cursor-pointer group/item border-b border-slate-100 dark:border-slate-900/60 ${
           active
-            ? 'bg-blue-50/50 dark:bg-blue-550/5 border-blue-550 dark:border-blue-500'
-            : 'hover:bg-slate-50 dark:hover:bg-slate-900/40 border-transparent'
+            ? 'bg-blue-500/5 dark:bg-blue-500/5 border-l-4 border-l-blue-500'
+            : 'hover:bg-slate-50 dark:hover:bg-slate-900/40 border-l-4 border-l-transparent'
         }`}
         style={!active && borderLeftColor ? { borderLeftColor } : {}}
       >
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-1.5">
-            <span className={`text-xs font-black ${active ? 'text-blue-600 dark:text-blue-400' : 'text-slate-800 dark:text-slate-100'}`}>
-              {stock.symbol.split('.')[0]}
-            </span>
-            <span className="text-[9px] text-slate-400 dark:text-slate-655 font-bold">{stock.symbol.split('.')[1]}</span>
-
-            {/* Premium, clean tag dots representing watchlist labels next to ticker symbol */}
-            {stockTags.length > 0 && (
-              <div className="flex gap-1 ml-1.5 shrink-0">
-                {stockTags.slice(0, 3).map(tid => {
-                  const td = tagMap[tid];
-                  if (!td) return null;
-                  return (
-                    <span 
-                      key={tid} 
-                      className="w-1.5 h-1.5 rounded-full shrink-0 border border-black/10 dark:border-white/10" 
-                      style={{ backgroundColor: td.dot }}
-                      title={td.label}
-                    />
-                  );
-                })}
-              </div>
-            )}
+        {/* Left Section: Circular Logo & Ticker Details */}
+        <div className="flex items-center gap-3 min-w-0 flex-1">
+          {/* Circular Logo/Avatar */}
+          <div className={`w-9 h-9 rounded-full flex items-center justify-center font-black text-xs shrink-0 select-none overflow-hidden border border-slate-200/50 dark:border-slate-800 ${getLogoBgColor(stock.symbol)}`}>
+            {stock.symbol.charAt(0).toUpperCase()}
           </div>
-          <p className="text-[10px] text-slate-500 truncate max-w-[130px] mt-0.5 font-medium">
-            {stock.name}
-          </p>
+          
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-1.5">
+              <span className={`text-[13px] font-black tracking-tight ${active ? 'text-blue-600 dark:text-blue-400' : 'text-slate-900 dark:text-slate-100'}`}>
+                {stock.symbol.split('.')[0]}
+              </span>
+              <span className="text-[8px] text-slate-400 dark:text-slate-655 font-bold uppercase tracking-wider bg-slate-100 dark:bg-slate-900 px-1 py-0.2 rounded shrink-0">{stock.symbol.split('.')[1] || 'IN'}</span>
+
+              {/* Tag flags */}
+              {stockTags.length > 0 && (
+                <div className="flex gap-1 ml-1 shrink-0">
+                  {stockTags.slice(0, 2).map(tid => {
+                    const td = tagMap[tid];
+                    if (!td) return null;
+                    return (
+                      <span 
+                        key={tid} 
+                        className="w-1.5 h-1.5 rounded-full shrink-0 border border-black/10 dark:border-white/10" 
+                        style={{ backgroundColor: td.dot }}
+                      />
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+            <p className="text-[10px] text-slate-450 dark:text-slate-500 truncate max-w-[180px] mt-0.5 font-semibold">
+              {stock.name}
+            </p>
+          </div>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0 relative">
-          {/* Price (Last) */}
-          <div className="w-20 text-right text-xs font-black text-slate-900 dark:text-white font-mono transition-opacity group-hover/item:opacity-20">
-            ₹{displayPrice > 0 ? displayPrice.toFixed(0) : '—'}
-          </div>
-
-          {/* Chg (Absolute Change) */}
-          <div className="w-20 text-right font-mono text-[11px] font-bold transition-opacity group-hover/item:opacity-20">
-            {stock.change !== 0 ? (
-              <span className={positive ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}>
-                {positive ? '+' : ''}{stock.change.toFixed(1)}
-              </span>
-            ) : (
-              <span className="text-slate-400 dark:text-slate-655">—</span>
-            )}
-          </div>
-
-          {/* Chg% */}
-          <div className="w-20 text-right transition-opacity group-hover/item:opacity-20">
-            {stock.changePercent !== 0 ? (
-              <span className={`inline-flex items-center gap-1 text-[9px] font-extrabold px-1.5 py-0.5 rounded ${
-                positive ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-red-500/10 text-red-500 dark:text-red-400'
-              }`}>
-                {positive ? '+' : ''}{stock.changePercent.toFixed(1)}%
-              </span>
-            ) : (
-              <span className="text-slate-400 dark:text-slate-650 text-[10px] font-extrabold">—</span>
-            )}
+        {/* Right Section: Price & Color-Coded Deltas */}
+        <div className="flex items-center gap-3 shrink-0 relative pr-1">
+          <div className="flex flex-col items-end gap-0.5 group-hover/item:opacity-20 transition-opacity">
+            {/* Price */}
+            <span className="text-[13px] font-extrabold text-slate-900 dark:text-white font-mono tracking-tight">
+              ₹{displayPrice > 0 ? displayPrice.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—'}
+            </span>
+            {/* Delta value + Change percentage */}
+            <span className={`text-[10px] font-black font-mono tracking-tight ${positive ? 'text-emerald-500 dark:text-emerald-455' : 'text-rose-500 dark:text-rose-455'}`}>
+              {stock.change !== 0 ? (
+                <>
+                  {positive ? '+' : ''}{stock.change.toFixed(2)} {positive ? '+' : ''}{stock.changePercent.toFixed(2)}%
+                </>
+              ) : (
+                '0.00 0.00%'
+              )}
+            </span>
           </div>
 
           {/* Hover actions overlay */}
-          <div className="absolute right-0 top-1/2 -translate-y-1/2 flex items-center gap-1 opacity-0 group-hover/item:opacity-100 transition-opacity bg-slate-50 dark:bg-slate-900 pl-2 rounded-l-lg py-1">
+          <div className="absolute right-0 top-1/2 -translate-y-1/2 flex items-center gap-1 opacity-0 group-hover/item:opacity-100 transition-opacity bg-slate-50 dark:bg-slate-900 pl-2 rounded-l-lg py-1 z-10">
             <button
               type="button"
               onClick={e => { e.stopPropagation(); setTagPopoverSym(tagPopoverSym === stock.symbol ? null : stock.symbol); }}

@@ -39,6 +39,9 @@ import {
   Lock,
   Unlock,
   Bookmark,
+  Compass,
+  Users,
+  Pencil,
   CircleQuestionMark as HelpCircle
 } from 'lucide-react';
 import { DEFAULT_SYMBOLS, DEFAULT_SEEDS } from '@/utils/symbols';
@@ -228,7 +231,7 @@ export default function TradingTerminalInner() {
     toastTimerRef.current = setTimeout(() => setToast(null), 4000);
   }, []);
 
-  const [mobileViewTab, setMobileViewTab] = useState<'chart' | 'list'>('chart');
+  const [mobileViewTab, setMobileViewTab] = useState<'watchlist' | 'chart' | 'explore' | 'community' | 'menu'>('watchlist');
 
   // Sync state selectors
   const [gridLayout, setGridLayout] = useState<1 | 2 | 4 | 6 | 8>(1);
@@ -977,7 +980,7 @@ export default function TradingTerminalInner() {
   const [deepLoading, setDeepLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'technicals' | 'fundamentals' | 'profile' | 'proscons' | 'strategy'>('technicals');
 
-  const [sidebarMode, setSidebarMode] = useState<'watchlist' | 'fundamentals' | 'layout'>('watchlist');
+  const [sidebarMode, setSidebarMode] = useState<'watchlist' | 'fundamentals' | 'layout' | 'alerts' | 'menu'>('watchlist');
   const [sidebarWidth, setSidebarWidth] = useState(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('sidebarWidth');
@@ -1635,22 +1638,6 @@ export default function TradingTerminalInner() {
       {/* â”€â”€ Main Viewport Panel Grid & Drawer â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <main className="flex-1 flex flex-col lg:flex-row lg:overflow-hidden min-h-0 relative">
         
-        {/* Mobile View Toggle Tabs */}
-        <div className="lg:hidden flex border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 shrink-0 p-2 gap-2">
-          <button 
-            onClick={() => setMobileViewTab('chart')} 
-            className={`flex-1 py-2 text-[11px] font-extrabold rounded-lg transition-all flex items-center justify-center gap-1.5 ${mobileViewTab === 'chart' ? 'bg-blue-500/10 border border-blue-500/20 text-blue-600 dark:text-blue-400' : 'text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-900 border border-transparent'}`}
-          >
-            <Activity className="w-3.5 h-3.5" /> Chart View
-          </button>
-          <button 
-            onClick={() => setMobileViewTab('list')} 
-            className={`flex-1 py-2 text-[11px] font-extrabold rounded-lg transition-all flex items-center justify-center gap-1.5 ${mobileViewTab === 'list' ? 'bg-blue-500/10 border border-blue-500/20 text-blue-600 dark:text-blue-400' : 'text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-900 border border-transparent'}`}
-          >
-            <Grid className="w-3.5 h-3.5" /> List View
-          </button>
-        </div>
-
         {/* LEFT VIEWPORT CANVAS & bottom docking drawer */}
         <section className={`flex-1 flex flex-col lg:min-h-0 lg:h-full lg:max-h-full lg:overflow-hidden bg-slate-50 dark:bg-slate-900/40 ${mobileViewTab === 'chart' ? 'flex min-h-0' : 'hidden lg:flex'}`}>
           
@@ -1716,6 +1703,55 @@ export default function TradingTerminalInner() {
                 );
               })}
             </div>
+
+            {/* TradingView Mobile Drawing Overlay Toolbar */}
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-3 bg-slate-905/90 dark:bg-slate-950/95 border border-slate-800 backdrop-blur-md px-4 py-2.5 rounded-full shadow-2xl z-30 select-none lg:hidden animate-fade-in">
+              <button
+                type="button"
+                onClick={() => showToast('Drawing Tool: Tap screen pivots to place trend indicators.', 'info')}
+                className="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-750 flex items-center justify-center border border-slate-700 text-white cursor-pointer transition-all active:scale-95"
+                title="Pencil draw"
+              >
+                <Pencil className="w-4 h-4" />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => showToast('Trend Overlay active. Alt+T toggles standard guidelines.', 'info')}
+                className="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-750 flex items-center justify-center border border-slate-700 text-white cursor-pointer transition-all active:scale-95"
+                title="Trend lines"
+              >
+                <TrendingUp className="w-4 h-4" />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => { setMobileViewTab('explore'); setSidebarMode('layout'); }}
+                className="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-750 flex items-center justify-center border border-slate-700 text-white cursor-pointer transition-all active:scale-95 font-bold"
+                title="Quick options"
+              >
+                <span className="leading-none text-xs">•••</span>
+              </button>
+
+              <div className="w-[1px] h-5 bg-slate-700 mx-1" />
+
+              <button
+                type="button"
+                onClick={() => {
+                  setGridConfigs(prev => prev.map((cfg, i) => {
+                    if (i === activeGridIndex) {
+                      return { ...cfg, drawingsVersion: cfg.drawingsVersion + 1 };
+                    }
+                    return cfg;
+                  }));
+                  showToast('Erase command broadcast to active slot!', 'info');
+                }}
+                className="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-750 flex items-center justify-center border border-slate-700 text-white cursor-pointer transition-all active:scale-95"
+                title="Clear drawings"
+              >
+                <RefreshCw className="w-4 h-4" />
+              </button>
+            </div>
           </div>
         </section>
 
@@ -1728,8 +1764,8 @@ export default function TradingTerminalInner() {
 
         {/* RIGHT WATCHLIST & FUNDAMENTALS SIDEBAR PANEL */}
         <section
-          style={isMounted && mobileViewTab !== 'list' ? { width: `${sidebarWidth}px` } : {}}
-          className={`bg-white dark:bg-slate-950 flex flex-row overflow-hidden lg:h-full lg:max-h-full lg:min-h-0 safe-bottom border-t lg:border-t-0 border-slate-200 dark:border-slate-800 shadow-xl shrink-0 ${mobileViewTab === 'list' ? 'flex flex-1 min-h-0 max-h-none' : 'hidden lg:flex'}`}
+          style={isMounted ? { width: typeof window !== 'undefined' && window.innerWidth < 1024 ? '100%' : `${sidebarWidth}px` } : {}}
+          className={`bg-white dark:bg-slate-955 flex flex-row overflow-hidden lg:h-full lg:max-h-full lg:min-h-0 safe-bottom border-t lg:border-t-0 border-slate-200 dark:border-slate-800 shadow-xl shrink-0 ${mobileViewTab !== 'chart' ? 'flex flex-1 min-h-0 max-h-none h-full w-full' : 'hidden lg:flex'}`}
         >
           
           {/* Main Sidebar Active Panel Content (left part) */}
@@ -2110,7 +2146,195 @@ export default function TradingTerminalInner() {
                 </>
               )}
             </div>
-          ) : (
+          ) : sidebarMode === 'alerts' ? (
+            <div className="flex-1 flex flex-col min-h-0 bg-white dark:bg-slate-950">
+              {/* Brand Header */}
+              <div className="px-4 py-3 bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between shrink-0">
+                <div>
+                  <span className="font-extrabold text-xs text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-1.5">
+                    <Bell className="w-3.5 h-3.5 text-rose-500 animate-pulse" /> Active Alert Triggers
+                  </span>
+                </div>
+              </div>
+
+              {/* Builder form */}
+              <div className="p-4 shrink-0 overflow-y-auto">
+                <form onSubmit={handleCreateAlert} className="bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 p-4 rounded-2xl shadow-sm flex flex-col gap-3">
+                  <div className="text-[9px] font-black uppercase tracking-widest text-slate-455">Add Crossing Trigger</div>
+                  <div className="grid grid-cols-2 gap-2 text-[10px] font-extrabold select-none">
+                    <div>
+                      <label className="text-[9px] text-slate-450 block mb-1">Stock Ticker</label>
+                      <span className="px-2.5 py-1.5 bg-slate-100 dark:bg-slate-800/80 rounded-lg block font-sans truncate">{selectedSymbol.split('.')[0] || 'SELECT'}</span>
+                    </div>
+                    <div>
+                      <label className="text-[9px] text-slate-455 block mb-1">Trigger Condition</label>
+                      <select
+                        value={newAlertCondition}
+                        onChange={e => setNewAlertCondition(e.target.value as any)}
+                        className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-955 border border-slate-205 dark:border-slate-750 rounded-lg font-bold text-slate-900 dark:text-white"
+                      >
+                        <option value="price_above">Price Above (&gt;=)</option>
+                        <option value="price_below">Price Below (&lt;=)</option>
+                        <option value="price_crosses">Price Crosses</option>
+                        <option value="volume_spike">Volume Spike</option>
+                        <option value="rsi_above">RSI Above</option>
+                        <option value="rsi_below">RSI Below</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div className="text-[10px] font-bold">
+                    <label className="text-[9px] text-slate-455 block mb-1">Target Value</label>
+                    <input
+                      type="number"
+                      step="0.05"
+                      placeholder="Target value..."
+                      value={newAlertValue}
+                      onChange={e => setNewAlertValue(e.target.value)}
+                      className="w-full px-2.5 py-1.5 bg-slate-50 dark:bg-slate-950 border border-slate-205 dark:border-slate-805 rounded-lg font-bold"
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    className="w-full py-2 bg-rose-550 hover:bg-rose-650 text-white rounded-xl text-xs font-black uppercase shadow-md transition-all cursor-pointer"
+                  >
+                    CREATE TRIGGER ALERT
+                  </button>
+                </form>
+              </div>
+
+              <div className="w-full h-[1px] bg-slate-100 dark:bg-slate-900 shrink-0" />
+
+              {/* Alerts active list scrollable */}
+              <div className="flex-1 overflow-y-auto p-4 space-y-2 min-h-0 text-[10px]">
+                {alertsList.filter(a => !a.isTriggered).length === 0 ? (
+                  <span className="text-slate-400 block text-center py-8 font-semibold">No active trigger bounds. Add one above!</span>
+                ) : (
+                  alertsList.filter(a => !a.isTriggered).map(alert => (
+                    <div
+                      key={alert._id}
+                      className="bg-slate-50 dark:bg-slate-900/60 border border-slate-205 dark:border-slate-805 p-3 rounded-xl shadow-sm flex items-center justify-between gap-3 group"
+                    >
+                      <div>
+                        <span className="font-extrabold text-slate-800 dark:text-slate-150 block">{alert.symbol.replace('.NS','')}</span>
+                        <span className="text-[8.5px] text-slate-450 block font-bold font-mono mt-1 block">
+                          {alert.condition === 'price_above' ? 'Crossing Above' : alert.condition === 'price_below' ? 'Crossing Below' : alert.condition === 'volume_spike' ? 'Volume Spike' : alert.condition === 'rsi_above' ? 'RSI Above' : alert.condition === 'rsi_below' ? 'RSI Below' : 'Crossing Target'} @ {alert.value.toFixed(2)}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteAlert(alert._id)}
+                        className="p-1 hover:bg-rose-500/10 hover:text-red-500 text-slate-400 rounded-lg transition-colors cursor-pointer"
+                        title="Delete trigger alert"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          ) : sidebarMode === 'menu' ? (
+            <div className="flex-1 flex flex-col min-h-0 bg-slate-900 text-white overflow-y-auto">
+              {/* Account Status / Profile Circle block */}
+              <div className="p-4 shrink-0 select-none">
+                <div className="bg-slate-950/40 border border-slate-800 rounded-3xl p-5 flex items-center gap-4 relative overflow-hidden shadow-lg">
+                  {/* Avatar circular tag letter */}
+                  <div className="w-14 h-14 rounded-full bg-purple-600/80 border border-purple-500 flex items-center justify-center font-black text-xl text-white shadow-inner select-none shrink-0">
+                    K
+                  </div>
+                  
+                  {/* Details metadata */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-extrabold text-sm text-slate-100 truncate block">kishorprem769</span>
+                      <span className="text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-md border border-slate-700 bg-slate-800 text-slate-400">BASIC</span>
+                    </div>
+                    {/* User stats metric count */}
+                    <div className="grid grid-cols-3 gap-2 mt-3.5 text-center">
+                      <div>
+                        <span className="text-[11px] font-black font-mono block text-white">0</span>
+                        <span className="text-[8px] font-black uppercase text-slate-500 block mt-0.5 tracking-wider">Ideas</span>
+                      </div>
+                      <div>
+                        <span className="text-[11px] font-black font-mono block text-white">0</span>
+                        <span className="text-[8px] font-black uppercase text-slate-500 block mt-0.5 tracking-wider">Followers</span>
+                      </div>
+                      <div>
+                        <span className="text-[11px] font-black font-mono block text-white">0</span>
+                        <span className="text-[8px] font-black uppercase text-slate-500 block mt-0.5 tracking-wider">Following</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Promo dual blocks */}
+              <div className="grid grid-cols-2 gap-3 px-4 shrink-0">
+                <div className="bg-slate-950/40 border border-slate-800 rounded-2xl p-4 flex flex-col justify-between min-h-[90px] shadow-md hover:border-slate-700 cursor-pointer transition-all">
+                  <span className="text-xs font-black block tracking-tight">Subscription</span>
+                  <span className="text-[9px] text-slate-400 block font-semibold leading-relaxed mt-2">Get the full power of TradingView</span>
+                </div>
+                <div className="bg-slate-950/40 border border-slate-800 rounded-2xl p-4 flex flex-col justify-between min-h-[90px] shadow-md hover:border-slate-700 cursor-pointer transition-all">
+                  <span className="text-xs font-black block tracking-tight">Refer a friend</span>
+                  <span className="text-[9px] text-slate-400 block font-semibold leading-relaxed mt-2">Share what you love</span>
+                </div>
+              </div>
+
+              {/* Upgrade Banner Gradient promotion card */}
+              <div className="p-4 shrink-0 select-none">
+                <div className="bg-gradient-to-br from-indigo-700 via-purple-700 to-pink-600 rounded-3xl p-5 relative overflow-hidden shadow-xl border border-white/10 flex items-center justify-between gap-4">
+                  <div className="space-y-1.5 z-10 flex-1">
+                    <span className="text-sm font-black block tracking-tight text-white">30-day free trial</span>
+                    <span className="text-[9px] text-indigo-100 block font-bold leading-normal">Upgrade now and experience fully accelerated charting analysis!</span>
+                  </div>
+                  {/* Mock TradingView styled Logo glyph */}
+                  <div className="w-16 h-12 flex items-center justify-center font-black text-2xl text-white bg-black/10 rounded-2xl shrink-0 z-10 font-mono tracking-tighter">
+                    📊
+                  </div>
+                </div>
+              </div>
+
+              {/* Help & row options links list */}
+              <div className="flex-1 px-4 py-2 space-y-1 select-none">
+                {[
+                  { label: 'Rate us', desc: 'Rate our terminal on store', icon: '⭐' },
+                  { label: 'Help Center', desc: 'Read guides and documentation', icon: '❓' },
+                  { label: 'About', desc: 'Version specs and terms', icon: 'ℹ️' },
+                ].map((item) => (
+                  <div
+                    key={item.label}
+                    onClick={() => showToast(`${item.label} opened!`, 'info')}
+                    className="p-3.5 bg-slate-950/20 hover:bg-slate-950/50 border border-slate-800/40 hover:border-slate-700 rounded-2xl flex items-center justify-between gap-4 cursor-pointer transition-all shadow-sm"
+                  >
+                    <div className="flex items-center gap-3.5">
+                      <span className="text-base shrink-0">{item.icon}</span>
+                      <div>
+                        <span className="text-xs font-black block tracking-tight text-slate-100">{item.label}</span>
+                        <span className="text-[8px] text-slate-500 block font-bold uppercase mt-0.5 tracking-wider">{item.desc}</span>
+                      </div>
+                    </div>
+                    <span className="text-slate-500 font-mono text-[10px]">&gt;</span>
+                  </div>
+                ))}
+
+                {/* Exit Exit door trigger warning */}
+                <div
+                  onClick={() => {
+                    localStorage.removeItem('auth_token');
+                    showToast('Logged out successfully', 'info');
+                    setTimeout(() => window.location.reload(), 1000);
+                  }}
+                  className="p-3.5 bg-rose-500/5 hover:bg-rose-500/10 border border-rose-500/20 rounded-2xl flex items-center gap-3.5 cursor-pointer transition-all shadow-sm mt-4 select-none"
+                >
+                  <span className="text-base shrink-0">🚪</span>
+                  <div>
+                    <span className="text-xs font-black block tracking-tight text-rose-500">Sign Out</span>
+                    <span className="text-[8px] text-rose-455 block font-bold uppercase mt-0.5 tracking-wider">Flush active workspace session cache</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : sidebarMode === 'layout' ? (
             // LAYOUT PANEL (Grid, Sync Cockpit, Templates settings)
             <div className="flex-1 flex flex-col min-h-0 overflow-y-auto bg-slate-50 dark:bg-slate-950 p-4 space-y-5 select-none animate-fade-in">
               
@@ -2231,11 +2455,11 @@ export default function TradingTerminalInner() {
               </div>
 
             </div>
-          )}
+          ) : null}
           </div>
 
           {/* Vertical Icon Strip Toolbar (right part) */}
-          <div className="w-11 shrink-0 bg-slate-50 dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 flex flex-col items-center justify-between py-4 select-none h-full z-20">
+          <div className="hidden lg:flex w-11 shrink-0 bg-slate-50 dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 flex flex-col items-center justify-between py-4 select-none h-full z-20">
             {/* Top icon buttons */}
             <div className="flex flex-col items-center gap-4">
               {/* Watchlist Bookmark Button */}
@@ -2283,9 +2507,9 @@ export default function TradingTerminalInner() {
               {/* Alerts Slide Drawer Toggle Button */}
               <button
                 type="button"
-                onClick={() => setShowAlertsSidebar(prev => !prev)}
+                onClick={() => setSidebarMode('alerts')}
                 className={`p-2 rounded-xl transition-all cursor-pointer ${
-                  showAlertsSidebar
+                  sidebarMode === 'alerts'
                     ? 'bg-rose-500/10 text-rose-555 dark:text-rose-455 shadow-sm ring-1 ring-rose-500/20'
                     : 'text-slate-405 hover:text-slate-850 dark:hover:text-slate-250'
                 }`}
@@ -2546,6 +2770,63 @@ export default function TradingTerminalInner() {
           <span className="text-xs font-black uppercase tracking-wider leading-none">{toast.message}</span>
         </div>
       )}
+
+      {/* TradingView Mobile Style Bottom Navigation Bar */}
+      <div className="lg:hidden h-[58px] border-t border-slate-200 dark:border-slate-800/80 bg-white/95 dark:bg-slate-950/95 backdrop-blur-md flex items-center justify-around shrink-0 z-40 pb-safe select-none">
+        <button
+          onClick={() => { setMobileViewTab('watchlist'); setSidebarMode('watchlist'); }}
+          className={`flex-1 flex flex-col items-center justify-center gap-1 transition-all h-full bg-transparent border-0 cursor-pointer ${
+            mobileViewTab === 'watchlist' ? 'text-blue-500 dark:text-blue-400 font-extrabold' : 'text-slate-400 dark:text-slate-500 font-bold'
+          }`}
+        >
+          <Bookmark className="w-4.5 h-4.5" />
+          <span className="text-[8px] uppercase tracking-widest font-black">Watchlist</span>
+        </button>
+        
+        <button
+          onClick={() => setMobileViewTab('chart')}
+          className={`flex-1 flex flex-col items-center justify-center gap-1 transition-all h-full bg-transparent border-0 cursor-pointer ${
+            mobileViewTab === 'chart' ? 'text-blue-500 dark:text-blue-400 font-extrabold' : 'text-slate-400 dark:text-slate-500 font-bold'
+          }`}
+        >
+          <Activity className="w-4.5 h-4.5" />
+          <span className="text-[8px] uppercase tracking-widest font-black">Chart</span>
+        </button>
+
+        <button
+          onClick={() => { setMobileViewTab('explore'); setSidebarMode('layout'); }}
+          className={`flex-1 flex flex-col items-center justify-center gap-1 transition-all h-full bg-transparent border-0 cursor-pointer ${
+            mobileViewTab === 'explore' ? 'text-blue-500 dark:text-blue-400 font-extrabold' : 'text-slate-400 dark:text-slate-500 font-bold'
+          }`}
+        >
+          <Compass className="w-4.5 h-4.5" />
+          <span className="text-[8px] uppercase tracking-widest font-black">Explore</span>
+        </button>
+
+        <button
+          onClick={() => { setMobileViewTab('community'); setSidebarMode('fundamentals'); setSidebarActiveTab('backtest'); }}
+          className={`flex-1 flex flex-col items-center justify-center gap-1 transition-all h-full bg-transparent border-0 cursor-pointer ${
+            mobileViewTab === 'community' ? 'text-blue-500 dark:text-blue-400 font-extrabold' : 'text-slate-400 dark:text-slate-500 font-bold'
+          }`}
+        >
+          <Users className="w-4.5 h-4.5" />
+          <span className="text-[8px] uppercase tracking-widest font-black">Community</span>
+        </button>
+
+        <button
+          onClick={() => { setMobileViewTab('menu'); setSidebarMode('menu'); }}
+          className={`flex-1 flex flex-col items-center justify-center gap-1 transition-all h-full bg-transparent border-0 cursor-pointer ${
+            mobileViewTab === 'menu' ? 'text-blue-500 dark:text-blue-400 font-extrabold' : 'text-slate-400 dark:text-slate-500 font-bold'
+          }`}
+        >
+          <svg className="w-4.5 h-4.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="3" y1="12" x2="21" y2="12"></line>
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <line x1="3" y1="18" x2="21" y2="18"></line>
+          </svg>
+          <span className="text-[8px] uppercase tracking-widest font-black">Menu</span>
+        </button>
+      </div>
 
     </div>
   );
