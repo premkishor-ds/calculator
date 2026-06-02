@@ -1,11 +1,12 @@
 "use client";
 
-import React, { useState, useMemo, useEffect, Suspense } from 'react';
+import React, { useState, useMemo, useEffect, Suspense, useDeferredValue } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { calculateScenario, getSummary } from '@/utils/calculations';
 import { Header, QuickStart } from '@/components/Header';
 import { Controls } from '@/components/Controls';
-import { SummaryCards, ExecutiveSummary } from '@/components/WealthVisuals';
+import { SummaryCards, ExecutiveSummary, CapitalComposition, GoalMilestones, FIREResults } from '@/components/WealthVisuals';
+import { solveRequiredYears, solveRequiredCAGR, solveTargetSIPCombo, calculateFIRE } from '@/utils/solvers';
 import dynamicImport from 'next/dynamic';
 
 const WealthChart = dynamicImport(() => import('@/components/WealthVisuals').then(m => m.WealthChart), { 
@@ -30,14 +31,38 @@ const KnowledgeBase = dynamicImport(() => import('@/components/KnowledgeBase').t
 function WealthDashboardContent() {
   const searchParams = useSearchParams();
 
-  // State
+  // Active Tab
+  const [activeTab, setActiveTab] = useState<'corpus' | 'years' | 'cagr' | 'target' | 'fire'>('corpus');
+
+  // Input states
   const [initialLumpsum, setInitialLumpsum] = useState(0);
-  const [startSip, setStartSip] = useState(30000);
-  const [stepUp, setStepUp] = useState(20);
-  const [cagr, setCagr] = useState(25);
-  const [years, setYears] = useState(12);
+  const [startSip, setStartSip] = useState(10000);
+  const [stepUp, setStepUp] = useState(10);
+  const [cagr, setCagr] = useState(12);
+  const [years, setYears] = useState(15);
   const [inflation, setInflation] = useState(6);
-  const [targetGoal, setTargetGoal] = useState<string>('');
+  const [considerInflation, setConsiderInflation] = useState(true);
+  
+  // Advanced configs
+  const [sipFrequency, setSipFrequency] = useState<'monthly' | 'quarterly' | 'yearly'>('monthly');
+  const [compoundingFrequency, setCompoundingFrequency] = useState<'monthly' | 'quarterly' | 'yearly'>('monthly');
+  const [considerTax, setConsiderTax] = useState(true);
+  const [taxRate, setTaxRate] = useState(12.5);
+  const [taxExemption, setTaxExemption] = useState(125000);
+  
+  // Tab-specific parameters
+  const [targetGoal, setTargetGoal] = useState<number>(10000000); // Default 1 Crore target
+  const [targetMode, setTargetMode] = useState<'sip' | 'lumpsum' | 'combo'>('sip');
+
+  // FIRE Calculator States
+  const [currentAge, setCurrentAge] = useState(30);
+  const [retirementAge, setRetirementAge] = useState(50);
+  const [currentMonthlyExpenses, setCurrentMonthlyExpenses] = useState(50000);
+  const [swr, setSwr] = useState(4.0);
+  const [healthcareBuffer, setHealthcareBuffer] = useState(true);
+  const [emergencyBuffer, setEmergencyBuffer] = useState(true);
+
+  // Common UI States
   const [theme, setTheme] = useState<'dark' | 'light'>('light');
   const [selectedSymbol, setSelectedSymbol] = useState<string>('');
   const [copied, setCopied] = useState(false);
@@ -114,12 +139,26 @@ function WealthDashboardContent() {
 
   const resetAll = () => {
     setInitialLumpsum(0);
-    setStartSip(30000);
-    setStepUp(20);
-    setCagr(25);
-    setYears(12);
+    setStartSip(10000);
+    setStepUp(10);
+    setCagr(12);
+    setYears(15);
     setInflation(6);
-    setTargetGoal('');
+    setConsiderInflation(true);
+    setSipFrequency('monthly');
+    setCompoundingFrequency('monthly');
+    setConsiderTax(true);
+    setTaxRate(12.5);
+    setTaxExemption(125000);
+    setActiveTab('corpus');
+    setTargetGoal(10000000);
+    setTargetMode('sip');
+    setCurrentAge(30);
+    setRetirementAge(50);
+    setCurrentMonthlyExpenses(50000);
+    setSwr(4.0);
+    setHealthcareBuffer(true);
+    setEmergencyBuffer(true);
     setSelectedSymbol('');
     try {
       localStorage.removeItem('wealth_initialLumpsum');
@@ -154,38 +193,125 @@ function WealthDashboardContent() {
     return () => window.removeEventListener('themeChanged', handleThemeChange);
   }, []);
 
-  const toggleTheme = () => {
-    const newTheme = theme === 'dark' ? 'light' : 'dark';
-    setTheme(newTheme);
-    localStorage.setItem('theme', newTheme);
-    document.documentElement.classList.toggle('dark', newTheme === 'dark');
-    window.dispatchEvent(new CustomEvent('themeChanged', { detail: newTheme }));
-  };
+  // Deferring States for High Performance Calculation Debouncing
+  const dLumpsum = useDeferredValue(initialLumpsum);
+  const dSip = useDeferredValue(startSip);
+  const dStepUp = useDeferredValue(stepUp);
+  const dCagr = useDeferredValue(cagr);
+  const dYears = useDeferredValue(years);
+  const dInflation = useDeferredValue(inflation);
+  const dConsiderInflation = useDeferredValue(considerInflation);
+  const dSipFrequency = useDeferredValue(sipFrequency);
+  const dCompoundingFrequency = useDeferredValue(compoundingFrequency);
+  const dConsiderTax = useDeferredValue(considerTax);
+  const dTaxRate = useDeferredValue(taxRate);
+  const dTaxExemption = useDeferredValue(taxExemption);
+  
+  const dTargetGoal = useDeferredValue(targetGoal);
+  const dTargetMode = useDeferredValue(targetMode);
 
-  // Logic
+  // Dynamic Routing Calculations based on the active tab mode
+  const solvedParameters = useMemo(() => {
+    let activeYears = dYears;
+    let activeCagr = dCagr;
+    let activeSip = dSip;
+    let activeLumpsum = dLumpsum;
+
+    if (activeTab === 'years') {
+      const yearsSolution = solveRequiredYears(
+        dTargetGoal, dLumpsum, dSip, dStepUp / 100, dCagr / 100, dInflation,
+        dSipFrequency, dCompoundingFrequency, dConsiderTax, dTaxRate, dTaxExemption, dConsiderInflation
+      );
+      activeYears = Math.max(1, yearsSolution.years);
+    } else if (activeTab === 'cagr') {
+      const cagrSolution = solveRequiredCAGR(
+        dTargetGoal, dLumpsum, dSip, dStepUp / 100, dYears, dInflation,
+        dSipFrequency, dCompoundingFrequency, dConsiderTax, dTaxRate, dTaxExemption, dConsiderInflation
+      );
+      activeCagr = cagrSolution;
+    } else if (activeTab === 'target') {
+      const comboSolution = solveTargetSIPCombo(
+        dTargetMode, dTargetGoal, dYears, dCagr / 100, dLumpsum, dSip, dStepUp / 100, dInflation,
+        dSipFrequency, dCompoundingFrequency, dConsiderTax, dTaxRate, dTaxExemption, dConsiderInflation
+      );
+      activeSip = comboSolution.requiredSip;
+      activeLumpsum = comboSolution.requiredLumpsum;
+    } else if (activeTab === 'fire') {
+      activeYears = Math.max(1, retirementAge - currentAge);
+    }
+
+    return {
+      activeYears,
+      activeCagr,
+      activeSip,
+      activeLumpsum
+    };
+  }, [activeTab, dYears, dCagr, dSip, dLumpsum, dTargetGoal, dTargetMode, dStepUp, dInflation, dSipFrequency, dCompoundingFrequency, dConsiderTax, dTaxRate, dTaxExemption, dConsiderInflation, currentAge, retirementAge]);
+
+  // Compounding Projections Logic
   const ledger = useMemo(() => 
-    calculateScenario(initialLumpsum, startSip, stepUp / 100, cagr / 100, years, inflation),
-    [initialLumpsum, startSip, stepUp, cagr, years, inflation]
+    calculateScenario(
+      solvedParameters.activeLumpsum, 
+      solvedParameters.activeSip, 
+      dStepUp / 100, 
+      solvedParameters.activeCagr / 100, 
+      solvedParameters.activeYears, 
+      dInflation,
+      dSipFrequency, 
+      dCompoundingFrequency, 
+      dConsiderTax, 
+      dTaxRate, 
+      dTaxExemption, 
+      dConsiderInflation
+    ),
+    [solvedParameters, dStepUp, dInflation, dSipFrequency, dCompoundingFrequency, dConsiderTax, dTaxRate, dTaxExemption, dConsiderInflation]
   );
 
-  const totalInvested = useMemo(() => 
-    initialLumpsum + ledger.reduce((acc, curr) => acc + curr.sip, 0),
-    [initialLumpsum, ledger]
+  const totalInvested = useMemo(() => {
+    if (ledger.length === 0) return solvedParameters.activeLumpsum;
+    return ledger[ledger.length - 1].investedTillDate;
+  }, [ledger, solvedParameters]);
+
+  const summary = useMemo(() => 
+    getSummary(
+      ledger, totalInvested, solvedParameters.activeLumpsum, dConsiderTax, dTaxRate, dTaxExemption, 
+      dConsiderInflation, dInflation, solvedParameters.activeCagr, solvedParameters.activeYears
+    ), 
+    [ledger, totalInvested, solvedParameters, dConsiderTax, dTaxRate, dTaxExemption, dConsiderInflation, dInflation]
   );
 
-  const summary = useMemo(() => getSummary(ledger, totalInvested), [ledger, totalInvested]);
+  // Special retirement calculations for FIRE
+  const fireSummary = useMemo(() => {
+    if (activeTab !== 'fire') return null;
+    return calculateFIRE(
+      currentAge, retirementAge, currentMonthlyExpenses, dInflation, dCagr, swr, 
+      dLumpsum, dSip, dStepUp, dSipFrequency, dCompoundingFrequency, dConsiderTax, dTaxRate, dTaxExemption, dConsiderInflation,
+      healthcareBuffer, emergencyBuffer
+    );
+  }, [activeTab, currentAge, retirementAge, currentMonthlyExpenses, dInflation, dCagr, swr, dLumpsum, dSip, dStepUp, dSipFrequency, dCompoundingFrequency, dConsiderTax, dTaxRate, dTaxExemption, dConsiderInflation, healthcareBuffer, emergencyBuffer]);
 
   const chartData = useMemo(() => {
     return ledger
       .filter((m) => m.month === 1 || m.month % 6 === 0 || m.month === ledger.length)
-      .map((m) => ({
-        name: `M${m.month}`,
-        year: `Year ${m.year}`,
-        balance: Math.round(m.closingBalance),
-        realValue: Math.round(m.inflationAdjusted),
-        invested: Math.round(initialLumpsum + ledger.slice(0, m.month).reduce((acc, curr) => acc + curr.sip, 0)),
-      }));
-  }, [ledger, initialLumpsum]);
+      .map((m) => {
+        const sliceEnd = m.month;
+        const totalInvestedAtMonth = ledger[sliceEnd - 1]?.investedTillDate || solvedParameters.activeLumpsum;
+        const currentBalance = m.closingBalance;
+        
+        const gains = Math.max(0, currentBalance - totalInvestedAtMonth);
+        const taxableGains = Math.max(0, gains - dTaxExemption);
+        const tax = dConsiderTax ? taxableGains * (dTaxRate / 100) : 0;
+        
+        return {
+          name: `M${m.month}`,
+          year: `Year ${m.year}`,
+          balance: Math.round(currentBalance),
+          realValue: Math.round(m.inflationAdjusted),
+          invested: Math.round(totalInvestedAtMonth),
+          afterTax: Math.round(currentBalance - tax)
+        };
+      });
+  }, [ledger, solvedParameters, dConsiderTax, dTaxRate, dTaxExemption]);
 
   const matrix = useMemo(() => {
     const stepOptions = [10, 15, 20];
@@ -193,28 +319,27 @@ function WealthDashboardContent() {
     return stepOptions.map(s => ({
       step: s,
       results: cagrOptions.map(c => {
-        const res = calculateScenario(initialLumpsum, startSip, s / 100, c / 100, years, inflation);
-        const final = res[res.length - 1].closingBalance;
+        const res = calculateScenario(
+          solvedParameters.activeLumpsum, solvedParameters.activeSip, s / 100, c / 100, solvedParameters.activeYears, dInflation,
+          dSipFrequency, dCompoundingFrequency, dConsiderTax, dTaxRate, dTaxExemption, dConsiderInflation
+        );
+        const final = res[res.length - 1]?.closingBalance || 0;
+        const totalInv = res[res.length - 1]?.investedTillDate || solvedParameters.activeLumpsum;
+        
+        const gains = Math.max(0, final - totalInv);
+        const taxableGains = Math.max(0, gains - dTaxExemption);
+        const tax = dConsiderTax ? taxableGains * (dTaxRate / 100) : 0;
+        const postTax = final - tax;
+
         return {
           cagr: c,
-          corpus: final,
-          swp6: (final * 0.06) / 12,
+          corpus: postTax,
+          swp6: (postTax * 0.06) / 12,
           isSelected: s === stepUp && c === cagr
         };
       })
     }));
-  }, [initialLumpsum, startSip, years, stepUp, cagr, inflation]);
-
-  const handleReverseSip = (val: string) => {
-    setTargetGoal(val);
-    const target = parseFloat(val);
-    if (target > 0) {
-      const multiplierRes = calculateScenario(0, 1, stepUp / 100, cagr / 100, years, inflation);
-      const finalMultiplier = multiplierRes[multiplierRes.length - 1].closingBalance;
-      const remainingTarget = Math.max(0, target - (initialLumpsum * Math.pow(1 + (cagr / 100), years)));
-      setStartSip(Math.ceil(remainingTarget / finalMultiplier));
-    }
-  };
+  }, [solvedParameters, stepUp, cagr, dInflation, dSipFrequency, dCompoundingFrequency, dConsiderTax, dTaxRate, dTaxExemption, dConsiderInflation]);
 
   const handleSharePlan = () => {
     if (typeof window === 'undefined') return;
@@ -228,7 +353,7 @@ function WealthDashboardContent() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors duration-300 font-sans">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors duration-300 font-sans animate-fadeIn">
       <div className="w-full px-4 sm:px-8 lg:px-12 py-8 sm:py-12 max-w-[1600px] mx-auto min-w-0">
         
         <Header />
@@ -256,22 +381,49 @@ function WealthDashboardContent() {
         </div>
 
         <Controls 
+          activeTab={activeTab} setActiveTab={setActiveTab}
           initialLumpsum={initialLumpsum} setInitialLumpsum={setInitialLumpsum}
           startSip={startSip} setStartSip={setStartSip}
           stepUp={stepUp} setStepUp={setStepUp}
           cagr={cagr} setCagr={setCagr}
           years={years} setYears={setYears}
           inflation={inflation} setInflation={setInflation}
-          targetGoal={targetGoal} handleReverseSip={handleReverseSip}
+          considerInflation={considerInflation} setConsiderInflation={setConsiderInflation}
+          sipFrequency={sipFrequency} setSipFrequency={setSipFrequency}
+          compoundingFrequency={compoundingFrequency} setCompoundingFrequency={setCompoundingFrequency}
+          considerTax={considerTax} setConsiderTax={setConsiderTax}
+          taxRate={taxRate} setTaxRate={setTaxRate}
+          taxExemption={taxExemption} setTaxExemption={setTaxExemption}
+          targetGoal={targetGoal} setTargetGoal={setTargetGoal}
+          targetMode={targetMode} setTargetMode={setTargetMode}
+          currentAge={currentAge} setCurrentAge={setCurrentAge}
+          retirementAge={retirementAge} setRetirementAge={setRetirementAge}
+          currentMonthlyExpenses={currentMonthlyExpenses} setCurrentMonthlyExpenses={setCurrentMonthlyExpenses}
+          swr={swr} setSwr={setSwr}
+          healthcareBuffer={healthcareBuffer} setHealthcareBuffer={setHealthcareBuffer}
+          emergencyBuffer={emergencyBuffer} setEmergencyBuffer={setEmergencyBuffer}
           resetAll={resetAll}
         />
 
-        <SummaryCards summary={summary} inflation={inflation} years={years} chartData={chartData} theme={theme} />
-        <ExecutiveSummary summary={summary} inflation={inflation} years={years} chartData={chartData} theme={theme} />
-        <WealthChart summary={summary} inflation={inflation} years={years} chartData={chartData} theme={theme} />
+        {activeTab !== 'fire' ? (
+          <>
+            <SummaryCards summary={summary} inflation={inflation} years={solvedParameters.activeYears} chartData={chartData} theme={theme} />
+            <ExecutiveSummary summary={summary} inflation={inflation} years={solvedParameters.activeYears} chartData={chartData} theme={theme} />
+            <CapitalComposition summary={summary} theme={theme} />
+            <WealthChart summary={summary} inflation={inflation} years={solvedParameters.activeYears} chartData={chartData} theme={theme} />
+            <GoalMilestones ledger={ledger} />
+          </>
+        ) : (
+          fireSummary && (
+            <>
+              <FIREResults summary={fireSummary} inflation={inflation} swr={swr} />
+              <WealthChart summary={summary} inflation={inflation} years={solvedParameters.activeYears} chartData={chartData} theme={theme} />
+            </>
+          )
+        )}
         
-        <ComparisonMatrix matrix={matrix} years={years} />
-        <DetailedLedger ledger={ledger} years={years} />
+        <ComparisonMatrix matrix={matrix} years={solvedParameters.activeYears} />
+        <DetailedLedger ledger={ledger} years={solvedParameters.activeYears} />
         
         {/* 🧠 GEO & Conversational AI Reference: How Worth is Calculated */}
         <section className="my-12 p-6 sm:p-8 bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xl">
