@@ -327,6 +327,23 @@ export default function TradingTerminalInner() {
   const [newTemplateName, setNewTemplateName] = useState('');
   const [showTemplatesDropdown, setShowTemplatesDropdown] = useState(false);
 
+  /* ── Interactive Menu Dialog States ── */
+  const [showSubModal, setShowSubModal] = useState(false);
+  const [subModalPlan, setSubModalPlan] = useState<'pro' | 'pro_plus' | 'premium'>('premium');
+  const [subModalDuration, setSubModalDuration] = useState<'monthly' | 'yearly'>('yearly');
+  const [subPaymentProcessing, setSubPaymentProcessing] = useState(false);
+  const [subPaymentSuccess, setSubPaymentSuccess] = useState(false);
+
+  const [showRateModal, setShowRateModal] = useState(false);
+  const [rateStars, setRateStars] = useState(5);
+  const [rateFeedback, setRateFeedback] = useState('');
+  const [rateSuccess, setRateSuccess] = useState(false);
+
+  const [showHelpDrawer, setShowHelpDrawer] = useState(false);
+  const [showAboutModal, setShowAboutModal] = useState(false);
+  const [showReferModal, setShowReferModal] = useState(false);
+  const [referCopied, setReferCopied] = useState(false);
+
 
   /* â”€â”€ Watchlist Screener States â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   const [screenerSortField, setScreenerSortField] = useState<'symbol' | 'price' | 'changePercent' | 'sma20' | 'sma50' | 'rsi14'>('symbol');
@@ -1639,13 +1656,13 @@ export default function TradingTerminalInner() {
       <main className="flex-1 flex flex-col lg:flex-row lg:overflow-hidden min-h-0 relative">
         
         {/* LEFT VIEWPORT CANVAS & bottom docking drawer */}
-        <section className={`flex-1 flex flex-col lg:min-h-0 lg:h-full lg:max-h-full lg:overflow-hidden bg-slate-50 dark:bg-slate-900/40 ${mobileViewTab === 'chart' ? 'flex min-h-0' : 'hidden lg:flex'}`}>
+        <section className={`flex-1 flex flex-col lg:min-h-0 lg:h-full lg:max-h-full lg:overflow-hidden bg-slate-50 dark:bg-[#131722] ${mobileViewTab === 'chart' ? 'flex min-h-0 bg-[#131722]' : 'hidden lg:flex'}`}>
           
 
 
           {/* Grid Canvas Area */}
-          <div className="h-[420px] lg:h-auto lg:flex-1 lg:min-h-[250px] relative">
-            <div className={`grid gap-2 p-2 w-full h-full bg-slate-100 dark:bg-slate-900/60 ${
+          <div className="h-[460px] lg:h-auto lg:flex-1 lg:min-h-[250px] relative bg-[#131722]">
+            <div className={`grid gap-2 p-2 w-full h-full bg-[#131722] ${
               gridLayout === 1 ? 'grid-cols-1 grid-rows-1' :
               gridLayout === 2 ? 'grid-cols-1 md:grid-cols-2 grid-rows-1' :
               gridLayout === 4 ? 'grid-cols-2 grid-rows-2' :
@@ -1831,34 +1848,11 @@ export default function TradingTerminalInner() {
                 onEditCustomTag={(tag) => { setEditingTag(tag); setEditLabel(tag.label); setEditColor(tag.color); }}
                 showToast={showToast}
                 onMobileSwitchToChart={() => setMobileViewTab('chart')}
+                deepData={deepData}
+                deepLoading={deepLoading}
+                activeGridIndex={activeGridIndex}
+                gridDataCache={gridDataCache}
               />
-              
-              {/* AI Market Intelligence Section (relocated to bottom of watchlist sidebar like TradingView) */}
-              {selectedStock && (
-                <div className="shrink-0 p-4 bg-slate-50/70 dark:bg-slate-900/40 border-t border-slate-200 dark:border-slate-800 overflow-y-auto h-[260px] max-h-[260px] min-h-[260px]">
-                  <AIMarketIntelligence 
-                    data={{
-                      ratios: {
-                        symbol: selectedStock.symbol,
-                        price: livePrices[selectedSymbol] || selectedStock.price || 500,
-                        ...(deepData?.ratios || {})
-                      },
-                      profile: deepData?.profile || {},
-                      balanceSheet: deepData?.balanceSheet || [],
-                      profitLoss: deepData?.profitLoss || [],
-                      cashFlow: deepData?.cashFlow || [],
-                      quarterlyProfitLoss: deepData?.quarterlyProfitLoss || [],
-                      chartData: gridDataCache[activeGridIndex]?.length > 0 ? gridDataCache[activeGridIndex] : (deepData?.chartData || []),
-                      peers: deepData?.peers || [],
-                      pros: deepData?.pros || [],
-                      cons: deepData?.cons || []
-                    }}
-                    livePrice={livePrices[selectedSymbol] || selectedStock.price || 500} 
-                    isLoading={deepLoading}
-                    isSidebar={true}
-                  />
-                </div>
-              )}
             </div>
           ) : sidebarMode === 'fundamentals' ? (
             
@@ -2270,22 +2264,31 @@ export default function TradingTerminalInner() {
 
               {/* Promo dual blocks */}
               <div className="grid grid-cols-2 gap-3 px-4 shrink-0">
-                <div className="bg-slate-950/40 border border-slate-800 rounded-2xl p-4 flex flex-col justify-between min-h-[90px] shadow-md hover:border-slate-700 cursor-pointer transition-all">
+                <div 
+                  onClick={() => setShowSubModal(true)}
+                  className="bg-slate-955 border border-slate-800 rounded-2xl p-4 flex flex-col justify-between min-h-[90px] shadow-md hover:border-slate-700 cursor-pointer transition-all active:scale-95 select-none"
+                >
                   <span className="text-xs font-black block tracking-tight">Subscription</span>
-                  <span className="text-[9px] text-slate-400 block font-semibold leading-relaxed mt-2">Get the full power of TradingView</span>
+                  <span className="text-[9px] text-slate-400 block font-semibold leading-relaxed mt-2">Upgrade now to unlock all advanced indicators and charts!</span>
                 </div>
-                <div className="bg-slate-950/40 border border-slate-800 rounded-2xl p-4 flex flex-col justify-between min-h-[90px] shadow-md hover:border-slate-700 cursor-pointer transition-all">
+                <div 
+                  onClick={() => { setShowReferModal(true); setReferCopied(false); }}
+                  className="bg-slate-955 border border-slate-800 rounded-2xl p-4 flex flex-col justify-between min-h-[90px] shadow-md hover:border-slate-700 cursor-pointer transition-all active:scale-95 select-none"
+                >
                   <span className="text-xs font-black block tracking-tight">Refer a friend</span>
-                  <span className="text-[9px] text-slate-400 block font-semibold leading-relaxed mt-2">Share what you love</span>
+                  <span className="text-[9px] text-slate-400 block font-semibold leading-relaxed mt-2">Get ₹1000 premium credit when they register!</span>
                 </div>
               </div>
 
               {/* Upgrade Banner Gradient promotion card */}
               <div className="p-4 shrink-0 select-none">
-                <div className="bg-gradient-to-br from-indigo-700 via-purple-700 to-pink-600 rounded-3xl p-5 relative overflow-hidden shadow-xl border border-white/10 flex items-center justify-between gap-4">
+                <div 
+                  onClick={() => setShowSubModal(true)}
+                  className="bg-gradient-to-br from-indigo-700 via-purple-700 to-pink-600 rounded-3xl p-5 relative overflow-hidden shadow-xl border border-white/10 flex items-center justify-between gap-4 cursor-pointer hover:opacity-95 transition-all active:scale-[0.98]"
+                >
                   <div className="space-y-1.5 z-10 flex-1">
                     <span className="text-sm font-black block tracking-tight text-white">30-day free trial</span>
-                    <span className="text-[9px] text-indigo-100 block font-bold leading-normal">Upgrade now and experience fully accelerated charting analysis!</span>
+                    <span className="text-[9px] text-indigo-100 block font-bold leading-normal">Experience fully accelerated real-time indicators and option builds!</span>
                   </div>
                   {/* Mock TradingView styled Logo glyph */}
                   <div className="w-16 h-12 flex items-center justify-center font-black text-2xl text-white bg-black/10 rounded-2xl shrink-0 z-10 font-mono tracking-tighter">
@@ -2296,33 +2299,59 @@ export default function TradingTerminalInner() {
 
               {/* Help & row options links list */}
               <div className="flex-1 px-4 py-2 space-y-1 select-none">
-                {[
-                  { label: 'Rate us', desc: 'Rate our terminal on store', icon: '⭐' },
-                  { label: 'Help Center', desc: 'Read guides and documentation', icon: '❓' },
-                  { label: 'About', desc: 'Version specs and terms', icon: 'ℹ️' },
-                ].map((item) => (
-                  <div
-                    key={item.label}
-                    onClick={() => showToast(`${item.label} opened!`, 'info')}
-                    className="p-3.5 bg-slate-950/20 hover:bg-slate-950/50 border border-slate-800/40 hover:border-slate-700 rounded-2xl flex items-center justify-between gap-4 cursor-pointer transition-all shadow-sm"
-                  >
-                    <div className="flex items-center gap-3.5">
-                      <span className="text-base shrink-0">{item.icon}</span>
-                      <div>
-                        <span className="text-xs font-black block tracking-tight text-slate-100">{item.label}</span>
-                        <span className="text-[8px] text-slate-500 block font-bold uppercase mt-0.5 tracking-wider">{item.desc}</span>
-                      </div>
+                {/* Rate Us Option Row */}
+                <div
+                  onClick={() => { setShowRateModal(true); setRateSuccess(false); setRateFeedback(''); }}
+                  className="p-3.5 bg-slate-950/20 hover:bg-slate-950/50 border border-slate-800/40 hover:border-slate-700 rounded-2xl flex items-center justify-between gap-4 cursor-pointer transition-all shadow-sm"
+                >
+                  <div className="flex items-center gap-3.5">
+                    <span className="text-base shrink-0">⭐</span>
+                    <div>
+                      <span className="text-xs font-black block tracking-tight text-slate-100">Rate us</span>
+                      <span className="text-[8px] text-slate-500 block font-bold uppercase mt-0.5 tracking-wider">Rate our terminal on store</span>
                     </div>
-                    <span className="text-slate-500 font-mono text-[10px]">&gt;</span>
                   </div>
-                ))}
+                  <span className="text-slate-500 font-mono text-[10px]">&gt;</span>
+                </div>
+
+                {/* Help Center Option Row */}
+                <div
+                  onClick={() => setShowHelpDrawer(true)}
+                  className="p-3.5 bg-slate-950/20 hover:bg-slate-950/50 border border-slate-800/40 hover:border-slate-700 rounded-2xl flex items-center justify-between gap-4 cursor-pointer transition-all shadow-sm"
+                >
+                  <div className="flex items-center gap-3.5">
+                    <span className="text-base shrink-0">❓</span>
+                    <div>
+                      <span className="text-xs font-black block tracking-tight text-slate-100">Help Center</span>
+                      <span className="text-[8px] text-slate-500 block font-bold uppercase mt-0.5 tracking-wider">Read guides and keyboard shortcut maps</span>
+                    </div>
+                  </div>
+                  <span className="text-slate-500 font-mono text-[10px]">&gt;</span>
+                </div>
+
+                {/* About Option Row */}
+                <div
+                  onClick={() => setShowAboutModal(true)}
+                  className="p-3.5 bg-slate-950/20 hover:bg-slate-950/50 border border-slate-800/40 hover:border-slate-700 rounded-2xl flex items-center justify-between gap-4 cursor-pointer transition-all shadow-sm"
+                >
+                  <div className="flex items-center gap-3.5">
+                    <span className="text-base shrink-0">ℹ️</span>
+                    <div>
+                      <span className="text-xs font-black block tracking-tight text-slate-100">About</span>
+                      <span className="text-[8px] text-slate-500 block font-bold uppercase mt-0.5 tracking-wider">Terminal version details and engine specs</span>
+                    </div>
+                  </div>
+                  <span className="text-slate-500 font-mono text-[10px]">&gt;</span>
+                </div>
 
                 {/* Exit Exit door trigger warning */}
                 <div
                   onClick={() => {
-                    localStorage.removeItem('auth_token');
-                    showToast('Logged out successfully', 'info');
-                    setTimeout(() => window.location.reload(), 1000);
+                    if (window.confirm('Are you sure you want to sign out and clear your active workspace session?')) {
+                      localStorage.removeItem('auth_token');
+                      showToast('Logged out successfully', 'info');
+                      setTimeout(() => window.location.reload(), 800);
+                    }
                   }}
                   className="p-3.5 bg-rose-500/5 hover:bg-rose-500/10 border border-rose-500/20 rounded-2xl flex items-center gap-3.5 cursor-pointer transition-all shadow-sm mt-4 select-none"
                 >
@@ -2757,6 +2786,264 @@ export default function TradingTerminalInner() {
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Premium Subscription Plan Upgrade Modal */}
+      {showSubModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fade-in" onClick={() => setShowSubModal(false)}>
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 w-full max-w-sm shadow-2xl animate-scale-up text-white" onClick={e => e.stopPropagation()}>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-base font-black uppercase tracking-wider text-slate-100">Upgrade Subscription</h2>
+              <button onClick={() => setShowSubModal(false)} className="text-slate-400 hover:text-white">✕</button>
+            </div>
+            
+            {subPaymentSuccess ? (
+              <div className="text-center py-6 space-y-4">
+                <div className="w-16 h-16 bg-emerald-500/10 border border-emerald-500 text-emerald-500 rounded-full flex items-center justify-center text-3xl mx-auto animate-bounce">✓</div>
+                <h3 className="text-sm font-black uppercase tracking-widest text-emerald-400">Payment Successful!</h3>
+                <p className="text-[10px] text-slate-350 leading-relaxed font-semibold">Your Vision Wealth Pro plan is now active! All accelerated indicator channels are unlocked.</p>
+                <button onClick={() => { setShowSubModal(false); setSubPaymentSuccess(false); }} className="w-full py-2.5 bg-emerald-550 hover:bg-emerald-650 rounded-xl text-xs font-black uppercase transition-all shadow-md">Awesome</button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {/* Plan Toggle Button selector */}
+                <div className="grid grid-cols-3 gap-2 bg-slate-950 p-1 rounded-xl">
+                  {['pro', 'pro_plus', 'premium'].map((plan) => (
+                    <button
+                      key={plan}
+                      onClick={() => setSubModalPlan(plan as any)}
+                      className={`py-1.5 rounded-lg text-[9px] font-black uppercase transition-all ${
+                        subModalPlan === plan ? 'bg-indigo-650 text-white shadow-sm' : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      {plan.replace('_', ' ')}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Duration Toggle selector */}
+                <div className="flex items-center justify-between p-2.5 bg-slate-950/40 border border-slate-800/80 rounded-xl">
+                  <span className="text-[10px] font-extrabold text-slate-300">Billing Period</span>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setSubModalDuration('monthly')}
+                      className={`px-3 py-1 rounded-lg text-[9px] font-black uppercase ${
+                        subModalDuration === 'monthly' ? 'bg-indigo-600 text-white' : 'text-slate-455 hover:text-white'
+                      }`}
+                    >
+                      Monthly
+                    </button>
+                    <button
+                      onClick={() => setSubModalDuration('yearly')}
+                      className={`px-3 py-1 rounded-lg text-[9px] font-black uppercase relative ${
+                        subModalDuration === 'yearly' ? 'bg-indigo-600 text-white' : 'text-slate-455 hover:text-white'
+                      }`}
+                    >
+                      Yearly <span className="absolute -top-2 -right-2 bg-pink-500 text-white font-black text-[6px] px-1 py-0.2 rounded-full">SAVE 20%</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Pricing Info */}
+                <div className="bg-slate-955 border border-slate-800 p-4 rounded-2xl text-center">
+                  <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest block mb-1">PRO FEATURES</span>
+                  <div className="flex items-baseline justify-center gap-1">
+                    <span className="text-2xl font-black font-mono">₹{
+                      subModalPlan === 'pro' ? (subModalDuration === 'yearly' ? '7,200' : '750') :
+                      subModalPlan === 'pro_plus' ? (subModalDuration === 'yearly' ? '12,000' : '1,250') :
+                      (subModalDuration === 'yearly' ? '24,000' : '2,500')
+                    }</span>
+                    <span className="text-[10px] text-slate-450 font-bold">/{subModalDuration === 'yearly' ? 'yr' : 'mo'}</span>
+                  </div>
+                  <ul className="text-left text-[9px] text-slate-400 font-semibold space-y-1.5 mt-3 list-disc pl-4">
+                    <li>Multi-chart split screen matching</li>
+                    <li>20+ rolling live indicators (EMA, RSI, MACD)</li>
+                    <li>Advanced options strategies analysis panel</li>
+                  </ul>
+                </div>
+
+                {/* Checkout Trigger */}
+                <button
+                  onClick={() => {
+                    setSubPaymentProcessing(true);
+                    setTimeout(() => {
+                      setSubPaymentProcessing(false);
+                      setSubPaymentSuccess(true);
+                      showToast('Subscription payment processed successfully!', 'success');
+                    }, 1800);
+                  }}
+                  disabled={subPaymentProcessing}
+                  className="w-full py-2.5 bg-gradient-to-r from-indigo-600 to-pink-600 hover:from-indigo-700 hover:to-pink-700 text-white rounded-xl text-xs font-black uppercase shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  {subPaymentProcessing ? (
+                    <>
+                      <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      <span>Securing payment...</span>
+                    </>
+                  ) : (
+                    <span>Upgrade plan / 30-day Free Trial</span>
+                  )}
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Interactive Rate Us Feedback Modal */}
+      {showRateModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in" onClick={() => setShowRateModal(false)}>
+          <div className="bg-slate-900 border border-slate-700 rounded-3xl p-6 w-full max-w-sm shadow-2xl text-white" onClick={e => e.stopPropagation()}>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-base font-black uppercase tracking-wider text-slate-100">Rate Vision Wealth</h2>
+              <button onClick={() => setShowRateModal(false)} className="text-slate-400 hover:text-white">✕</button>
+            </div>
+
+            {rateSuccess ? (
+              <div className="text-center py-6 space-y-4">
+                <div className="w-16 h-16 bg-yellow-500/10 border border-yellow-500 text-yellow-500 rounded-full flex items-center justify-center text-3xl mx-auto">★</div>
+                <h3 className="text-sm font-black uppercase tracking-widest text-yellow-500">Thank you for rating us!</h3>
+                <p className="text-[10px] text-slate-400 font-semibold leading-relaxed">Your feedback helps us make the ultimate trading terminal. We appreciate your rating of {rateStars} stars.</p>
+                <button onClick={() => setShowRateModal(false)} className="w-full py-2 bg-indigo-650 hover:bg-indigo-750 rounded-xl text-xs font-black uppercase tracking-wider transition-all">Done</button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="flex justify-center gap-2 py-2">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button
+                      key={star}
+                      type="button"
+                      onClick={() => setRateStars(star)}
+                      className={`text-2xl transition-all cursor-pointer ${star <= rateStars ? 'text-yellow-500 scale-110' : 'text-slate-600 hover:text-yellow-500/55'}`}
+                    >
+                      ★
+                    </button>
+                  ))}
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] text-slate-450 block font-black uppercase tracking-wider">Review comments</label>
+                  <textarea
+                    rows={3}
+                    placeholder="Tell us what you love or how we can improve..."
+                    value={rateFeedback}
+                    onChange={e => setRateFeedback(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-xs font-semibold text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-indigo-500 transition-all resize-none"
+                  />
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setRateSuccess(true);
+                    showToast('Feedback submitted successfully! Thank you.', 'success');
+                  }}
+                  className="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-black uppercase shadow-md transition-all cursor-pointer"
+                >
+                  Submit review
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Help Center Slide-Up Drawer */}
+      {showHelpDrawer && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-end justify-center select-none animate-fade-in" onClick={() => setShowHelpDrawer(false)}>
+          <div className="bg-slate-900 border-t border-slate-800 rounded-t-3xl p-5 w-full max-w-md shadow-2xl text-white max-h-[70vh] flex flex-col animate-slide-up" onClick={e => e.stopPropagation()}>
+            <div className="flex justify-between items-center border-b border-slate-800 pb-3 shrink-0">
+              <span className="text-xs font-black uppercase tracking-widest text-slate-300">❓ Help Center & Short-maps</span>
+              <button onClick={() => setShowHelpDrawer(false)} className="text-slate-400 hover:text-white">✕</button>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto py-4 space-y-4 text-[11px] font-semibold text-slate-350 pr-1">
+              <div className="space-y-1">
+                <h4 className="text-[10px] font-black uppercase text-indigo-400 tracking-wider">Keyboard Hotkeys</h4>
+                <ul className="space-y-1 font-mono text-[9px] bg-slate-950/60 p-2.5 rounded-xl border border-slate-855">
+                  <li><span className="text-white">Space</span> : Focus watchlist ticker filter search.</li>
+                  <li><span className="text-white">Delete</span> : Erase all lines/shapes on the focused chart slot.</li>
+                  <li><span className="text-white">Alt + T</span> : Show custom Trendline indicators popup.</li>
+                  <li><span className="text-white">Alt + F</span> : Show custom Fibonacci indicator retracement popup.</li>
+                </ul>
+              </div>
+
+              <div className="space-y-1">
+                <h4 className="text-[10px] font-black uppercase text-indigo-400 tracking-wider">How to manage drawings?</h4>
+                <p className="leading-relaxed">Tap any stock from the list to draw trend lines directly from your chart overlay toolbar. Switch slots above to apply discrete tools and indicators.</p>
+              </div>
+
+              <div className="space-y-1">
+                <h4 className="text-[10px] font-black uppercase text-indigo-400 tracking-wider">Support Contact</h4>
+                <p className="leading-relaxed">Email us at <span className="text-white underline">support@visionwealth.app</span>. Live agent responses typically within 4 hours.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* About Terminal Modal */}
+      {showAboutModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in" onClick={() => setShowAboutModal(false)}>
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 w-full max-w-xs shadow-2xl text-white text-center animate-scale-up" onClick={e => e.stopPropagation()}>
+            <div className="w-12 h-12 bg-indigo-500/10 border border-indigo-550/20 text-indigo-400 text-xl font-bold flex items-center justify-center rounded-2xl mx-auto mb-3 shadow-md">📊</div>
+            <h2 className="text-sm font-black uppercase tracking-wider text-slate-100 mb-1">Vision Wealth Terminal</h2>
+            <span className="text-[8px] font-black tracking-widest text-slate-500 uppercase px-2 py-0.5 rounded border border-slate-800 bg-slate-950">v2.4.0 (Stable-OS)</span>
+            
+            <div className="my-4 py-3 border-t border-b border-slate-800/80 text-[10px] space-y-1.5 font-semibold text-slate-400 font-mono text-left">
+              <div className="flex justify-between"><span>Active Workspace:</span><span className="text-white">calculator_NS</span></div>
+              <div className="flex justify-between"><span>Core engine:</span><span className="text-white">NextJS + React19</span></div>
+              <div className="flex justify-between"><span>Network latency:</span><span className="text-emerald-400 font-bold">12ms (Good)</span></div>
+            </div>
+
+            <button
+              onClick={() => setShowAboutModal(false)}
+              className="w-full py-2 bg-indigo-650 hover:bg-indigo-755 text-white rounded-xl text-xs font-black uppercase shadow-md transition-all cursor-pointer"
+            >
+              Close specs
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Refer a Friend Modal */}
+      {showReferModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in" onClick={() => setShowReferModal(false)}>
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 w-full max-w-sm shadow-2xl text-white text-center animate-scale-up" onClick={e => e.stopPropagation()}>
+            <div className="w-12 h-12 bg-pink-500/10 border border-pink-550/20 text-pink-500 text-xl font-bold flex items-center justify-center rounded-2xl mx-auto mb-3 shadow-md">🎁</div>
+            <h2 className="text-sm font-black uppercase tracking-wider text-slate-100 mb-1">Refer a Friend</h2>
+            <p className="text-[10px] text-slate-400 font-semibold mb-4 leading-relaxed">Share Vision Wealth with your network. They get ₹500 free premium credit, and you earn ₹1000 credit when they upgrade!</p>
+            
+            <div className="flex items-center gap-2 p-2 bg-slate-950 border border-slate-850 rounded-xl mb-4 shrink-0">
+              <input
+                type="text"
+                readOnly
+                value="visionwealth.app/ref?user=kishorprem769"
+                className="flex-1 bg-transparent border-none text-[9.5px] font-mono text-slate-350 focus:outline-none"
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  navigator.clipboard.writeText("visionwealth.app/ref?user=kishorprem769");
+                  setReferCopied(true);
+                  showToast('Referral link copied to clipboard!', 'success');
+                }}
+                className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase transition-all shrink-0 cursor-pointer ${
+                  referCopied ? 'bg-emerald-600 text-white' : 'bg-pink-650 hover:bg-pink-700 text-white'
+                }`}
+              >
+                {referCopied ? 'Copied ✓' : 'Copy'}
+              </button>
+            </div>
+
+            <button
+              onClick={() => setShowReferModal(false)}
+              className="w-full py-2 bg-slate-800 hover:bg-slate-750 text-slate-350 rounded-xl text-xs font-bold transition-all cursor-pointer"
+            >
+              Close referral
+            </button>
           </div>
         </div>
       )}

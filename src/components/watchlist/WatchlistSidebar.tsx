@@ -10,6 +10,7 @@ import { TagPopover, TagFilterBar } from '@/components/watchlist/TagManager';
 import { buildAllTags, DEFAULT_CUSTOM_TAGS, type CustomTagRaw } from '@/utils/tags';
 import type { StockQuote, WatchlistSortOption } from '@/hooks/useWatchlistStore';
 import { getBackendApiUrl } from '@/lib/backend-config';
+import AIMarketIntelligence from '@/components/AIMarketIntelligence';
 
 /* ── Props ──────────────────────────────────────────────── */
 
@@ -50,6 +51,11 @@ export interface WatchlistSidebarProps {
 
   showToast?: (msg: string, type: 'success' | 'error' | 'info') => void;
   onMobileSwitchToChart?: () => void;
+
+  deepData?: any;
+  deepLoading?: boolean;
+  activeGridIndex?: number;
+  gridDataCache?: Record<number, any[]>;
 }
 
 /* ── Row height ─────────────────────────────────────────── */
@@ -87,6 +93,10 @@ export default function WatchlistSidebar({
   onEditCustomTag,
   showToast,
   onMobileSwitchToChart,
+  deepData,
+  deepLoading,
+  activeGridIndex = 0,
+  gridDataCache = {},
 }: WatchlistSidebarProps) {
   const [showAddModal, setShowAddModal] = useState(false);
   const [tagPopoverSym, setTagPopoverSym] = useState<string | null>(null);
@@ -299,22 +309,20 @@ export default function WatchlistSidebar({
           </div>
         </div>
 
-        {/* Right Section: Price & Color-Coded Deltas */}
-        <div className="flex items-center gap-3 shrink-0 relative pr-1">
-          <div className="flex flex-col items-end gap-0.5 group-hover/item:opacity-20 transition-opacity">
-            {/* Price */}
-            <span className="text-[13px] font-extrabold text-slate-900 dark:text-white font-mono tracking-tight">
+        {/* Right Section: Price & Color-Coded Deltas aligned in horizontal columns */}
+        <div className="flex items-center gap-2 shrink-0 relative pr-1">
+          <div className="flex items-center gap-2 group-hover/item:opacity-20 transition-opacity">
+            {/* Price Column */}
+            <span className="w-20 text-right text-[13px] font-extrabold text-slate-900 dark:text-white font-mono tracking-tight">
               ₹{displayPrice > 0 ? displayPrice.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—'}
             </span>
-            {/* Delta value + Change percentage */}
-            <span className={`text-[10px] font-black font-mono tracking-tight ${positive ? 'text-emerald-500 dark:text-emerald-455' : 'text-rose-500 dark:text-rose-455'}`}>
-              {stock.change !== 0 ? (
-                <>
-                  {positive ? '+' : ''}{stock.change.toFixed(2)} {positive ? '+' : ''}{stock.changePercent.toFixed(2)}%
-                </>
-              ) : (
-                '0.00 0.00%'
-              )}
+            {/* Change Column */}
+            <span className={`w-20 text-right text-[12px] font-bold font-mono tracking-tight ${positive ? 'text-emerald-500 dark:text-emerald-455' : 'text-rose-500 dark:text-rose-455'}`}>
+              {stock.change !== 0 ? `${positive ? '+' : ''}${stock.change.toFixed(2)}` : '0.00'}
+            </span>
+            {/* Change% Column */}
+            <span className={`w-20 text-right text-[12px] font-bold font-mono tracking-tight ${positive ? 'text-emerald-500 dark:text-emerald-455' : 'text-rose-500 dark:text-rose-455'}`}>
+              {stock.changePercent !== 0 ? `${positive ? '+' : ''}${stock.changePercent.toFixed(2)}%` : '0.00%'}
             </span>
           </div>
 
@@ -730,6 +738,33 @@ export default function WatchlistSidebar({
               >
                 Load More <ChevronDown className="w-4 h-4 text-slate-500" />
               </button>
+            </div>
+          )}
+
+          {/* AI Market Intelligence Section (Design alignment) */}
+          {deepData && (
+            <div className="shrink-0 p-4 bg-slate-50/70 dark:bg-slate-900/40 border-t border-slate-200 dark:border-slate-800">
+              <AIMarketIntelligence 
+                data={{
+                  ratios: {
+                    symbol: selectedSymbol,
+                    price: livePrices[selectedSymbol] || (watchlistStocks.find(s => s.symbol === selectedSymbol)?.price) || 500,
+                    ...(deepData?.ratios || {})
+                  },
+                  profile: deepData?.profile || {},
+                  balanceSheet: deepData?.balanceSheet || [],
+                  profitLoss: deepData?.profitLoss || [],
+                  cashFlow: deepData?.cashFlow || [],
+                  quarterlyProfitLoss: deepData?.quarterlyProfitLoss || [],
+                  chartData: gridDataCache[activeGridIndex]?.length > 0 ? gridDataCache[activeGridIndex] : (deepData?.chartData || []),
+                  peers: deepData?.peers || [],
+                  pros: deepData?.pros || [],
+                  cons: deepData?.cons || []
+                }}
+                livePrice={livePrices[selectedSymbol] || (watchlistStocks.find(s => s.symbol === selectedSymbol)?.price) || 500} 
+                isLoading={deepLoading}
+                isSidebar={true}
+              />
             </div>
           )}
         </>
