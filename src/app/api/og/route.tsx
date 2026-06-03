@@ -1,5 +1,6 @@
 import { ImageResponse } from 'next/og';
 import { NextRequest } from 'next/server';
+
 import { SITE_URL } from '@/lib/backend-config';
 
 export const runtime = 'edge';

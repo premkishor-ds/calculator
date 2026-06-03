@@ -1,4 +1,5 @@
 import { Metadata } from 'next';
+
 import { SITE_URL } from '@/lib/backend-config';
 
 interface Props {

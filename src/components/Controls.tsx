@@ -1,54 +1,55 @@
+import { Layers, Lock,RotateCw } from 'lucide-react';
 import React, { useState } from 'react';
-import { RotateCw, Layers, Sparkles, Check, DollarSign, Calendar, TrendingUp, Lock } from 'lucide-react';
+
 import { formatINR } from '@/utils/calculations';
 
 interface ControlsProps {
   activeTab: 'corpus' | 'years' | 'cagr' | 'target' | 'fire';
-  setActiveTab: (tab: 'corpus' | 'years' | 'cagr' | 'target' | 'fire') => void;
+  setActiveTab: (_tab: 'corpus' | 'years' | 'cagr' | 'target' | 'fire') => void;
 
   initialLumpsum: number;
-  setInitialLumpsum: (v: number) => void;
+  setInitialLumpsum: (_v: number) => void;
   startSip: number;
-  setStartSip: (v: number) => void;
+  setStartSip: (_v: number) => void;
   stepUp: number;
-  setStepUp: (v: number) => void;
+  setStepUp: (_v: number) => void;
   cagr: number;
-  setCagr: (v: number) => void;
+  setCagr: (_v: number) => void;
   years: number;
-  setYears: (v: number) => void;
+  setYears: (_v: number) => void;
   inflation: number;
-  setInflation: (v: number) => void;
+  setInflation: (_v: number) => void;
   considerInflation: boolean;
-  setConsiderInflation: (v: boolean) => void;
+  setConsiderInflation: (_v: boolean) => void;
   sipFrequency: 'monthly' | 'quarterly' | 'yearly';
-  setSipFrequency: (v: 'monthly' | 'quarterly' | 'yearly') => void;
+  setSipFrequency: (_v: 'monthly' | 'quarterly' | 'yearly') => void;
   compoundingFrequency: 'monthly' | 'quarterly' | 'yearly';
-  setCompoundingFrequency: (v: 'monthly' | 'quarterly' | 'yearly') => void;
+  setCompoundingFrequency: (_v: 'monthly' | 'quarterly' | 'yearly') => void;
   considerTax: boolean;
-  setConsiderTax: (v: boolean) => void;
+  setConsiderTax: (_v: boolean) => void;
   taxRate: number;
-  setTaxRate: (v: number) => void;
+  setTaxRate: (_v: number) => void;
   taxExemption: number;
-  setTaxExemption: (v: number) => void;
+  setTaxExemption: (_v: number) => void;
 
   targetGoal: number;
-  setTargetGoal: (v: number) => void;
+  setTargetGoal: (_v: number) => void;
   targetMode: 'sip' | 'lumpsum' | 'combo';
-  setTargetMode: (v: 'sip' | 'lumpsum' | 'combo') => void;
+  setTargetMode: (_v: 'sip' | 'lumpsum' | 'combo') => void;
 
   // FIRE Calculator States
   currentAge: number;
-  setCurrentAge: (v: number) => void;
+  setCurrentAge: (_v: number) => void;
   retirementAge: number;
-  setRetirementAge: (v: number) => void;
+  setRetirementAge: (_v: number) => void;
   currentMonthlyExpenses: number;
-  setCurrentMonthlyExpenses: (v: number) => void;
+  setCurrentMonthlyExpenses: (_v: number) => void;
   swr: number;
-  setSwr: (v: number) => void;
+  setSwr: (_v: number) => void;
   healthcareBuffer: boolean;
-  setHealthcareBuffer: (v: boolean) => void;
+  setHealthcareBuffer: (_v: boolean) => void;
   emergencyBuffer: boolean;
-  setEmergencyBuffer: (v: boolean) => void;
+  setEmergencyBuffer: (_v: boolean) => void;
 
   resetAll: () => void;
 }
@@ -66,8 +67,8 @@ export const Controls: React.FC<ControlsProps> = (props) => {
     sipFrequency, setSipFrequency,
     compoundingFrequency, setCompoundingFrequency,
     considerTax, setConsiderTax,
-    taxRate, setTaxRate,
-    taxExemption, setTaxExemption,
+    taxRate, setTaxRate: _setTaxRate,
+    taxExemption: _taxExemption, setTaxExemption: _setTaxExemption,
     targetGoal, setTargetGoal,
     targetMode, setTargetMode,
     currentAge, setCurrentAge,
@@ -79,10 +80,10 @@ export const Controls: React.FC<ControlsProps> = (props) => {
     resetAll
   } = props;
 
-  const [activePreset, setActivePreset] = useState<string | null>(null);
+  const [_activePreset, setActivePreset] = useState<string | null>(null);
   const requiredRetirementCorpus = (currentMonthlyExpenses * 12) / (swr / 100 || 0.04);
 
-  const handleNumberChange = (value: string, setter: (v: number) => void, maxVal: number) => {
+  const handleNumberChange = (value: string, setter: (_v: number) => void, maxVal: number) => {
     const clean = value.replace(/[^0-9]/g, '');
     if (clean === '') {
       setter(0);
@@ -96,7 +97,7 @@ export const Controls: React.FC<ControlsProps> = (props) => {
     }
   };
 
-  const presets = [
+  const _presets = [
     {
       id: 'it_pro',
       label: '🚀 IT Pro Wealth Builder',
@@ -151,7 +152,7 @@ export const Controls: React.FC<ControlsProps> = (props) => {
     }
   ];
 
-  const handlePresetSelect = (id: string, configFn: () => void) => {
+  const _handlePresetSelect = (id: string, configFn: () => void) => {
     configFn();
     setActivePreset(id);
   };

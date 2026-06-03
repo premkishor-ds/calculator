@@ -1,13 +1,14 @@
 "use client";
 
-import React, { useState, useMemo, useEffect, Suspense, useDeferredValue } from 'react';
-import { useSearchParams } from 'next/navigation';
-import { calculateScenario, getSummary } from '@/utils/calculations';
-import { Header, QuickStart } from '@/components/Header';
-import { Controls } from '@/components/Controls';
-import { SummaryCards, ExecutiveSummary, CapitalComposition, GoalMilestones, FIREResults } from '@/components/WealthVisuals';
-import { solveRequiredYears, solveRequiredCAGR, solveTargetSIPCombo, calculateFIRE } from '@/utils/solvers';
 import dynamicImport from 'next/dynamic';
+import { useSearchParams } from 'next/navigation';
+import React, { Suspense, useDeferredValue,useEffect, useMemo, useState } from 'react';
+
+import { Controls } from '@/components/Controls';
+import { Header, QuickStart } from '@/components/Header';
+import { CapitalComposition, ExecutiveSummary, FIREResults,GoalMilestones, SummaryCards } from '@/components/WealthVisuals';
+import { calculateScenario, getSummary } from '@/utils/calculations';
+import { calculateFIRE,solveRequiredCAGR, solveRequiredYears, solveTargetSIPCombo } from '@/utils/solvers';
 
 const WealthChart = dynamicImport(() => import('@/components/WealthVisuals').then(m => m.WealthChart), { 
   ssr: false, 

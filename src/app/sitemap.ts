@@ -1,6 +1,7 @@
 import { MetadataRoute } from 'next';
-import { DEFAULT_SEEDS } from '@/utils/symbols';
+
 import { SITE_URL } from '@/lib/backend-config';
+import { DEFAULT_SEEDS } from '@/utils/symbols';
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const baseUrl = SITE_URL;

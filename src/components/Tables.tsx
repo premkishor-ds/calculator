@@ -1,6 +1,7 @@
-import React from 'react';
-import { formatINR, CalculationResult } from '@/utils/calculations';
 import { Download } from 'lucide-react';
+import React from 'react';
+
+import { CalculationResult,formatINR } from '@/utils/calculations';
 
 interface MatrixResult {
   cagr: number;

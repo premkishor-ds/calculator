@@ -2,8 +2,9 @@
 
 import React from 'react';
 import { 
-  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip 
-} from 'recharts';
+Area,   AreaChart, CartesianGrid, Tooltip, 
+XAxis, YAxis} from 'recharts';
+
 import { formatINR } from '@/utils/calculations';
 
 interface ChartDataPoint {

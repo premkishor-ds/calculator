@@ -1,7 +1,7 @@
 "use client";
 
+import { Info, Shield, Sparkles } from 'lucide-react';
 import React, { useMemo } from 'react';
-import { Shield, Sparkles, TrendingUp, AlertCircle, Info, Star } from 'lucide-react';
 
 interface SnowflakeData {
   value: number;       // 0 to 10
@@ -20,7 +20,7 @@ interface SwotItem {
 }
 
 export default function SimplyWallStSnowflake({
-  symbol = 'NIFTY',
+  symbol: _symbol = 'NIFTY',
   snowflakeValues,
   swot,
   economicMoat = 'Narrow Moat'

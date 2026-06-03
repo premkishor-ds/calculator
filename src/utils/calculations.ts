@@ -145,7 +145,7 @@ export function getSummary(
   taxExemption: number = 125000,
   considerInflation: boolean = true,
   inflationPct: number = 6,
-  cagrPct: number = 12,
+  _cagrPct: number = 12,
   years: number = 15
 ): SummaryResult {
   const finalCorpus = results[results.length - 1]?.closingBalance || 0;

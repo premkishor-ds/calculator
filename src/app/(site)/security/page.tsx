@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { Shield, RefreshCw, Key, LogOut, Trash2, Sparkles, User, AlertTriangle } from 'lucide-react';
-import { useAuth } from '@/context/AuthContext';
+import { AlertTriangle,Key, RefreshCw, Shield } from 'lucide-react';
 import Link from 'next/link';
+import React, { useEffect, useState } from 'react';
+
+import { useAuth } from '@/context/AuthContext';
 
 interface DeviceSession {
   deviceInfo: string;
@@ -16,7 +17,6 @@ export default function SecuritySettingsPage() {
   const { user, token, logout, updateProfile } = useAuth();
   const [sessions, setSessions] = useState<DeviceSession[]>([]);
   const [loadingSessions, setLoadingSessions] = useState(false);
-  const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [submittingPassword, setSubmittingPassword] = useState(false);
@@ -71,7 +71,6 @@ export default function SecuritySettingsPage() {
       setPasswordSuccess('Password changed successfully across all nodes.');
       setNewPassword('');
       setConfirmPassword('');
-      setOldPassword('');
     } catch (err: any) {
       setPasswordError(err.message || 'Failed to change password. Ensure formatting matches security policies.');
     } finally {
@@ -91,7 +90,7 @@ export default function SecuritySettingsPage() {
         alert('Successfully logged out other device sessions.');
         fetchSessions();
       }
-    } catch (err) {
+    } catch {
       alert('Failed to revoke sessions.');
     }
   };

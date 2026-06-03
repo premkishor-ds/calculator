@@ -1,7 +1,8 @@
 'use client';
-import React, { useState, useMemo } from 'react';
+import { ArrowUpDown, ChevronDown, ChevronUp, Download, RefreshCw, TrendingDown,TrendingUp } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { Download, ArrowUpDown, ChevronUp, ChevronDown, RefreshCw, TrendingUp, TrendingDown } from 'lucide-react';
+import React, { useMemo,useState } from 'react';
+
 import { ActiveFilters } from './FilterSidebar';
 import { StockRow } from './screener-utils';
 

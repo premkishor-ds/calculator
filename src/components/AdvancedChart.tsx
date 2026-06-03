@@ -1,32 +1,31 @@
 'use client';
 
-import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { getBackendWsUrl } from '@/lib/backend-config';
-import { 
-  RotateCcw, MousePointer, Slash, Minus, Eraser, Trash2,
-  TrendingUp, TrendingDown, RefreshCw, Settings, Play, Pause,
-  SkipForward, Calendar, Eye, EyeOff, Lock, Unlock,
-  Activity, Sliders, ChevronDown, Check, Plus, Undo2, Redo2, X
-} from 'lucide-react';
 import {
-  createChart,
+  AreaSeries,
+  BarSeries,
+  BaselineSeries,
+  CandlestickSeries,
   ColorType,
+  createChart,
+  createSeriesMarkers,
   CrosshairMode,
+  HistogramData,
+  HistogramSeries,
   IChartApi,
   ISeriesApi,
-  SeriesType,
-  CandlestickData,
-  HistogramData,
   LineData,
-  Time,
-  CandlestickSeries,
   LineSeries,
-  HistogramSeries,
-  BarSeries,
-  AreaSeries,
-  BaselineSeries,
-  createSeriesMarkers,
+  SeriesType,
+  Time,
 } from 'lightweight-charts';
+import { 
+  Activity, Check, ChevronDown, Eraser, Minus, MousePointer, Pause,
+Play, Plus, Redo2, RefreshCw,   RotateCcw,   SkipForward, Slash, Trash2, Undo2,
+X
+} from 'lucide-react';
+import React, {useEffect, useRef, useState } from 'react';
+
+import { getBackendWsUrl } from '@/lib/backend-config';
 
 /* ─── Types & Drawings Structures ────────────────────────────── */
 export interface ChartPoint {
@@ -131,7 +130,7 @@ const CHART_STYLES = [
   'Line Break'
 ];
 
-const STANDARD_INTERVALS = [
+const _STANDARD_INTERVALS = [
   '1m', '3m', '5m', '10m', '15m', '30m', '45m',
   '1h', '2h', '4h',
   'Daily', 'Weekly', 'Monthly', 'Yearly'
@@ -178,16 +177,16 @@ const INDICATOR_OPTIONS = [
 interface Props {
   symbol: string;
   chartRange: string;
-  onRangeChange: (r: string) => void;
+  onRangeChange: (_r: string) => void;
   chartMode: 'price' | 'pe';
-  onModeChange: (m: 'price' | 'pe') => void;
+  onModeChange: (_m: 'price' | 'pe') => void;
   theme: 'dark' | 'light';
   controlledInterval?: string;
-  onIntervalChange?: (i: string) => void;
+  onIntervalChange?: (_i: string) => void;
   controlledStyle?: string;
-  onStyleChange?: (s: string) => void;
+  onStyleChange?: (_s: string) => void;
   controlledIndicators?: Set<string>;
-  onIndicatorsChange?: (s: Set<string>) => void;
+  onIndicatorsChange?: (_s: Set<string>) => void;
   drawingsVersion?: number;
   onDrawingsChange?: () => void;
   markers?: Array<{
@@ -197,7 +196,7 @@ interface Props {
     shape: 'arrowUp' | 'arrowDown' | 'circle' | 'square';
     text?: string;
   }>;
-  onDataLoaded?: (data: ChartPoint[]) => void;
+  onDataLoaded?: (_data: ChartPoint[]) => void;
   companyName?: string;
 }
 
@@ -626,7 +625,7 @@ function getIntervalSeconds(interval: string): number {
 
 /* ─── Component ──────────────────────────────────────────────── */
 export default function AdvancedChart({
-  symbol, chartRange, onRangeChange, chartMode, onModeChange, theme,
+  symbol, chartRange: _chartRange, onRangeChange: _onRangeChange, chartMode, onModeChange: _onModeChange, theme,
   controlledInterval, onIntervalChange, controlledStyle, onStyleChange,
   controlledIndicators, onIndicatorsChange, drawingsVersion,
   onDrawingsChange, markers, onDataLoaded, companyName
@@ -667,7 +666,7 @@ export default function AdvancedChart({
 
   // Replay Mode states
   const [replayMode, setReplayMode] = useState(false);
-  const [replayIndex, setReplayIndex] = useState(0);
+  const [_replayIndex, setReplayIndex] = useState(0);
   const [replayPlaying, setReplayPlaying] = useState(false);
   const [replaySpeed, setReplaySpeed] = useState(1000); // ms per candle
   const replayTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -675,16 +674,16 @@ export default function AdvancedChart({
   const [selectedInterval, setSelectedInterval] = useState<string>('Daily');
 
   // Sprint 3: Advanced Charting Templates, Multi-Chart Splits & Sync Engine
-  const [multiChartLayout, setMultiChartLayout] = useState<1 | 2 | 4>(1);
+  const [multiChartLayout, _setMultiChartLayout] = useState<1 | 2 | 4>(1);
   const [compareSymbols, setCompareSymbols] = useState<string[]>([]);
   const [compareInput, setCompareInput] = useState('');
-  const [indicatorTemplates, setIndicatorTemplates] = useState<Record<string, string[]>>({
+  const [indicatorTemplates, _setIndicatorTemplates] = useState<Record<string, string[]>>({
     'Moving Averages': ['EMA9', 'EMA20', 'EMA50', 'EMA100', 'EMA200'],
     'Oscillators': ['RSI14', 'MACD', 'Stochastic'],
     'Volatility': ['Bollinger', 'ATR', 'Supertrend']
   });
 
-  const loadSavedTemplate = (templateName: string) => {
+  const _loadSavedTemplate = (templateName: string) => {
     const list = indicatorTemplates[templateName];
     if (list) {
       if (onIndicatorsChange) onIndicatorsChange(new Set(list));
@@ -1539,7 +1538,7 @@ export default function AdvancedChart({
 
     // Clear old indicator series
     indicatorSeriesRef.current.forEach(seriesList => seriesList.forEach(series => {
-      try { chart.removeSeries(series); } catch (e) {}
+      try { chart.removeSeries(series); } catch {}
     }));
     indicatorSeriesRef.current.clear();
 
@@ -1633,7 +1632,7 @@ export default function AdvancedChart({
     setPineError('');
     try {
       const lines = pineScript.split('\n');
-      let overlay = true;
+      let _overlay = true;
       const plots: Array<{ name: string; color: string; values: any[] }> = [];
       const localScope: Record<string, LineData<Time>[]> = {};
 
@@ -1644,7 +1643,7 @@ export default function AdvancedChart({
         // Parse study
         if (clean.startsWith('study(')) {
           const match = clean.match(/overlay\s*=\s*(true|false)/);
-          if (match) overlay = match[1] === 'true';
+          if (match) _overlay = match[1] === 'true';
           return;
         }
 
@@ -1697,7 +1696,7 @@ export default function AdvancedChart({
     if (!chart) return;
 
     customSeriesRef.current.forEach(series => {
-      try { chart.removeSeries(series); } catch (e) {}
+      try { chart.removeSeries(series); } catch {}
     });
     customSeriesRef.current.clear();
 

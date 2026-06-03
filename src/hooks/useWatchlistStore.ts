@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo,useRef, useState } from 'react';
+
 import { getBackendApiUrl } from '@/lib/backend-config';
-import { DEFAULT_SEEDS, type SeedStock } from '@/utils/symbols';
+import { DEFAULT_SEEDS } from '@/utils/symbols';
 
 /* ── Types ──────────────────────────────────────────────── */
 export interface StockQuote {

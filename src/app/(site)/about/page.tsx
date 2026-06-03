@@ -1,6 +1,6 @@
-import React from 'react';
+import { BarChart3, Shield, TrendingUp, Users,Zap } from 'lucide-react';
 import { Metadata } from 'next';
-import { Shield, Zap, TrendingUp, BarChart3, Users } from 'lucide-react';
+import React from 'react';
 
 export const metadata: Metadata = {
   title: 'About Our Financial Engineering | Vision Wealth - DataForger.com',

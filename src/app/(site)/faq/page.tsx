@@ -1,6 +1,6 @@
-import React from 'react';
+import { ChevronDown,CircleQuestionMark as HelpCircle } from 'lucide-react';
 import { Metadata } from 'next';
-import { CircleQuestionMark as HelpCircle, ChevronDown } from 'lucide-react';
+import React from 'react';
 
 export const metadata: Metadata = {
   title: 'Advanced Wealth FAQ | Compounding & Tax Deep Dive - Vision Wealth',

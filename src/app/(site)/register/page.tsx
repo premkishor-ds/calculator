@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState } from 'react';
+import { ArrowRight, Lock, Mail, Sparkles,User } from 'lucide-react';
 import Link from 'next/link';
+import React, { useState } from 'react';
+
 import { useAuth } from '@/context/AuthContext';
-import { Lock, Mail, User, ArrowRight, Sparkles } from 'lucide-react';
 
 export default function RegisterPage() {
   const { register } = useAuth();

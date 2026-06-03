@@ -1,6 +1,6 @@
 ﻿'use client';
+import { Check, ChevronDown, ChevronUp, Filter, Save, Search, Trash2,X } from 'lucide-react';
 import React, { useState } from 'react';
-import { ChevronDown, ChevronUp, Filter, Search, Check, X, Save, Trash2 } from 'lucide-react';
 
 // Filter field metadata: which fields support range inputs vs boolean toggles
 export interface FilterField {
@@ -126,7 +126,7 @@ export const FilterSidebar = ({
   onFiltersChange,
 }: {
   activeFilters: ActiveFilters;
-  onFiltersChange: (filters: ActiveFilters) => void;
+  onFiltersChange: (_filters: ActiveFilters) => void;
 }) => {
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({ valuation: true });
   const [searchQuery, setSearchQuery] = useState('');

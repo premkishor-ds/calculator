@@ -1,4 +1,4 @@
-import type { Ratios, PeerItem, CorporateProfile, ChartPoint, BalanceSheetItem } from '@/types';
+import type { BalanceSheetItem, CorporateProfile, Ratios } from '@/types';
 
 export interface OutlookParams {
   ratios: Ratios;

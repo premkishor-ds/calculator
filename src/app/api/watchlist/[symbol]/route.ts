@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+
 import { yahooFinance } from '@/lib/yahoo-finance';
 import { DEFAULT_SEEDS } from '@/utils/symbols';
 
@@ -243,7 +244,7 @@ function generateProceduralMockStockData(symbol: string) {
   
   // Sectors peers
   const peerSymbols = DEFAULT_SEEDS.filter(s => s.symbol.toUpperCase() !== upperSymbol).slice(0, 3).map(s => s.symbol.toUpperCase());
-  const peers = peerSymbols.map((pSym, idx) => {
+  const peers = peerSymbols.map((pSym) => {
     const pSeed = pSym.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
     const pPrice = 50 + (pSeed % 1450);
     return {

@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useMemo } from 'react';
-import { Sliders, Activity, Info, TrendingUp, TrendingDown, RefreshCw, BarChart2 } from 'lucide-react';
+import { Activity,Info } from 'lucide-react';
+import React, { useMemo,useState } from 'react';
 
 interface OptionStrike {
   strike: number;
@@ -69,8 +69,8 @@ function calculateBSGreeks(
 
 export default function OptionsStrategyBuilder({
   spotPrice = 18200,
-  theme = 'light',
-  symbol = 'NIFTY'
+  theme: _theme = 'light',
+  symbol: _symbol = 'NIFTY'
 }: {
   spotPrice?: number;
   theme?: 'dark' | 'light';
@@ -78,7 +78,7 @@ export default function OptionsStrategyBuilder({
 }) {
   const [selectedStrategy, setSelectedStrategy] = useState<'naked' | 'bull_call' | 'bear_put' | 'iron_condor'>('naked');
   const [targetSpot, setTargetSpot] = useState<number>(spotPrice);
-  const [ivMultiplier, setIvMultiplier] = useState<number>(1.0); // Adjust IV simulation
+  const [ivMultiplier, _setIvMultiplier] = useState<number>(1.0); // Adjust IV simulation
   
   // Custom option positions state
   const [positions, setPositions] = useState<Array<{ strike: number; type: 'call' | 'put'; action: 'buy' | 'sell'; qty: number; entryPrice: number }>>([

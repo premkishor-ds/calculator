@@ -1,16 +1,17 @@
 "use client";
 
-import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { Search, RefreshCw, X, Plus } from 'lucide-react';
+import { Plus,RefreshCw, Search, X } from 'lucide-react';
+import React, { useCallback, useEffect,useRef, useState } from 'react';
+
 import type { SearchSuggestion } from '@/hooks/useWatchlistStore';
 
 interface AddStockModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onAddStock: (symbol: string) => Promise<{ ok: boolean; error?: string }>;
+  onAddStock: (_symbol: string) => Promise<{ ok: boolean; error?: string }>;
   suggestions: SearchSuggestion[];
   suggestLoading: boolean;
-  onFetchSuggestions: (q: string) => void;
+  onFetchSuggestions: (_q: string) => void;
   onClearSuggestions: () => void;
   existingSymbols: string[];
 }

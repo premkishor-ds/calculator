@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Bell, Check, CheckCheck, Trash2, X, AlertTriangle, TrendingUp, PieChart, Settings } from 'lucide-react';
+import { AlertTriangle, Bell, Check, CheckCheck, PieChart, Settings,Trash2, TrendingUp, X } from 'lucide-react';
+import React, { useCallback, useEffect, useRef,useState } from 'react';
+
 import { useAuth } from '@/context/AuthContext';
 
 interface NotificationItem {

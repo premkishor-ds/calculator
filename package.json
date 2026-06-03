@@ -8,8 +8,12 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint",
-    "generate-icons": "node scripts/generate-pwa-icons.mjs"
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "type-check": "tsc --noEmit",
+    "generate-icons": "node scripts/generate-pwa-icons.mjs",
+    "prepare": "husky",
+    "test": "echo \"No tests specified\" && exit 0"
   },
   "dependencies": {
     "lightweight-charts": "^5.2.0",
@@ -27,10 +31,20 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.6",
+    "eslint-plugin-simple-import-sort": "^13.0.0",
+    "eslint-plugin-unused-imports": "^4.4.1",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.4.0",
     "tailwindcss": "^4",
     "typescript": "^5"
   },
   "overrides": {
     "postcss": "8.5.10"
+  },
+  "lint-staged": {
+    "*.{ts,tsx}": [
+      "npm run lint:fix",
+      "npm run type-check"
+    ]
   }
 }

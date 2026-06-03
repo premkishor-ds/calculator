@@ -1,16 +1,17 @@
 "use client";
 
+import { Check,Pencil, Plus, X } from 'lucide-react';
 import React, { useState } from 'react';
-import { Plus, X, Pencil, Check } from 'lucide-react';
+
 import type { WatchlistItem } from '@/hooks/useWatchlistStore';
 
 interface WatchlistSwitcherProps {
   watchlists: WatchlistItem[];
   selectedWatchlist: string;
-  onSelect: (name: string) => void;
-  onCreate: (name: string) => Promise<{ ok: boolean; error?: string }>;
-  onRename: (oldName: string, newName: string) => Promise<{ ok: boolean; error?: string }>;
-  onDelete: (name: string) => Promise<boolean>;
+  onSelect: (_name: string) => void;
+  onCreate: (_name: string) => Promise<{ ok: boolean; error?: string }>;
+  onRename: (_oldName: string, _newName: string) => Promise<{ ok: boolean; error?: string }>;
+  onDelete: (_name: string) => Promise<boolean>;
 }
 
 /**

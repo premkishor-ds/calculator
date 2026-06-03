@@ -1,26 +1,26 @@
 "use client";
 
-import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import {
-  Search, Layers, Plus, Trash2, Star, TrendingUp, TrendingDown, RefreshCw, ChevronDown, X, Check, Pencil, Download, Upload, Copy, Sparkles
-} from 'lucide-react';
-import VirtualStockList from '@/components/watchlist/VirtualStockList';
+Check, ChevronDown, Copy, Download, Layers, Pencil, Plus,   Search, Trash2, Upload, X} from 'lucide-react';
+import React, { useCallback, useEffect, useMemo,useState } from 'react';
+
+import AIMarketIntelligence from '@/components/AIMarketIntelligence';
 import AddStockModal from '@/components/watchlist/AddStockModal';
-import { TagPopover, TagFilterBar } from '@/components/watchlist/TagManager';
-import { buildAllTags, DEFAULT_CUSTOM_TAGS, type CustomTagRaw } from '@/utils/tags';
+import { TagFilterBar,TagPopover } from '@/components/watchlist/TagManager';
+import VirtualStockList from '@/components/watchlist/VirtualStockList';
 import type { StockQuote, WatchlistSortOption } from '@/hooks/useWatchlistStore';
 import { getBackendApiUrl } from '@/lib/backend-config';
-import AIMarketIntelligence from '@/components/AIMarketIntelligence';
+import { buildAllTags, type CustomTagRaw,DEFAULT_CUSTOM_TAGS } from '@/utils/tags';
 
 /* ── Props ──────────────────────────────────────────────── */
 
 export interface WatchlistSidebarProps {
   watchlists: Array<{ name: string; isDefault: boolean; _id?: string }>;
   selectedWatchlist: string;
-  onSelectWatchlist: (name: string) => void;
-  onCreateWatchlist: (name: string) => Promise<{ ok: boolean; error?: string }>;
-  onRenameWatchlist: (oldName: string, newName: string) => Promise<{ ok: boolean; error?: string }>;
-  onDeleteWatchlist: (name: string) => Promise<boolean>;
+  onSelectWatchlist: (_name: string) => void;
+  onCreateWatchlist: (_name: string) => Promise<{ ok: boolean; error?: string }>;
+  onRenameWatchlist: (_oldName: string, _newName: string) => Promise<{ ok: boolean; error?: string }>;
+  onDeleteWatchlist: (_name: string) => Promise<boolean>;
 
   watchlistStocks: StockQuote[];
   filteredWatchlist: StockQuote[];
@@ -28,28 +28,28 @@ export interface WatchlistSidebarProps {
   livePrices: Record<string, number>;
 
   searchQuery: string;
-  onSearchChange: (q: string) => void;
+  onSearchChange: (_q: string) => void;
   activeTagFilter: string;
-  onSetTagFilter: (tagId: string) => void;
+  onSetTagFilter: (_tagId: string) => void;
   watchlistSort: WatchlistSortOption;
-  onSortChange: (sort: WatchlistSortOption) => void;
+  onSortChange: (_sort: WatchlistSortOption) => void;
 
   selectedSymbol: string;
-  onSelectSymbol: (symbol: string) => void;
+  onSelectSymbol: (_symbol: string) => void;
 
-  onAddStock: (symbol: string) => Promise<{ ok: boolean; error?: string }>;
-  onRemoveStock: (symbol: string) => Promise<boolean>;
-  onToggleTag: (symbol: string, tagId: string) => void;
+  onAddStock: (_symbol: string) => Promise<{ ok: boolean; error?: string }>;
+  onRemoveStock: (_symbol: string) => Promise<boolean>;
+  onToggleTag: (_symbol: string, _tagId: string) => void;
 
   suggestions: Array<{ symbol: string; name: string; exchange: string }>;
   suggestLoading: boolean;
-  onFetchSuggestions: (q: string) => void;
+  onFetchSuggestions: (_q: string) => void;
   onClearSuggestions: () => void;
 
   customTagRaw?: CustomTagRaw[];
-  onEditCustomTag?: (tag: CustomTagRaw) => void;
+  onEditCustomTag?: (_tag: CustomTagRaw) => void;
 
-  showToast?: (msg: string, type: 'success' | 'error' | 'info') => void;
+  showToast?: (_msg: string, _type: 'success' | 'error' | 'info') => void;
   onMobileSwitchToChart?: () => void;
 
   deepData?: any;
@@ -104,7 +104,7 @@ export default function WatchlistSidebar({
 
   // States
   const [analyticsData, setAnalyticsData] = useState<{ dailyReturn: number; topGainer: any; topLoser: any } | null>(null);
-  const [loadingAnalytics, setLoadingAnalytics] = useState(false);
+  const [, setLoadingAnalytics] = useState(false);
   const [smartFilter, setSmartFilter] = useState<'all' | 'high_volume' | 'breakout' | 'momentum'>('all');
   const [limit, setLimit] = useState(10);
 
@@ -224,7 +224,7 @@ export default function WatchlistSidebar({
           if (res.ok) successCount++;
         }
         if (showToast) showToast(`Successfully imported ${successCount} stocks!`, 'success');
-      } catch (err) {
+      } catch {
         if (showToast) showToast('Failed to parse CSV file', 'error');
       }
     };
@@ -233,7 +233,7 @@ export default function WatchlistSidebar({
   };
 
   /* ── Render single stock row ───────────────────────────── */
-  const renderStockRow = useCallback((stock: StockQuote, _index: number) => {
+  const renderStockRow = useCallback((stock: StockQuote) => {
     const active = stock.symbol === selectedSymbol;
     const positive = stock.changePercent >= 0;
     const displayPrice = livePrices[stock.symbol] || stock.price;

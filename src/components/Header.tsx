@@ -1,5 +1,5 @@
-import React from 'react';
 import { Zap } from 'lucide-react';
+import React from 'react';
 
 export const Header: React.FC = () => (
   <header className="relative flex flex-col items-center mb-8 text-center px-12 sm:px-16">

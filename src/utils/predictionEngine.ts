@@ -824,7 +824,6 @@ export function runWalkForwardBacktest(
   const closes = points.map(p => p.close);
 
   const trainSize = Math.floor(len * 0.6);
-  const testSize = len - trainSize;
   
   let truePositives = 0;
   let falsePositives = 0;
@@ -1163,9 +1162,9 @@ export function runAIPredictionEngine(
   symbol: string,
   points: ChartPoint[],
   ratios: FinancialRatios,
-  profitLoss: unknown[] = [],
-  cashFlow: unknown[] = [],
-  quarterly: unknown[] = [],
+  _profitLoss: unknown[] = [],
+  _cashFlow: unknown[] = [],
+  _quarterly: unknown[] = [],
   liveOrderBook?: { bids: OrderBookLevel[], asks: OrderBookLevel[] }
 ): PredictionResult {
   const currentPrice = points[points.length - 1]?.close || ratios.price || 100;
@@ -1193,11 +1192,8 @@ export function runAIPredictionEngine(
   const ema9 = calcEMA(closes, 9);
   const ema20 = calcEMA(closes, 20);
   const ema50 = calcEMA(closes, 50);
-  const ema200 = calcEMA(closes, 200);
 
-  const sma20 = calcSMA(closes, 20);
   const sma50 = calcSMA(closes, 50);
-  const sma200 = calcSMA(closes, 200);
 
   const atr = calcATR(highs, lows, closes, 14);
   const atrVal = atr[len - 1];
@@ -1209,8 +1205,6 @@ export function runAIPredictionEngine(
 
   const adxResult = calcADX(highs, lows, closes, 14);
   const adxVal = adxResult.adx[len - 1];
-  const plusDIVal = adxResult.plusDI[len - 1];
-  const minusDIVal = adxResult.minusDI[len - 1];
 
   // 2. Pivot swing points calculation
   const pivots = detectPivots(highs, lows, 4);
@@ -1472,13 +1466,7 @@ export function runAIPredictionEngine(
 
   const buyPressure = Math.max(0, Math.min(100, Math.round((orderImbalance + 1) * 50)));
   const sellPressure = 100 - buyPressure;
-  const blockTradesCount = 'Data unavailable';
   const volumeSpikes = rvol > 2.0;
-
-  let liqScore = Math.round(50 + (rvol - 1) * 20 + (volumeSpikes ? 15 : 0));
-  liqScore = Math.max(5, Math.min(99, liqScore));
-
-  const averageTradeSize = 'Data unavailable';
 
   // Map real level-5 WebSocket order book depth or set to "Data unavailable"
   let bids: { price: number; qty: number }[] | 'Data unavailable' = 'Data unavailable';
@@ -1504,37 +1492,7 @@ export function runAIPredictionEngine(
   /* ────────────────────────────────────────────────────────────── */
   /* ─── 3. OPTIONS CHAIN PROXY GENERATOR ────────────────────────── */
   /* ────────────────────────────────────────────────────────────── */
-
-  // Proxying options derivatives metrics based on Spot Volatility & Spot Price location
-  let pcr = 0.92;
-  if (currentPrice > lastPivotHigh * 0.98) pcr = 1.25; // resistance bearish call overlay
-  else if (currentPrice < lastPivotLow * 1.02) pcr = 0.65; // support puts sold bullish support
-  else pcr = Number((0.85 + (rsiVal - 50)*0.005).toFixed(2));
-
-  let buildupState: 'LONG_BUILDUP' | 'SHORT_BUILDUP' | 'SHORT_COVERING' | 'LONG_UNWINDING' = 'LONG_BUILDUP';
   const priceChange24h = (closes[len - 1] - closes[len - 2]) / (closes[len - 2] || 1);
-  const volumeChange24h = (volumes[len - 1] - volumes[len - 2]) / (volumes[len - 2] || 1);
-
-  if (priceChange24h > 0 && volumeChange24h > 0) buildupState = 'LONG_BUILDUP';
-  else if (priceChange24h < 0 && volumeChange24h > 0) buildupState = 'SHORT_BUILDUP';
-  else if (priceChange24h > 0 && volumeChange24h < 0) buildupState = 'SHORT_COVERING';
-  else buildupState = 'LONG_UNWINDING';
-
-  const optionsSentiment = buildupState === 'LONG_BUILDUP' || buildupState === 'SHORT_COVERING'
-    ? 'BULLISH' as const
-    : buildupState === 'SHORT_BUILDUP'
-    ? 'BEARISH' as const
-    : 'NEUTRAL' as const;
-
-  const maxPainZone = supportResistanceZones.find(z => z.type === 'SUPPORT') || supportResistanceZones[0];
-  const maxPain = maxPainZone ? maxPainZone.price : Number((currentPrice * 0.97).toFixed(2));
-  
-  const openInterest = Math.round(curVolAvg * 12.5 + (volumes[len - 1] * 3));
-  const oiChangePercent = Number((priceChange24h * 15 + volumeChange24h * 5).toFixed(1));
-
-  const gammaExposure = Math.round(openInterest * 0.04 * (optionsSentiment === 'BULLISH' ? 1.2 : 0.8));
-  const deltaExposure = Math.round(openInterest * 0.68 * (optionsSentiment === 'BULLISH' ? 1.1 : -0.9));
-
   /* ────────────────────────────────────────────────────────────── */
   /* ─── 4. NEWS & SENTIMENT SOLVER ──────────────────────────────── */
   /* ────────────────────────────────────────────────────────────── */
@@ -2130,7 +2088,7 @@ export function runAIPredictionEngine(
       score: rvol > 0 ? Math.max(5, Math.min(99, Math.round(50 + (rvol - 1) * 20))) : 'Data unavailable',
       rvol,
       avgTradeSize: 'Data unavailable',
-      volumeSpikes: rvol > 2.0,
+      volumeSpikes,
       blockTradesCount: 'Data unavailable',
       orderImbalance,
       buyPressure,

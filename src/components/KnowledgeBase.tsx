@@ -1,5 +1,5 @@
-import React from 'react';
 import { Info } from 'lucide-react';
+import React from 'react';
 
 export const KnowledgeBase = () => (
   <section className="mt-12 p-8 bg-slate-100 dark:bg-slate-900/50 rounded-3xl border border-slate-200 dark:border-slate-800">

@@ -1,7 +1,7 @@
 'use client';
 
+import { Info,Scale } from 'lucide-react';
 import React, { useState } from 'react';
-import { DollarSign, ShieldAlert, TrendingUp, Sparkles, Scale, Info } from 'lucide-react';
 
 export default function PlaybookPage() {
   // Compounding Inputs

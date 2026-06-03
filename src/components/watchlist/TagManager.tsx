@@ -1,14 +1,15 @@
 "use client";
 
-import React, { useState } from 'react';
-import { Plus, X, Check, Pencil } from 'lucide-react';
-import { buildAllTags, STATIC_TAGS, CUSTOM_TAG_IDS, type TagDef, type CustomTagRaw, DEFAULT_CUSTOM_TAGS } from '@/utils/tags';
+import { Check, Pencil, X } from 'lucide-react';
+import React from 'react';
+
+import { buildAllTags, CUSTOM_TAG_IDS, type CustomTagRaw } from '@/utils/tags';
 
 interface TagManagerProps {
   stockSymbol: string;
   stockTags: string[];
   customTagRaw: CustomTagRaw[];
-  onToggleTag: (symbol: string, tagId: string) => void;
+  onToggleTag: (_symbol: string, _tagId: string) => void;
   onClose: () => void;
 }
 
@@ -73,9 +74,9 @@ export function TagPopover({ stockSymbol, stockTags, customTagRaw, onToggleTag, 
 interface TagFilterBarProps {
   allStocks: Array<{ tags?: string[] }>;
   activeTagFilter: string;
-  onSetFilter: (tagId: string) => void;
+  onSetFilter: (_tagId: string) => void;
   customTagRaw: CustomTagRaw[];
-  onEditCustomTag?: (tag: CustomTagRaw) => void;
+  onEditCustomTag?: (_tag: CustomTagRaw) => void;
 }
 
 export function TagFilterBar({ allStocks, activeTagFilter, onSetFilter, customTagRaw, onEditCustomTag }: TagFilterBarProps) {

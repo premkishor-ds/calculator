@@ -1,6 +1,6 @@
-import React from 'react';
-import { Metadata } from 'next';
 import { ArrowRight, Clock, Tag } from 'lucide-react';
+import { Metadata } from 'next';
+import React from 'react';
 
 export const metadata: Metadata = {
   title: 'Equity Insights Blog | Multibagger Strategies - Vision Wealth',

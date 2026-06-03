@@ -1,7 +1,7 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import React, { createContext, useContext, useEffect,useState } from 'react';
 
 interface User {
   id: string;
@@ -21,11 +21,11 @@ interface AuthContextType {
   preferences: UserPreferences | null;
   token: string | null;
   loading: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  register: (fullName: string, email: string, password: string) => Promise<void>;
+  login: (_email: string, _password: string) => Promise<void>;
+  register: (_fullName: string, _email: string, _password: string) => Promise<void>;
   logout: () => void;
-  updateProfile: (fullName?: string, password?: string) => Promise<void>;
-  updatePreferences: (theme?: 'dark' | 'light', timezone?: string) => Promise<void>;
+  updateProfile: (_fullName?: string, _password?: string) => Promise<void>;
+  updatePreferences: (_theme?: 'dark' | 'light', _timezone?: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);

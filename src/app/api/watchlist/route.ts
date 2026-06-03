@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+
 import { yahooFinance } from '@/lib/yahoo-finance';
 
 import { WATCHLIST_SYMBOLS } from '../../../utils/symbols';

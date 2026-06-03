@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { Calendar, DollarSign, Award, Gift, ArrowUpDown, ChevronRight } from 'lucide-react';
+import { ArrowUpDown, Award, Calendar, ChevronRight,DollarSign, Gift } from 'lucide-react';
+import React, { useEffect,useState } from 'react';
+
 import { getBackendApiUrl } from '@/lib/backend-config';
 import { DEFAULT_SEEDS } from '@/utils/symbols';
 

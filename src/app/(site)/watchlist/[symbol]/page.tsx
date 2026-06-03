@@ -1,43 +1,42 @@
 "use client";
 
-import React, { useEffect, useState, use, useMemo, useRef } from 'react';
-import Link from 'next/link';
-import dynamic from 'next/dynamic';
 import { 
-  ArrowLeft, 
-  TrendingUp, 
-  TrendingDown, 
-  RefreshCw, 
-  FileText, 
-  PieChart, 
-  Info, 
-  Shield, 
-  Layers, 
-  Scale, 
-  DollarSign, 
-  Users, 
-  CheckCircle, 
-  AlertTriangle,
-  Calendar,
-  Globe,
-  Briefcase,
-  LineChart,
-  BarChart2,
-  Newspaper,
-  Sun,
-  Moon,
-  Brain,
   Activity,
+  AlertTriangle,
+  ArrowLeft, 
+  Award,
+  BarChart2,
+  Brain,
+  Briefcase,
+  Calendar,
   Check,
-  X,
-  Gauge,
-  Lock,
-  Unlock,
+  CheckCircle, 
+  DollarSign, 
   ExternalLink,
-  Volume2,
+  FileText, 
+  Gauge,
+  Globe,
+  Info, 
+  Layers, 
+  LineChart,
+  Lock,
+  Moon,
+  Newspaper,
+  PieChart, 
   Presentation,
-  Award
-} from 'lucide-react';
+  RefreshCw, 
+  Scale, 
+  Shield, 
+  Sun,
+  TrendingDown, 
+  TrendingUp,
+  Users, 
+  Volume2,
+  X} from 'lucide-react';
+import dynamic from 'next/dynamic';
+import Link from 'next/link';
+import React, { use, useEffect, useMemo, useRef,useState } from 'react';
+
 import { getBackendWsUrl } from '@/lib/backend-config';
 
 /* Dynamically import AdvancedChart so it's client-only (no SSR) */
@@ -53,27 +52,19 @@ const AdvancedChart = dynamic(() => import('@/components/AdvancedChart'), {
   ),
 });
 
+import { useRouter } from 'next/navigation';
+
 import AIMarketIntelligence from '@/components/AIMarketIntelligence';
-import { computeOutlookResult } from '@/lib/aiOutlook';
 import SimplyWallStSnowflake from '@/components/SimplyWallStSnowflake';
 import WatchlistSidebar from '@/components/watchlist/WatchlistSidebar';
-import { useWatchlistStore } from '@/hooks/useWatchlistStore';
-import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
-import { DEFAULT_CUSTOM_TAGS, type CustomTagRaw } from '@/utils/tags';
-
+import { useWatchlistStore } from '@/hooks/useWatchlistStore';
+import { computeOutlookResult } from '@/lib/aiOutlook';
 import type {
-  Ratios,
-  BalanceSheetItem,
-  ProfitLossItem,
-  QuarterlyItem,
-  CashFlowItem,
-  PeerItem,
-  CorporateProfile,
   ChartPoint,
-  NewsItem,
   StockDetails,
 } from '@/types';
+import { type CustomTagRaw,DEFAULT_CUSTOM_TAGS } from '@/utils/tags';
 
 interface OrderBookLevel {
   price: number;
@@ -254,13 +245,13 @@ function LiveOrderBook({
 function AIForecastDashboard({ 
   data, 
   displayPrice, 
-  theme 
+  theme: _theme 
 }: { 
   data: StockDetails; 
   displayPrice: number; 
   theme: 'dark' | 'light'; 
 }) {
-  const { ratios, balanceSheet, profitLoss, cashFlow, quarterlyProfitLoss, peers, pros, cons } = data;
+  const { ratios, balanceSheet, profitLoss, cashFlow, quarterlyProfitLoss: _quarterlyProfitLoss, peers: _peers, pros: _pros, cons: _cons } = data;
 
   // 1. Interactive Slider States for Reverse DCF
   const [dcfDiscountRate, setDcfDiscountRate] = useState<number>(10);
@@ -270,7 +261,7 @@ function AIForecastDashboard({
   const [qualityHorizon, setQualityHorizon] = useState<3 | 5 | 10>(5);
 
   // 3. Expand/Collapse States for premium interactive UX
-  const [expandedCards, setExpandedCards] = useState<Record<string, boolean>>({
+  const [_expandedCards, setExpandedCards] = useState<Record<string, boolean>>({
     outlook: true,
     valuation: true,
     dcf: true,
@@ -283,7 +274,7 @@ function AIForecastDashboard({
     summary: true,
   });
 
-  const toggleCard = (card: string) => {
+  const _toggleCard = (card: string) => {
     setExpandedCards(prev => ({ ...prev, [card]: !prev[card] }));
   };
 
@@ -330,7 +321,7 @@ function AIForecastDashboard({
     const priorBS = sortedBS.find(b => b.date === priorYear.date) || sortedBS[sortedBS.length - 2];
 
     const latestCF = sortedCF.find(c => c.date === latestYear.date) || sortedCF[sortedCF.length - 1];
-    const priorCF = sortedCF.find(c => c.date === priorYear.date) || sortedCF[sortedCF.length - 2];
+    const _priorCF = sortedCF.find(c => c.date === priorYear.date) || sortedCF[sortedCF.length - 2];
 
     const assetsLatest = latestBS.totalAssets || 1;
     const assetsPrior = priorBS.totalAssets || 1;
@@ -690,7 +681,7 @@ function AIForecastDashboard({
     sortedBS,
   ]);
 
-  const { sentiment, confidence, riseFactors, fallFactors, strengths, risks, strategy } = outlookResult;
+  const { sentiment: _sentiment, confidence: _confidence, riseFactors: _riseFactors, fallFactors: _fallFactors, strengths: _strengths, risks: _risks, strategy: _strategy } = outlookResult;
 
   // ==========================================
   // VIEW RENDER LAYOUT
@@ -1566,7 +1557,7 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
   useEffect(() => {
     const tabs = ['ratios', 'prediction', 'ai', 'news', 'filings', 'about', 'qpl', 'pl', 'bs', 'cf', 'peers', 'shareholding'];
     
-    const observerCallback = (entries: IntersectionObserverEntry[]) => {
+    const observerCallback = (_entries: IntersectionObserverEntry[]) => {
       if (isScrollingRef.current) return;
 
       let activeSectionId = activeTabRef.current;

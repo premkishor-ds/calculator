@@ -1,15 +1,15 @@
 "use client";
 
-import React, { useRef, useState, useCallback, useEffect, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo,useRef, useState } from 'react';
 
 interface VirtualStockListProps<T> {
   items: T[];
   itemHeight: number;
   overscan?: number;
   containerClassName?: string;
-  renderItem: (item: T, index: number) => React.ReactNode;
+  renderItem: (_item: T, _index: number) => React.ReactNode;
   emptyState?: React.ReactNode;
-  getItemKey: (item: T, index: number) => string;
+  getItemKey: (_item: T, _index: number) => string;
 }
 
 /**
@@ -50,7 +50,7 @@ export default function VirtualStockList<T>({
 
   const totalHeight = items.length * itemHeight;
 
-  const { startIndex, endIndex, visibleItems } = useMemo(() => {
+  const { startIndex, visibleItems } = useMemo(() => {
     if (containerHeight === 0 || items.length === 0) {
       return { startIndex: 0, endIndex: 0, visibleItems: [] };
     }

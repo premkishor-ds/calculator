@@ -1,4 +1,4 @@
-import { ChartPoint, PredictionResult, calcEMA, calcRSI, calcADX, calcBollingerBands, calcATR, calcSMA, calcMACD, runWalkForwardBacktest } from './predictionEngine';
+import { calcADX, calcATR, calcBollingerBands, calcEMA, calcMACD, calcRSI, calcSMA, ChartPoint } from './predictionEngine';
 
 export type MarketRegime = 'BULL' | 'BEAR' | 'SIDEWAYS' | 'VOLATILE';
 
@@ -95,8 +95,8 @@ export class StrategyOptimizer {
     name: string,
     bestMarket: MarketRegime,
     config: BacktestConfig,
-    generateSignal: (i: number) => 'BUY' | 'SELL' | 'NEUTRAL',
-    checkExit: (i: number, entryPrice: number, entryIdx: number, stopLoss: number) => { exit: boolean, reason?: string, price?: number }
+    generateSignal: (_i: number) => 'BUY' | 'SELL' | 'NEUTRAL',
+    checkExit: (_i: number, _entryPrice: number, _entryIdx: number, _stopLoss: number) => { exit: boolean, reason?: string, price?: number }
   ): StrategyResult {
     let capital = config.initialCapital;
     let peakCapital = capital;
@@ -257,7 +257,7 @@ export class StrategyOptimizer {
         ) return 'BUY';
         return 'NEUTRAL';
       },
-      (i, ep, eIdx) => {
+      (i, _ep, _eIdx) => {
         const aiScore = predictions[i] || 50;
         if (aiScore < 45) return { exit: true, reason: 'AI Score Drop' };
         return { exit: false };

@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
+
 import { getBackendApiUrl } from '@/lib/backend-config';
 import { DEFAULT_SEEDS } from '@/utils/symbols';
 

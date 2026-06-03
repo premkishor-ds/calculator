@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { Bell, Plus, Trash2, ShieldAlert, Sparkles, RefreshCw, Mail, Smartphone, Globe, Lock } from 'lucide-react';
+import { Bell, Globe, Lock,Mail, Plus, RefreshCw, ShieldAlert, Smartphone, Trash2 } from 'lucide-react';
 import Link from 'next/link';
+import React, { useEffect, useState } from 'react';
+
 import { useAuth } from '@/context/AuthContext';
 
 interface AlertItem {
@@ -62,6 +63,7 @@ export default function AlertsPage() {
 
     try {
       setSubmitting(true);
+      setError(null);
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || '/api'}/alerts`, {
         method: 'POST',
         headers: { 
@@ -83,7 +85,7 @@ export default function AlertsPage() {
       setShowAddForm(false);
       await fetchAlerts();
     } catch (err: any) {
-      alert(err.message || 'Failed to create alert');
+      setError(err.message || 'Failed to create alert');
     } finally {
       setSubmitting(false);
     }
@@ -92,6 +94,7 @@ export default function AlertsPage() {
   const handleDeleteAlert = async (id: string) => {
     if (!token) return;
     try {
+      setError(null);
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || '/api'}/alerts/${id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
@@ -99,7 +102,7 @@ export default function AlertsPage() {
       if (!res.ok) throw new Error('Failed to delete alert rule');
       await fetchAlerts();
     } catch (err: any) {
-      alert(err.message || 'Failed to delete alert');
+      setError(err.message || 'Failed to delete alert');
     }
   };
 
@@ -201,6 +204,12 @@ export default function AlertsPage() {
             </button>
           </div>
         </div>
+
+        {error && (
+          <div className="bg-red-500/10 border border-red-500/20 text-red-500 p-4 rounded-xl text-xs font-semibold animate-in fade-in duration-300">
+            {error}
+          </div>
+        )}
 
         {/* Dynamic Add Trigger Form */}
         {showAddForm && (

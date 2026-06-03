@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import { LogOut, Menu, Moon, Sun, User,X } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Menu, X, Sun, Moon, LogOut, User } from 'lucide-react';
-import { useAuth } from '@/context/AuthContext';
+import React, { useEffect, useState } from 'react';
+
 import NotificationCenter from '@/components/NotificationCenter';
+import { useAuth } from '@/context/AuthContext';
 
 const LINKS = [
   { href: '/portfolio', label: 'Portfolio' },

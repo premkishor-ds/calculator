@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+
 import { yahooFinance } from '@/lib/yahoo-finance';
 
 // Server-side cache: key = `${symbol}:${interval}`, TTL varies by interval

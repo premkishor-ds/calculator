@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useState, useEffect, Suspense } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
+import { ArrowLeft, ArrowRight, KeyRound,Lock } from 'lucide-react';
 import Link from 'next/link';
-import { Lock, ArrowRight, Sparkles, ArrowLeft, KeyRound } from 'lucide-react';
+import { useRouter,useSearchParams } from 'next/navigation';
+import React, { Suspense,useEffect, useState } from 'react';
 
 function ResetPasswordForm() {
   const searchParams = useSearchParams();

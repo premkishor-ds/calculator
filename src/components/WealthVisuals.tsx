@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import { Award, Briefcase,CheckCircle2, Circle, Heart, Landmark, ShieldAlert, TrendingUp, Zap } from 'lucide-react';
 import dynamic from 'next/dynamic';
-import { TrendingUp, Sun, Landmark, Zap, CheckCircle2, Circle, Percent, Award, Briefcase, ShieldAlert, Heart, Calendar } from 'lucide-react';
+import React, { useState } from 'react';
+
 import { formatINR, SummaryResult } from '@/utils/calculations';
 import { FIRESummary } from '@/utils/solvers';
 
@@ -145,7 +146,7 @@ export const ExecutiveSummary: React.FC<VisualsProps> = ({ summary, years, infla
 );
 
 export const WealthChart: React.FC<VisualsProps> = ({ chartData, theme }) => {
-  const [chartMode, setChartMode] = useState<'growth' | 'tax' | 'inflation' | 'yearly'>('growth');
+  const [chartMode, _setChartMode] = useState<'growth' | 'tax' | 'inflation' | 'yearly'>('growth');
 
   return (
     <section className="mb-12">

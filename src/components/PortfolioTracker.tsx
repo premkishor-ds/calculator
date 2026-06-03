@@ -1,11 +1,10 @@
 'use client';
 
-import React, { useEffect, useState, useMemo } from 'react';
 import { 
-  TrendingUp, TrendingDown, DollarSign, Activity, 
-  Trash2, Briefcase, Plus, Calendar, Layers, PieChart, 
-  FileText, ShieldCheck, Scale, ArrowLeftRight 
-} from 'lucide-react';
+Briefcase, Layers, PieChart, 
+Plus, Scale,   Trash2, TrendingDown,   TrendingUp} from 'lucide-react';
+import React, { useEffect, useMemo,useState } from 'react';
+
 import { getBackendApiUrl } from '@/lib/backend-config';
 
 interface HoldingItem {
@@ -22,20 +21,20 @@ interface HoldingItem {
 interface PortfolioTrackerProps {
   theme: 'dark' | 'light';
   selectedWatchlist: string;
-  showToast: (msg: string, type: 'success' | 'error' | 'info') => void;
+  showToast: (_msg: string, _type: 'success' | 'error' | 'info') => void;
 }
 
-export default function PortfolioTracker({ theme, selectedWatchlist, showToast }: PortfolioTrackerProps) {
+export default function PortfolioTracker({ theme: _theme, selectedWatchlist, showToast }: PortfolioTrackerProps) {
   const [holdings, setHoldings] = useState<HoldingItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string>('');
+  const [_error, setError] = useState<string>('');
   
   // Transaction entry form states
   const [symbol, setSymbol] = useState<string>('');
   const [name, setName] = useState<string>('');
   const [buyPrice, setBuyPrice] = useState<string>('');
   const [quantity, setQuantity] = useState<string>('');
-  const [purchaseDate, setPurchaseDate] = useState<string>(new Date().toISOString().slice(0, 10));
+  const [purchaseDate, _setPurchaseDate] = useState<string>(new Date().toISOString().slice(0, 10));
   const [adding, setAdding] = useState<boolean>(false);
 
   // Fetch holdings

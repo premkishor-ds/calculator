@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { Plus, Trash2, TrendingUp, TrendingDown, DollarSign, PieChart, Shield, RefreshCw, Sparkles, Lock } from 'lucide-react';
+import { Lock,PieChart, Plus, RefreshCw, Shield, Trash2, TrendingDown, TrendingUp } from 'lucide-react';
 import Link from 'next/link';
+import React, { useEffect, useState } from 'react';
+
 import { useAuth } from '@/context/AuthContext';
 
 interface Holding {
@@ -76,6 +77,7 @@ export default function PortfolioPage() {
 
     try {
       setSubmitting(true);
+      setError(null);
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || '/api'}/holdings`, {
         method: 'POST',
         headers: { 
@@ -106,7 +108,7 @@ export default function PortfolioPage() {
       // Refresh list
       await fetchHoldings();
     } catch (err: any) {
-      alert(err.message || 'Failed to add holding');
+      setError(err.message || 'Failed to add holding');
     } finally {
       setSubmitting(false);
     }
@@ -115,6 +117,7 @@ export default function PortfolioPage() {
   const handleDeleteHolding = async (id: string) => {
     if (!confirm('Are you sure you want to delete this transaction?') || !token) return;
     try {
+      setError(null);
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || '/api'}/holdings/${id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
@@ -122,7 +125,7 @@ export default function PortfolioPage() {
       if (!res.ok) throw new Error('Failed to delete transaction');
       await fetchHoldings();
     } catch (err: any) {
-      alert(err.message || 'Failed to delete holding');
+      setError(err.message || 'Failed to delete holding');
     }
   };
 
@@ -240,6 +243,12 @@ export default function PortfolioPage() {
             </button>
           </div>
         </div>
+
+        {error && (
+          <div className="bg-red-500/10 border border-red-500/20 text-red-500 p-4 rounded-xl text-xs font-semibold animate-in fade-in duration-300">
+            {error}
+          </div>
+        )}
 
         {/* Zerodha CSV Import Area */}
         {showCsvImport && (

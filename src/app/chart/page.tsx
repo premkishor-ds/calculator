@@ -1,7 +1,7 @@
 "use client";
 
-import React from 'react';
 import dynamic from 'next/dynamic';
+import React from 'react';
 
 /** Loading skeleton shown both on the server AND the client before the terminal JS bundle loads. */
 const TerminalLoader = () => (

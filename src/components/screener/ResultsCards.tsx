@@ -1,7 +1,8 @@
 'use client';
-import React from 'react';
+import { BarChart2, RefreshCw,TrendingDown, TrendingUp } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { TrendingUp, TrendingDown, BarChart2, RefreshCw } from 'lucide-react';
+import React from 'react';
+
 import { ActiveFilters } from './FilterSidebar';
 
 interface StockRow {
@@ -19,7 +20,7 @@ interface StockRow {
 export const ResultsCards = ({
   stocks,
   loading,
-  activeFilters,
+  activeFilters: _activeFilters,
 }: {
   stocks: StockRow[];
   loading: boolean;

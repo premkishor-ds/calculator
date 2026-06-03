@@ -1,9 +1,8 @@
 "use client";
 
-import React from 'react';
-import { Home, AlertCircle } from 'lucide-react';
-
+import { AlertCircle,Home } from 'lucide-react';
 import Link from 'next/link';
+import React from 'react';
 
 export default function NotFound() {
   return (

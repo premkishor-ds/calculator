@@ -1,7 +1,8 @@
 'use client';
 
 import React from 'react';
-import { PieChart, Pie, Cell, Tooltip } from 'recharts';
+import { Cell, Pie, PieChart, Tooltip } from 'recharts';
+
 import { formatINR } from '@/utils/calculations';
 
 interface Props {

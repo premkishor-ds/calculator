@@ -1,6 +1,8 @@
+import "./globals.css";
+
 import type { Metadata, Viewport } from "next";
 import { Outfit } from "next/font/google";
-import "./globals.css";
+
 import PWAInstallPrompt from '@/components/PWAInstallPrompt';
 import { SITE_URL } from '@/lib/backend-config';
 

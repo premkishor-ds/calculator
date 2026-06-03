@@ -1,38 +1,33 @@
 "use client";
 
-import React, { useMemo, useState, useEffect } from 'react';
 import { 
-  TrendingUp, 
-  TrendingDown, 
   Activity, 
-  CheckCircle, 
   AlertTriangle, 
-  Gauge, 
-  Layers, 
-  Scale, 
-  Info,
-  Calendar,
-  Compass,
-  Zap,
-  Target,
-  Percent,
-  LineChart,
-  ShieldAlert,
-  Brain,
-  History,
-  Sparkles,
   BarChart3,
-  Eye,
+  Brain,
+  Calendar,
+  CheckCircle,
   Coins,
-  ChevronRight
-} from 'lucide-react';
-import { 
-  runAIPredictionEngine, 
-  ChartPoint as EnginePoint, 
-  PredictionResult, 
-  OrderBookLevel 
-} from '@/utils/predictionEngine';
+  Compass,
+  Gauge, 
+  History,
+  Layers, 
+  LineChart,
+  Percent,
+  Scale, 
+  ShieldAlert,
+  Sparkles,
+  Target,
+  TrendingDown, 
+  TrendingUp, 
+  Zap} from 'lucide-react';
+import React, { useEffect,useMemo, useState } from 'react';
+
 import { getBackendApiUrl } from '@/lib/backend-config';
+import { 
+  OrderBookLevel, 
+  PredictionResult, 
+  runAIPredictionEngine} from '@/utils/predictionEngine';
 import { DEFAULT_SEEDS } from '@/utils/symbols';
 
 export interface MarketIntelligenceRatios {

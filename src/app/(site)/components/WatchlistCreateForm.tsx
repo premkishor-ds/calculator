@@ -2,20 +2,18 @@
 "use client";
 
 import React, { useState } from 'react';
+
 import { getBackendApiUrl } from '@/lib/backend-config';
 
 interface WatchlistCreateFormProps {
-  // Current watchlists array (any shape – we only push the new one)
-  watchlists: any[];
   setWatchlists: React.Dispatch<React.SetStateAction<any[]>>;
   // Called after successful creation to make the new list active
-  setSelectedWatchlist: (name: string) => void;
+  setSelectedWatchlist: (_name: string) => void;
   // Optional toast helper – if unavailable we fallback to alert()
-  showToast?: (msg: string, type: 'success' | 'error' | 'info') => void;
+  showToast?: (_msg: string, _type: 'success' | 'error' | 'info') => void;
 }
 
 export default function WatchlistCreateForm({
-  watchlists,
   setWatchlists,
   setSelectedWatchlist,
   showToast,
@@ -42,16 +40,16 @@ export default function WatchlistCreateForm({
         setWatchlists(prev => [...prev, data]);
         setSelectedWatchlist(data.name);
         setNewWatchlistName('');
-        const toast = showToast || ((msg, _) => alert(msg));
+        const toast = showToast || ((msg) => alert(msg));
         toast(`Workspace "${data.name}" created successfully`, 'success');
       } else {
         const errData = await res.json();
         setError(errData.error || 'Failed to create watchlist');
-        const toast = showToast || ((msg, _) => alert(msg));
+        const toast = showToast || ((msg) => alert(msg));
         toast(errData.error || 'Failed to create watchlist', 'error');
       }
-    } catch (e) {
-      const toast = showToast || ((msg, _) => alert(msg));
+    } catch {
+      const toast = showToast || ((msg) => alert(msg));
       toast('Unexpected error while creating watchlist', 'error');
     } finally {
       setCreating(false);
