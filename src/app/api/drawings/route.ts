@@ -19,7 +19,16 @@ export async function GET(request: NextRequest) {
       url += `&chartMode=${encodeURIComponent(chartMode)}`;
     }
 
-    const res = await fetch(url, { cache: 'no-store' });
+    const headers: Record<string, string> = {};
+    const authHeader = request.headers.get('Authorization');
+    if (authHeader) {
+      headers['Authorization'] = authHeader;
+    }
+
+    const res = await fetch(url, {
+      cache: 'no-store',
+      headers
+    });
     if (!res.ok) {
       throw new Error(`Backend error: ${res.statusText}`);
     }
@@ -34,11 +43,17 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+    const authHeader = request.headers.get('Authorization');
+    if (authHeader) {
+      headers['Authorization'] = authHeader;
+    }
+
     const res = await fetch(`${BACKEND}/drawings/sync`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers,
       body: JSON.stringify(body),
     });
 

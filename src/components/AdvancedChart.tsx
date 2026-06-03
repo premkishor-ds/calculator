@@ -825,9 +825,14 @@ export default function AdvancedChart({
   // Sync to database
   const syncDrawingsToDB = async (updatedDrawings: DrawingItem[]) => {
     try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
       await fetch('/api/drawings', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
           symbol,
           chartMode,
@@ -1288,7 +1293,12 @@ export default function AdvancedChart({
   /* Load historical candles & fetch drawings */
   useEffect(() => {
     if (!symbol) return;
-    fetch(`/api/drawings?symbol=${encodeURIComponent(symbol)}&chartMode=${chartMode}`)
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    const headers: Record<string, string> = {};
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    fetch(`/api/drawings?symbol=${encodeURIComponent(symbol)}&chartMode=${chartMode}`, { headers })
       .then(r => r.json())
       .then(json => setDrawings(json || []))
       .catch(() => {});
