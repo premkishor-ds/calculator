@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+import { getBackendApiUrl } from '@/lib/backend-config';
 import { yahooFinance } from '@/lib/yahoo-finance';
 import { DEFAULT_SEEDS } from '@/utils/symbols';
 
@@ -368,6 +369,24 @@ export async function GET(
     }
 
     const summary = summaryRes.value;
+
+    // Fetch calculated database metrics from the backend API in parallel
+    const BACKEND_API_URL = getBackendApiUrl();
+    const encoded = encodeURIComponent(symbol);
+    const [dbMetricsRes, dbGrowthRes, dbValuationRes, dbRiskRes, dbScoresRes] = await Promise.allSettled([
+      fetch(`${BACKEND_API_URL}/stocks/${encoded}/metrics`).then(r => r.ok ? r.json() : null),
+      fetch(`${BACKEND_API_URL}/stocks/${encoded}/growth`).then(r => r.ok ? r.json() : null),
+      fetch(`${BACKEND_API_URL}/stocks/${encoded}/valuation`).then(r => r.ok ? r.json() : null),
+      fetch(`${BACKEND_API_URL}/stocks/${encoded}/risk`).then(r => r.ok ? r.json() : null),
+      fetch(`${BACKEND_API_URL}/stocks/${encoded}/scores`).then(r => r.ok ? r.json() : null),
+    ]);
+
+    const dbMetrics = dbMetricsRes.status === 'fulfilled' ? dbMetricsRes.value : null;
+    const dbGrowth = dbGrowthRes.status === 'fulfilled' ? dbGrowthRes.value : null;
+    const dbValuation = dbValuationRes.status === 'fulfilled' ? dbValuationRes.value : null;
+    const dbRisk = dbRiskRes.status === 'fulfilled' ? dbRiskRes.value : null;
+    const dbScores = dbScoresRes.status === 'fulfilled' ? dbScoresRes.value : null;
+
     const balanceSheets = balanceSheetRes.status === 'fulfilled' ? (balanceSheetRes.value as any[]) : [];
     const financials = financialsRes.status === 'fulfilled' ? (financialsRes.value as any[]) : [];
     const cashFlows = cashFlowRes.status === 'fulfilled' ? (cashFlowRes.value as any[]) : [];
@@ -657,7 +676,12 @@ export async function GET(
       peers: peersData,
       pros,
       cons,
-      news: formattedNews
+      news: formattedNews,
+      dbMetrics,
+      dbGrowth,
+      dbValuation,
+      dbRisk,
+      dbScores
     });
   } catch (error) {
     console.error('Failed to fetch dynamic stock details:', error);

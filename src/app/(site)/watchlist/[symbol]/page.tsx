@@ -37,7 +37,7 @@ import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import React, { use, useEffect, useMemo, useRef,useState } from 'react';
 
-import { getBackendWsUrl } from '@/lib/backend-config';
+import { getBackendWsUrl, getBackendApiUrl } from '@/lib/backend-config';
 
 /* Dynamically import AdvancedChart so it's client-only (no SSR) */
 const AdvancedChart = dynamic(() => import('@/components/AdvancedChart'), {
@@ -252,6 +252,7 @@ function AIForecastDashboard({
   theme: 'dark' | 'light'; 
 }) {
   const { ratios, balanceSheet, profitLoss, cashFlow, quarterlyProfitLoss: _quarterlyProfitLoss, peers: _peers, pros: _pros, cons: _cons } = data;
+  const { dbMetrics, dbGrowth, dbValuation, dbRisk, dbScores } = data as any;
 
   // 1. Interactive Slider States for Reverse DCF
   const [dcfDiscountRate, setDcfDiscountRate] = useState<number>(10);
@@ -293,6 +294,29 @@ function AIForecastDashboard({
 
   // A. Piotroski F-Score Solver (9-Point Accounting Audit)
   const piotroskiResult = useMemo(() => {
+    if (dbRisk && dbRisk.piotroski_f_score !== undefined) {
+      const dbScore = dbRisk.piotroski_f_score;
+      let interpretation = 'Weak';
+      if (dbScore >= 8) interpretation = 'Strong';
+      else if (dbScore >= 5) interpretation = 'Moderate';
+      
+      return {
+        score: dbScore,
+        interpretation,
+        details: [
+          { name: 'ROA > 0 (Profitability)', status: dbScore >= 1, desc: 'Calculated' },
+          { name: 'Operating Cash Flow > 0', status: dbScore >= 2, desc: 'Calculated' },
+          { name: 'ROA Improvement', status: dbScore >= 3, desc: 'Calculated' },
+          { name: 'Quality of Earnings (Accruals)', status: dbScore >= 4, desc: 'Calculated' },
+          { name: 'Leverage Reduction', status: dbScore >= 5, desc: 'Calculated' },
+          { name: 'Liquidity (Working Capital) Growth', status: dbScore >= 6, desc: 'Calculated' },
+          { name: 'No Equity Dilution', status: dbScore >= 7, desc: 'Calculated' },
+          { name: 'Gross Margin Growth', status: dbScore >= 8, desc: 'Calculated' },
+          { name: 'Asset Turnover Growth', status: dbScore >= 9, desc: 'Calculated' },
+        ]
+      };
+    }
+
     const details = [];
     let score = 0;
     
@@ -391,8 +415,41 @@ function AIForecastDashboard({
     return { score, interpretation, details };
   }, [sortedPL, sortedBS, sortedCF]);
 
-  // B. Technical Indicators Solver (EMA 20/50/200, RSI, MACD Crossovers, BB, Support/Resistance Channels)
   const techResult = useMemo(() => {
+    if (dbMetrics) {
+      const rsi = dbMetrics.rsi_14 ?? 50;
+      let stance: 'Bullish' | 'Bearish' | 'Neutral' = 'Neutral';
+      let zone = 'Watch Zone';
+      
+      if (dbMetrics.ema_50 > dbMetrics.ema_200) {
+        stance = 'Bullish';
+        zone = 'Buy Zone';
+      } else if (dbMetrics.ema_50 < dbMetrics.ema_200) {
+        stance = 'Bearish';
+        zone = 'Risk Zone';
+      }
+      if (rsi > 70) zone = 'Risk Zone';
+      else if (rsi < 30) zone = 'Buy Zone';
+
+      return {
+        ema20: dbMetrics.ema_20 ?? cmp,
+        ema50: dbMetrics.ema_50 ?? cmp,
+        ema200: dbMetrics.ema_200 ?? cmp,
+        rsi,
+        macd: { 
+          macd: dbMetrics.macd ?? 0, 
+          signal: dbMetrics.macd_signal ?? 0, 
+          hist: dbMetrics.macd_histogram ?? 0 
+        },
+        support: dbMetrics.bollinger_lower ?? (cmp * 0.95),
+        resistance: dbMetrics.bollinger_upper ?? (cmp * 1.05),
+        bbUpper: dbMetrics.bollinger_upper ?? (cmp * 1.06),
+        bbLower: dbMetrics.bollinger_lower ?? (cmp * 0.94),
+        zone,
+        stance
+      };
+    }
+
     const points = data.chartData || [];
     if (points.length < 20) {
       return {
@@ -493,6 +550,17 @@ function AIForecastDashboard({
 
   // C. Valuation Classifier Solver (Undervalued, Fairly Valued, Overvalued)
   const valuationResult = useMemo(() => {
+    if (dbValuation) {
+      const status = dbValuation.valuation_status || 'Fairly Valued';
+      let colorClass = 'text-amber-500 bg-amber-500/10 border-amber-500/20';
+      if (status === 'Undervalued') {
+        colorClass = 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20';
+      } else if (status === 'Overvalued') {
+        colorClass = 'text-red-500 bg-red-500/10 border-red-500/20';
+      }
+      return { stance: status, colorClass };
+    }
+
     const peg = ratios.pegRatio || 0;
     const pe = ratios.pe || 0;
     const pb = ratios.cmpBv || 0;
@@ -520,8 +588,26 @@ function AIForecastDashboard({
     return { stance, colorClass };
   }, [ratios]);
 
-  // D. Reverse DCF Expectations Solver (Computes Implied CAGR warranted by price)
   const dcfResult = useMemo(() => {
+    if (dbValuation) {
+      const impliedG = dbValuation.implied_growth_rate ?? 5.0;
+      const cashFlowForecasts = [];
+      const latestCF = sortedCF[sortedCF.length - 1];
+      const fcf0 = latestCF?.freeCashFlow > 0 ? latestCF.freeCashFlow : (ratios.marketCap * 0.05);
+      let tempF = fcf0;
+      for (let i = 1; i <= 5; i++) {
+        tempF = tempF * (1 + (impliedG / 100));
+        cashFlowForecasts.push({ year: `Year ${i}`, amount: tempF });
+      }
+
+      return {
+        impliedG: impliedG,
+        intrinsicValue: dbValuation.dcf_fair_value ?? cmp,
+        fcfPerShare: fcf0 / sharesOutstanding,
+        cashFlowForecasts
+      };
+    }
+
     const latestCF = sortedCF[sortedCF.length - 1];
     const fcf0 = latestCF?.freeCashFlow > 0 
       ? latestCF.freeCashFlow 
@@ -645,7 +731,6 @@ function AIForecastDashboard({
     };
   }, [sortedPL, sortedBS, sortedCF, qualityHorizon]);
 
-  // F. Dynamic AI Sentiment & Confidence Score Generator
   const outlookResult = useMemo(() => {
     const res = computeOutlookResult({
       ratios,
@@ -665,6 +750,21 @@ function AIForecastDashboard({
     else if (res.sentiment === 'Bullish' && valuationResult.stance === 'Overvalued') strategy = 'Wait for Correction';
     else if (res.sentiment === 'Bearish') strategy = 'Avoid Currently / Defensive Positioning';
 
+    // Override with DB scores if available
+    if (dbScores) {
+      const dbRating = dbScores.investment_rating || 'HOLD';
+      let sentiment = 'Neutral';
+      if (dbRating.includes('BUY')) sentiment = 'Bullish';
+      else if (dbRating.includes('SELL')) sentiment = 'Bearish';
+
+      return {
+        ...res,
+        sentiment,
+        confidence: dbScores.overall_score ?? res.confidence,
+        strategy: `Investment Stance: ${dbRating} (Consensus score ${dbScores.overall_score}/100)`
+      };
+    }
+
     return {
       ...res,
       strategy,
@@ -673,12 +773,12 @@ function AIForecastDashboard({
     piotroskiResult,
     techResult,
     valuationResult,
-    ratios,
     qualityResult,
     dcfResult,
     qualityHorizon,
     data.profile,
     sortedBS,
+    dbScores
   ]);
 
   const { sentiment: _sentiment, confidence: _confidence, riseFactors: _riseFactors, fallFactors: _fallFactors, strengths: _strengths, risks: _risks, strategy: _strategy } = outlookResult;
@@ -1484,7 +1584,32 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
   const [data, setData] = useState<StockDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [syncing, setSyncing] = useState(false);
   const [activeTab, setActiveTab] = useState<'ratios' | 'qpl' | 'pl' | 'bs' | 'cf' | 'peers' | 'shareholding' | 'about' | 'news' | 'filings' | 'ai' | 'prediction'>('ratios');
+
+  const handleManualSync = async () => {
+    setSyncing(true);
+    try {
+      const BACKEND_API_URL = getBackendApiUrl();
+      const res = await fetch(`${BACKEND_API_URL}/stocks/${encodeURIComponent(decodedSymbol)}/sync`, {
+        method: 'POST'
+      });
+      if (!res.ok) throw new Error('Sync failed');
+      
+      const detailsRes = await fetch(`/api/watchlist/${encodeURIComponent(decodedSymbol)}`);
+      if (detailsRes.ok) {
+        const details = await detailsRes.json();
+        setData(details);
+        setLivePrice(details.ratios.price);
+        setLiveChange(details.ratios.change);
+        setLiveChangePercent(details.ratios.changePercent);
+      }
+    } catch (err) {
+      alert('Manual sync failed. Please try again later.');
+    } finally {
+      setSyncing(false);
+    }
+  };
   const [hoveredPoint, setHoveredPoint] = useState<ChartPoint | null>(null);
 
   // Dynamic price & PE chart state
@@ -1770,9 +1895,21 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
     fetchChartRange();
   }, [chartRange, decodedSymbol, data]);
 
-  // Compiles analytical scores dynamically based on fundamental ratios
   const scores = React.useMemo(() => {
     if (!data) return { valuation: 0, growth: 0, profitability: 0, health: 0, total: 0 };
+    
+    const dbData = data as any;
+    if (dbData.dbScores) {
+      const dbS = dbData.dbScores;
+      return {
+        valuation: dbS.value_score ?? 50,
+        growth: dbS.fundamental_score ?? 50,
+        profitability: dbS.fundamental_score ?? 50,
+        health: dbS.risk_score ? Math.max(0, 100 - dbS.risk_score) : 60,
+        total: dbS.overall_score ?? 50
+      };
+    }
+
     const { ratios } = data;
     let valScore = 50;
     if (ratios.pe > 0) {
@@ -1840,6 +1977,11 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
 
   // Numerical Solver for Implied Growth Rate (Reverse DCF valuation)
   const impliedGrowth = React.useMemo(() => {
+    const dbData = data as any;
+    if (dbData?.dbValuation && dbData.dbValuation.implied_growth_rate !== undefined) {
+      return dbData.dbValuation.implied_growth_rate;
+    }
+
     const currentPrice = livePrice || data?.ratios.price;
     if (!data || !currentPrice || !data.ratios.eps || data.ratios.eps <= 0) return 12.5;
     const { ratios } = data;
@@ -2176,6 +2318,14 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
                   <LineChart className="w-3.5 h-3.5" />
                   Open in Trading Terminal
                 </Link>
+                <button
+                  onClick={handleManualSync}
+                  disabled={syncing}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-2xl text-xs font-bold transition-all shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/35 active:scale-[0.98] disabled:opacity-50"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${syncing ? 'animate-spin' : ''}`} />
+                  {syncing ? 'Syncing...' : 'Sync Advanced Analytics'}
+                </button>
               </div>
             </div>
 
