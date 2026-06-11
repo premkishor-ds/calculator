@@ -37,7 +37,7 @@ import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import React, { use, useEffect, useMemo, useRef,useState } from 'react';
 
-import { getBackendWsUrl, getBackendApiUrl } from '@/lib/backend-config';
+import { getBackendApiUrl,getBackendWsUrl } from '@/lib/backend-config';
 
 /* Dynamically import AdvancedChart so it's client-only (no SSR) */
 const AdvancedChart = dynamic(() => import('@/components/AdvancedChart'), {
@@ -252,7 +252,7 @@ function AIForecastDashboard({
   theme: 'dark' | 'light'; 
 }) {
   const { ratios, balanceSheet, profitLoss, cashFlow, quarterlyProfitLoss: _quarterlyProfitLoss, peers: _peers, pros: _pros, cons: _cons } = data;
-  const { dbMetrics, dbGrowth, dbValuation, dbRisk, dbScores } = data as any;
+  const { dbMetrics, dbGrowth: _dbGrowth, dbValuation, dbRisk, dbScores } = data as any;
 
   // 1. Interactive Slider States for Reverse DCF
   const [dcfDiscountRate, setDcfDiscountRate] = useState<number>(10);
@@ -1604,7 +1604,7 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
         setLiveChange(details.ratios.change);
         setLiveChangePercent(details.ratios.changePercent);
       }
-    } catch (err) {
+    } catch (_err) {
       alert('Manual sync failed. Please try again later.');
     } finally {
       setSyncing(false);
